@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>V-Med ID | OTP Verification</title>
+  <link rel="stylesheet" href="otp.css" />
+</head>
+<body>
+
+  <div class="otp-container">
+
+    <img src="../../assets/images/logo.jpg" alt="V-Med ID Logo" class="logo" />
+
+    <h2>OTP Verification</h2>
+    <p class="subtitle">
+      Enter the 6-digit verification code
+    </p>
+
+    <input
+      type="text"
+      id="otp"
+      placeholder="Enter 6-digit OTP"
+      maxlength="6"
+      inputmode="numeric"
+    />
+
+    <button id="verifyBtn">Verify & Continue</button>
+
+    <p id="error" class="error"></p>
+
+  </div>
+
+  <script>
+    const verifyBtn = document.getElementById("verifyBtn");
+    const otpInput = document.getElementById("otp");
+    const error = document.getElementById("error");
+
+    verifyBtn.addEventListener("click", () => {
+      const otp = otpInput.value.trim();
+
+      // Dummy OTP rule
+      if (!/^\d{6}$/.test(otp)) {
+        error.textContent = "Please enter a valid 6-digit OTP";
+        return;
+      }
+
+      // TEMP role routing (will be replaced by Firebase later)
+      const role = sessionStorage.getItem("role");
+
+      if (role === "patient") {
+        window.location.href = "../patient_dashboard/index.html";
+      } else if (role === "doctor") {
+        window.location.href = "../doctor_dashboard/index.html";
+      } else if (role === "government") {
+        window.location.href = "../gov_dashboard/index.html";
+      } else {
+        error.textContent = "Role not found. Please login again.";
+      }
+    });
+  </script>
+
+</body>
+</html>

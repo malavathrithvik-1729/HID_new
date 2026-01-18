@@ -196,3 +196,60 @@ body{
   font-size:12px;
   color:#6b7c8f;
 }
+/* ===== BUTTON BASE ===== */
+.btn{
+  border:none;
+  border-radius:999px;
+  cursor:pointer;
+  font-weight:600;
+  letter-spacing:0.3px;
+
+  background: linear-gradient(135deg, #1E88E5, #42A5F5);
+  color:#fff;
+
+  box-shadow:
+    0 8px 20px rgba(30,136,229,0.25),
+    inset 0 1px 0 rgba(255,255,255,0.25);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+/* ===== HERO BUTTON ===== */
+.hero-btn{
+  padding:12px 42px;
+  font-size:18px;
+}
+
+/* ===== BIG CTA BUTTON ===== */
+.big-btn{
+  padding:14px 52px;
+  font-size:20px;
+}
+
+/* ===== HOVER EFFECT ===== */
+.btn:hover{
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 28px rgba(30,136,229,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.35);
+  filter:brightness(1.05);
+}
+
+/* ===== ACTIVE (CLICK) ===== */
+.btn:active{
+  transform: translateY(0);
+  box-shadow:
+    0 6px 14px rgba(30,136,229,0.25),
+    inset 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* ===== KEYBOARD ACCESSIBILITY ===== */
+.btn:focus-visible{
+  outline:none;
+  box-shadow:
+    0 0 0 3px rgba(30,136,229,0.35),
+    0 10px 25px rgba(30,136,229,0.35);
+}

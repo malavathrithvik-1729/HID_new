@@ -1,0 +1,74 @@
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:"Segoe UI", system-ui, sans-serif;
+  background: linear-gradient(135deg, #E8F2FF, #F6F9FF);
+}
+
+.auth-wrapper{
+  text-align:center;
+  background:#ffffff;
+  padding:40px 30px;
+  border-radius:18px;
+  width:100%;
+  max-width:360px;
+  box-shadow:0 20px 40px rgba(0,0,0,0.08);
+}
+
+.logo{
+  width:90px;
+  height:90px;
+  border-radius:50%;
+  object-fit:cover;
+  margin-bottom:16px;
+}
+
+h1{
+  font-size:22px;
+  margin-bottom:6px;
+}
+
+.sub{
+  font-size:14px;
+  color:#5f6f82;
+  margin-bottom:26px;
+}
+
+.actions{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+/* Buttons */
+.btn{
+  border:none;
+  border-radius:999px;
+  padding:12px;
+  font-size:16px;
+  cursor:pointer;
+  font-weight:600;
+  transition:all .2s ease;
+}
+
+.primary{
+  background: linear-gradient(135deg,#1E88E5,#42A5F5);
+  color:#fff;
+  box-shadow:0 8px 18px rgba(30,136,229,0.3);
+}
+
+.primary:hover{
+  transform:translateY(-1px);
+}
+
+.secondary{
+  background:#f1f4f8;
+  color:#1E88E5;
+}
+
+.secondary:hover{
+  background:#e6ebf3;
+}

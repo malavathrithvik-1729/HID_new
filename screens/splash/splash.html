@@ -38,11 +38,7 @@
     <span>✔ Verified</span>
   </div>
 
-  <button class="btn hero-btn"
-          aria-label="Explore V-Med ID"
-          onclick="scrollNext()">
-    Explore
-  </button>
+  <button class="btn hero-btn" onclick="gotoAuth()">Explore</button>
 
   <div class="scroll-indicator">
     ↓ Scroll to Learn More ↓
@@ -95,12 +91,7 @@
 
 <!-- FINAL CTA -->
 <section class="final-section fade-in">
-  <button class="btn big-btn"
-          aria-label="Get started with V-Med ID"
-          onclick="gotoLogin()">
-    Get Started
-  </button>
-</section>
+ <button class="btn big-btn" onclick="gotoAuth()">Get Started</button>
 
 <!-- FOOTER -->
 <footer class="footer">
@@ -109,10 +100,9 @@
 
 <!-- SCRIPTS -->
 <script>
-function gotoLogin(){
-  window.location.href = "../login/login.html";
+function gotoAuth(){
+  window.location.href = "../login/auth_choice.html";
 }
-
 function scrollNext(){
   document.getElementById("patients").scrollIntoView({ behavior: "smooth" });
 }

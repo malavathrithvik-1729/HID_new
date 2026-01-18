@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>V-Med ID | Login</title>
+  <link rel="stylesheet" href="login.css" />
+</head>
+<body>
+
+  <div class="login-container">
+
+    <!-- Logo -->
+    <img src="../../assets/images/logo.jpg" alt="V-Med ID Logo" class="logo" />
+
+    <h2>Login to V-Med ID</h2>
+    <p class="subtitle">Secure Virtual Medical Identity Access</p>
+
+    <!-- Login Form -->
+    <form id="loginForm">
+
+      <!-- Role Selection -->
+      <label for="role">Select Role</label>
+      <select id="role" required>
+        <option value="">-- Choose Role --</option>
+        <option value="patient">Patient</option>
+        <option value="doctor">Doctor</option>
+        <option value="government">Government</option>
+      </select>
+
+      <!-- User ID -->
+      <label for="userId">User ID</label>
+      <input
+        type="text"
+        id="userId"
+        placeholder="Enter your V-Med / Hospital / Govt ID"
+        required
+      />
+
+      <!-- Password -->
+      <label for="password">Password</label>
+      <input
+        type="password"
+        id="password"
+        placeholder="Enter your password"
+        required
+      />
+
+      <!-- Contact -->
+      <label for="contact">Phone Number or Email</label>
+      <input
+        type="text"
+        id="contact"
+        placeholder="Phone number or email"
+        required
+      />
+
+      <!-- Submit -->
+      <button type="submit">Proceed to OTP</button>
+
+    </form>
+
+  </div>
+
+  <!-- TEMP navigation (will be replaced by auth.js later) -->
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      window.location.href = "otp.html";
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>V-Med ID — Continue</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="auth_choice.css">
+</head>
+
+<body>
+
+<div class="auth-wrapper">
+
+  <img src="../../assets/images/logo.jpg"
+       class="logo"
+       alt="V-Med ID Logo">
+
+  <h1>Welcome to V-Med ID</h1>
+  <p class="sub">
+    Choose how you’d like to continue
+  </p>
+
+  <div class="actions">
+    <button class="btn primary"
+            onclick="gotoLogin()">
+      Login
+    </button>
+
+    <button class="btn secondary"
+            onclick="gotoSignup()">
+      Create Account
+    </button>
+  </div>
+
+</div>
+
+<script>
+function gotoLogin(){
+  window.location.href = "login.html";
+}
+
+function gotoSignup(){
+  window.location.href = "../signup/signup.html";
+}
+</script>
+
+</body>
+</html>
