@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>V-Med ID — Welcome</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="../../css/global.css">
+  <link rel="stylesheet" href="splash.css">
+</head>
+
+<body>
+
+<!-- PARALLAX GLOW BACKGROUND -->
+<div class="glow glow1"></div>
+<div class="glow glow2"></div>
+
+<!-- HERO SECTION -->
+<section class="hero" id="top">
+
+  <img src="../../assets/images/logo.jpg"
+       class="hero-logo"
+       alt="V-Med ID Logo">
+
+  <h1 class="hero-title">V-Med ID</h1>
+
+  <p class="hero-tagline">
+    Your lifelong digital health identity
+  </p>
+
+  <p class="hero-sub">
+    One health ID for your entire life — secure, smart, AI-powered.
+  </p>
+
+  <div class="trust-row">
+    <span>🔒 Privacy-first</span>
+    <span>🛡 Secure</span>
+    <span>✔ Verified</span>
+  </div>
+
+  <button class="btn hero-btn"
+          aria-label="Explore V-Med ID"
+          onclick="scrollNext()">
+    Explore
+  </button>
+
+  <div class="scroll-indicator">
+    ↓ Scroll to Learn More ↓
+  </div>
+</section>
+
+<!-- PATIENT SECTION -->
+<section class="info-section fade-in" id="patients">
+  <h2 class="section-title gradient-text">For Patients</h2>
+  <p class="section-desc">
+    Access all your medical records anywhere, anytime.
+    Store allergies, prescriptions, test results, and emergency details.
+  </p>
+
+  <div class="media-box">Future: Patient demo video or image</div>
+</section>
+
+<!-- DOCTOR SECTION -->
+<section class="info-section fade-in">
+  <h2 class="section-title gradient-text">For Doctors</h2>
+  <p class="section-desc">
+    Instant patient history, AI-powered clinical support,
+    and better treatment decisions.
+  </p>
+
+  <div class="media-box">Future: Doctor workflow animations</div>
+</section>
+
+<!-- GOVERNMENT SECTION -->
+<section class="info-section fade-in">
+  <h2 class="section-title gradient-text">For Government</h2>
+  <p class="section-desc">
+    Real-time analytics, disease prediction,
+    and population health monitoring.
+  </p>
+
+  <div class="media-box">Future: Maps & Dashboard Screenshots</div>
+</section>
+
+<!-- AI SECTION -->
+<section class="info-section fade-in">
+  <h2 class="section-title gradient-text">AI-Driven Healthcare</h2>
+  <p class="section-desc">
+    Predict risks early, receive expert AI suggestions,
+    and improve treatment accuracy.
+  </p>
+
+  <div class="media-box">Future: AI animations / charts</div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final-section fade-in">
+  <button class="btn big-btn"
+          aria-label="Get started with V-Med ID"
+          onclick="gotoLogin()">
+    Get Started
+  </button>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <p>© 2026 V-Med ID · Built for secure, intelligent healthcare</p>
+</footer>
+
+<!-- SCRIPTS -->
+<script>
+function gotoLogin(){
+  window.location.href = "../login/login.html";
+}
+
+function scrollNext(){
+  document.getElementById("patients").scrollIntoView({ behavior: "smooth" });
+}
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting){
+      entry.target.classList.add("visible");
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll(".fade-in")
+  .forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
