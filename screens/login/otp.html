@@ -30,34 +30,43 @@
 
   </div>
 
-  <script>
-    const verifyBtn = document.getElementById("verifyBtn");
-    const otpInput = document.getElementById("otp");
-    const error = document.getElementById("error");
+ <script>
+  const verifyBtn = document.getElementById("verifyBtn");
+  const otpInput = document.getElementById("otp");
+  const error = document.getElementById("error");
 
-    verifyBtn.addEventListener("click", () => {
-      const otp = otpInput.value.trim();
+  verifyBtn.addEventListener("click", () => {
+    const otp = otpInput.value.trim();
 
-      // Dummy OTP rule
-      if (!/^\d{6}$/.test(otp)) {
-        error.textContent = "Please enter a valid 6-digit OTP";
-        return;
-      }
+    // Dummy OTP rule
+    if (!/^\d{6}$/.test(otp)) {
+      error.textContent = "Please enter a valid 6-digit OTP";
+      return;
+    }
 
-      // TEMP role routing (will be replaced by Firebase later)
-      const role = sessionStorage.getItem("role");
+    const signupRole = sessionStorage.getItem("signupRole");
 
-      if (role === "patient") {
-        window.location.href = "../patient_dashboard/index.html";
-      } else if (role === "doctor") {
-        window.location.href = "../doctor_dashboard/index.html";
-      } else if (role === "government") {
-        window.location.href = "../gov_dashboard/index.html";
-      } else {
-        error.textContent = "Role not found. Please login again.";
-      }
-    });
-  </script>
+    // If coming from signup → go to create password
+    if (signupRole === "patient" || signupRole === "doctor") {
+      window.location.href = "../signup/create_password.html";
+      return;
+    }
+
+    // Otherwise → login flow (already existing)
+    const role = sessionStorage.getItem("role");
+
+    if (role === "patient") {
+      window.location.href = "../patient_dashboard/index.html";
+    } else if (role === "doctor") {
+      window.location.href = "../doctor_dashboard/index.html";
+    } else if (role === "government") {
+      window.location.href = "../gov_dashboard/index.html";
+    } else {
+      error.textContent = "Session expired. Please login again.";
+    }
+  });
+</script>
+
 
 </body>
 </html>

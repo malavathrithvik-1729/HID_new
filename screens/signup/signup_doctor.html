@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>V-Med ID | Doctor Application</title>
+  <link rel="stylesheet" href="../login/login.css" />
+</head>
+<body>
+
+  <div class="login-container" style="width:440px;">
+
+    <img src="../../assets/images/logo.jpg" alt="V-Med ID Logo" class="logo" />
+
+    <h2>Doctor Application</h2>
+    <p class="subtitle">
+      Fields marked with <b style="color:red">*</b> are compulsory
+    </p>
+
+    <form id="doctorForm">
+
+      <label>Full Name <span style="color:red">*</span></label>
+      <input type="text" required />
+
+      <label>Father Name <span style="color:red">*</span></label>
+      <input type="text" required />
+
+      <label>Gender <span style="color:red">*</span></label>
+      <select required>
+        <option value="">-- Select --</option>
+        <option>Male</option>
+        <option>Female</option>
+        <option>Other</option>
+      </select>
+
+      <label>Date of Birth <span style="color:red">*</span></label>
+      <input type="date" required />
+
+      <label>Aadhaar Number <span style="color:red">*</span></label>
+      <input type="text" placeholder="12-digit Aadhaar" required />
+
+      <label>ABHA Number <span style="color:red">*</span></label>
+      <input type="text" placeholder="ABHA Health ID" required />
+
+      <label>Address <span style="color:red">*</span></label>
+      <input type="text" required />
+
+      <label>
+        Email
+        <span style="color:red">*</span>
+        <small>(at least one contact required)</small>
+      </label>
+      <input type="email" id="email" />
+
+      <label>
+        Phone Number
+        <span style="color:red">*</span>
+        <small>(at least one contact required)</small>
+      </label>
+      <input type="tel" id="phone" />
+
+      <label>Specializations <span style="color:red">*</span></label>
+      <input
+        type="text"
+        placeholder="e.g., Cardiology, General Medicine"
+        required
+      />
+
+      <label>Practising Since <span style="color:red">*</span></label>
+      <input type="number" placeholder="Year (e.g., 2015)" required />
+
+      <hr style="margin:18px 0;">
+
+      <label>
+        Doctor Certificates / License
+        <span style="color:red">*</span>
+      </label>
+      <input
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png"
+        required
+      />
+
+      <label>Additional Certificates (optional)</label>
+      <input
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png"
+        multiple
+      />
+
+      <p id="contactError" style="color:#d32f2f; font-size:13px;"></p>
+
+      <button type="submit" style="margin-top:14px;">
+        Continue to OTP
+      </button>
+
+    </form>
+
+  </div>
+
+<script>
+  document.getElementById("doctorForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const email = document.getElementById("email").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+
+    if (!email && !phone) {
+      document.getElementById("contactError").textContent =
+        "Please provide at least one contact.";
+      return;
+    }
+
+    const data = {
+      fullName: e.target[0].value,
+      fatherName: e.target[1].value,
+      gender: e.target[2].value,
+      dob: e.target[3].value,
+      aadhaar: e.target[4].value,
+      abha: e.target[5].value,
+      address: e.target[6].value,
+      email,
+      phone,
+      specializations: e.target[9].value,
+      practisingSince: e.target[10].value
+    };
+
+    sessionStorage.setItem("signupRole", "doctor");
+    sessionStorage.setItem("email", email);
+    sessionStorage.setItem("applicationData", JSON.stringify(data));
+
+    window.location.href = "../login/otp.html";
+  });
+</script>
+
+</body>
+</html>
