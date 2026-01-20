@@ -1,3 +1,19 @@
+/* =========================================================
+   FIREBASE IMPORTS
+   ========================================================= */
+import { auth, db, storage } from "./firebase.js";
+
+import {
+  doc,
+  setDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 /* =========================================================
    VMED ID GENERATOR
@@ -14,29 +30,64 @@ function generateVMEDId(role, fullName) {
     throw new Error("Invalid role for VMED ID generation");
   }
 
-  // Normalize name
   const namePart = fullName
     .toLowerCase()
     .replace(/\s+/g, "");
 
-  // Random number (can be improved later)
   const numberPart = Math.floor(100 + Math.random() * 900);
 
   return `VMED-${roleLetter}-${namePart}-${numberPart}`;
 }
 
-import { auth, db } from "./firebase.js";
-import {
-  doc,
-  setDoc,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+/* =========================================================
+   FILE UPLOAD HELPER (USED BY BOTH PATIENT & DOCTOR)
+   ========================================================= */
+async function uploadFile(userId, file, folder) {
+  const fileRef = ref(storage, `${folder}/${userId}/${file.name}`);
+  await uploadBytes(fileRef, file);
+  return await getDownloadURL(fileRef);
+}
 
 /* =========================================================
    SAVE PATIENT APPLICATION
    ========================================================= */
 async function savePatientApplication(user, formData) {
   const userRef = doc(db, "users", user.uid);
+
+  // Mandatory upload
+  const bloodReportURL = await uploadFile(
+    user.uid,
+    formData.bloodReport,
+    "patient_reports"
+  );
+
+  // Optional uploads
+  let allergyReportURL = "";
+  if (formData.allergyReport) {
+    allergyReportURL = await uploadFile(
+      user.uid,
+      formData.allergyReport,
+      "patient_reports"
+    );
+  }
+
+  let surgeryReportURL = "";
+  if (formData.surgeryReport) {
+    surgeryReportURL = await uploadFile(
+      user.uid,
+      formData.surgeryReport,
+      "patient_reports"
+    );
+  }
+
+  let medicationReportURL = "";
+  if (formData.medicationReport) {
+    medicationReportURL = await uploadFile(
+      user.uid,
+      formData.medicationReport,
+      "patient_reports"
+    );
+  }
 
   const data = {
     vmedId: generateVMEDId("patient", formData.fullName),
@@ -62,10 +113,10 @@ async function savePatientApplication(user, formData) {
     patientData: {
       occupation: formData.occupation || "",
       reports: {
-        bloodReport: "pending_upload",
-        allergyReport: "optional",
-        surgeryReport: "optional",
-        medicationReport: "optional"
+        bloodReport: bloodReportURL,
+        allergyReport: allergyReportURL,
+        surgeryReport: surgeryReportURL,
+        medicationReport: medicationReportURL
       }
     }
   };
@@ -78,6 +129,26 @@ async function savePatientApplication(user, formData) {
    ========================================================= */
 async function saveDoctorApplication(user, formData) {
   const userRef = doc(db, "users", user.uid);
+
+  // Mandatory certificate
+  const certificateURL = await uploadFile(
+    user.uid,
+    formData.certificate,
+    "doctor_certificates"
+  );
+
+  // Optional extra certificates
+  let extraCertificateURLs = [];
+  if (formData.extraCertificates && formData.extraCertificates.length > 0) {
+    for (const file of formData.extraCertificates) {
+      const url = await uploadFile(
+        user.uid,
+        file,
+        "doctor_certificates"
+      );
+      extraCertificateURLs.push(url);
+    }
+  }
 
   const data = {
     role: "doctor",
@@ -103,7 +174,10 @@ async function saveDoctorApplication(user, formData) {
     doctorData: {
       specializations: formData.specializations,
       practisingSince: formData.practisingSince,
-      certificates: "pending_upload"
+      certificates: {
+        main: certificateURL,
+        additional: extraCertificateURLs
+      }
     }
   };
 
@@ -111,7 +185,7 @@ async function saveDoctorApplication(user, formData) {
 }
 
 /* =========================================================
-   EXPORT
+   EXPORTS
    ========================================================= */
 export {
   savePatientApplication,

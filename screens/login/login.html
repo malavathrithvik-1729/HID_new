@@ -18,7 +18,7 @@
     <!-- Login Form -->
     <form id="loginForm">
 
-      <!-- Role Selection -->
+      <!-- Role Selection (for UI clarity & safety check) -->
       <label for="role">Select Role</label>
       <select id="role" required>
         <option value="">-- Choose Role --</option>
@@ -27,12 +27,12 @@
         <option value="government">Government</option>
       </select>
 
-      <!-- User ID -->
-      <label for="userId">User ID</label>
+      <!-- VMED ID -->
+      <label for="userId">V-Med ID</label>
       <input
         type="text"
         id="userId"
-        placeholder="Enter your V-Med / Hospital / Govt ID"
+        placeholder="VMED-p-name-123"
         required
       />
 
@@ -45,15 +45,6 @@
         required
       />
 
-      <!-- Contact -->
-      <label for="contact">Phone Number or Email</label>
-      <input
-        type="text"
-        id="contact"
-        placeholder="Phone number or email"
-        required
-      />
-
       <!-- Submit -->
       <button type="submit">Proceed to OTP</button>
 
@@ -61,11 +52,40 @@
 
   </div>
 
-  <!-- TEMP navigation (will be replaced by auth.js later) -->
-  <script>
-    document.getElementById("loginForm").addEventListener("submit", function (e) {
+  <!-- LOGIN LOGIC -->
+  <script type="module">
+    import { loginWithVMEDId } from "../../js/auth.js";
+
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      window.location.href = "otp.html";
+
+      const selectedRole = document.getElementById("role").value;
+      const vmedId = document.getElementById("userId").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!selectedRole) {
+        alert("Please select a role.");
+        return;
+      }
+
+      try {
+        const result = await loginWithVMEDId(vmedId, password);
+
+        // Optional safety check: role mismatch
+        if (result.role !== selectedRole) {
+          alert("Selected role does not match this V-Med ID.");
+          return;
+        }
+
+        // Store role for OTP → dashboard routing
+        sessionStorage.setItem("role", result.role);
+
+        // Go to OTP page
+        window.location.href = "otp.html";
+
+      } catch (error) {
+        alert(error.message);
+      }
     });
   </script>
 

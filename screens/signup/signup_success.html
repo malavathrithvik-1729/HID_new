@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>V-Med ID | Registration Successful</title>
+  <link rel="stylesheet" href="../login/login.css" />
+</head>
+<body>
+
+  <div class="login-container">
+
+    <img src="../../assets/images/logo.jpg" alt="V-Med ID Logo" class="logo" />
+
+    <h2>Registration Successful 🎉</h2>
+
+    <p class="subtitle">
+      Your Virtual Medical ID has been created successfully.
+    </p>
+
+    <div
+      style="
+        background:#f4f6f8;
+        padding:14px;
+        border-radius:10px;
+        margin:16px 0;
+        font-weight:600;
+        color:#203a43;
+        word-break:break-all;
+      "
+      id="vmedIdBox"
+    >
+      Loading VMED ID...
+    </div>
+
+    <p class="subtitle">
+      Please save this ID carefully.  
+      You will use it for future logins.
+    </p>
+
+    <button id="goDashboardBtn">
+      Go to Dashboard
+    </button>
+
+  </div>
+
+ <script type="module">
+  import { auth, db } from "../../js/firebase.js";
+  import {
+    doc,
+    getDoc
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import {
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+  const vmedBox = document.getElementById("vmedIdBox");
+  const btn = document.getElementById("goDashboardBtn");
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      vmedBox.textContent = "Session expired. Please login again.";
+      btn.style.display = "none";
+      return;
+    }
+
+    const docRef = doc(db, "users", user.uid);
+    const snap = await getDoc(docRef);
+
+    if (!snap.exists()) {
+      vmedBox.textContent = "User record not found.";
+      btn.style.display = "none";
+      return;
+    }
+
+    const data = snap.data();
+
+    // ✅ SHOW VMED ID
+    vmedBox.textContent = data.vmedId;
+
+    // ✅ DASHBOARD ROUTING
+    btn.addEventListener("click", () => {
+      if (data.role === "patient") {
+        window.location.href = "../patient_dashboard/index.html";
+      } else if (data.role === "doctor") {
+        window.location.href = "../doctor_dashboard/index.html";
+      } else if (data.role === "government") {
+        window.location.href = "../gov_dashboard/index.html";
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
