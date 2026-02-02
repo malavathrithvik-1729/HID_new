@@ -1,19 +1,13 @@
 /* =========================================================
    FIREBASE IMPORTS
    ========================================================= */
-import { auth, db, storage } from "./firebase.js";
+import { auth, db } from "./firebase.js";
 
 import {
   doc,
   setDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-import {
-  ref,
-  uploadBytes,
-  getDownloadURL
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 /* =========================================================
    VMED ID GENERATOR
@@ -40,14 +34,12 @@ function generateVMEDId(role, fullName) {
 }
 
 /* =========================================================
-   FILE UPLOAD HELPER (USED BY BOTH PATIENT & DOCTOR)
+   FILE UPLOAD HELPER (DISABLED — MANUAL DOCUMENTS ONLY)
    ========================================================= */
-async function uploadFile(userId, file, folder) {
-  if (!file) return "";
-
-  const fileRef = ref(storage, `${folder}/${userId}/${file.name}`);
-  await uploadBytes(fileRef, file);
-  return await getDownloadURL(fileRef);
+async function uploadFile() {
+  // ❌ Firebase Storage removed
+  // ✅ Documents are added manually via Firestore console
+  return "";
 }
 
 /* =========================================================
@@ -56,31 +48,11 @@ async function uploadFile(userId, file, folder) {
 async function savePatientApplication(user, formData) {
   const userRef = doc(db, "users", user.uid);
 
-  // Mandatory upload
-  const bloodReportURL = await uploadFile(
-    user.uid,
-    formData.bloodReport,
-    "patient_reports"
-  );
-
-  // Optional uploads
-  const allergyReportURL = await uploadFile(
-    user.uid,
-    formData.allergyReport,
-    "patient_reports"
-  );
-
-  const surgeryReportURL = await uploadFile(
-    user.uid,
-    formData.surgeryReport,
-    "patient_reports"
-  );
-
-  const medicationReportURL = await uploadFile(
-    user.uid,
-    formData.medicationReport,
-    "patient_reports"
-  );
+  // ❌ Uploads disabled → empty placeholders
+  const bloodReportURL = "";
+  const allergyReportURL = "";
+  const surgeryReportURL = "";
+  const medicationReportURL = "";
 
   const data = {
     vmedId: generateVMEDId("patient", formData.fullName),
@@ -112,6 +84,8 @@ async function savePatientApplication(user, formData) {
         medicationReport: medicationReportURL
       }
     }
+
+    // documents will be added manually later
   };
 
   await setDoc(userRef, data);
@@ -123,25 +97,9 @@ async function savePatientApplication(user, formData) {
 async function saveDoctorApplication(user, formData) {
   const userRef = doc(db, "users", user.uid);
 
-  // Mandatory certificate
-  const certificateURL = await uploadFile(
-    user.uid,
-    formData.certificate,
-    "doctor_certificates"
-  );
-
-  // Optional extra certificates
-  let extraCertificateURLs = [];
-  if (formData.extraCertificates && formData.extraCertificates.length > 0) {
-    for (const file of formData.extraCertificates) {
-      const url = await uploadFile(
-        user.uid,
-        file,
-        "doctor_certificates"
-      );
-      extraCertificateURLs.push(url);
-    }
-  }
+  // ❌ Uploads disabled → empty placeholders
+  const certificateURL = "";
+  const extraCertificateURLs = [];
 
   const data = {
     vmedId: generateVMEDId("doctor", formData.fullName),
@@ -172,6 +130,8 @@ async function saveDoctorApplication(user, formData) {
         additional: extraCertificateURLs
       }
     }
+
+    // certificates verified & inserted manually by admin
   };
 
   await setDoc(userRef, data);
