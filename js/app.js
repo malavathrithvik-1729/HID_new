@@ -43,6 +43,8 @@ function generateVMEDId(role, fullName) {
    FILE UPLOAD HELPER (USED BY BOTH PATIENT & DOCTOR)
    ========================================================= */
 async function uploadFile(userId, file, folder) {
+  if (!file) return "";
+
   const fileRef = ref(storage, `${folder}/${userId}/${file.name}`);
   await uploadBytes(fileRef, file);
   return await getDownloadURL(fileRef);
@@ -62,32 +64,23 @@ async function savePatientApplication(user, formData) {
   );
 
   // Optional uploads
-  let allergyReportURL = "";
-  if (formData.allergyReport) {
-    allergyReportURL = await uploadFile(
-      user.uid,
-      formData.allergyReport,
-      "patient_reports"
-    );
-  }
+  const allergyReportURL = await uploadFile(
+    user.uid,
+    formData.allergyReport,
+    "patient_reports"
+  );
 
-  let surgeryReportURL = "";
-  if (formData.surgeryReport) {
-    surgeryReportURL = await uploadFile(
-      user.uid,
-      formData.surgeryReport,
-      "patient_reports"
-    );
-  }
+  const surgeryReportURL = await uploadFile(
+    user.uid,
+    formData.surgeryReport,
+    "patient_reports"
+  );
 
-  let medicationReportURL = "";
-  if (formData.medicationReport) {
-    medicationReportURL = await uploadFile(
-      user.uid,
-      formData.medicationReport,
-      "patient_reports"
-    );
-  }
+  const medicationReportURL = await uploadFile(
+    user.uid,
+    formData.medicationReport,
+    "patient_reports"
+  );
 
   const data = {
     vmedId: generateVMEDId("patient", formData.fullName),
@@ -151,10 +144,10 @@ async function saveDoctorApplication(user, formData) {
   }
 
   const data = {
+    vmedId: generateVMEDId("doctor", formData.fullName),
     role: "doctor",
     status: "pending",
     createdAt: serverTimestamp(),
-    vmedId: generateVMEDId("doctor", formData.fullName),
 
     contact: {
       email: formData.email || "",

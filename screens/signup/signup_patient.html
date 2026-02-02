@@ -105,7 +105,18 @@
       return;
     }
 
-    // Store application data
+    // ✅ FILE INPUTS (CRITICAL FIX)
+    const bloodReport = e.target[10].files[0];      // mandatory
+    const allergyReport = e.target[11].files[0];    // optional
+    const surgeryReport = e.target[12].files[0];    // optional
+    const medicationReport = e.target[13].files[0]; // optional
+
+    if (!bloodReport) {
+      alert("Blood report is required.");
+      return;
+    }
+
+    // ✅ BUILD formData EXACTLY AS savePatientApplication EXPECTS
     const data = {
       fullName: e.target[0].value,
       fatherName: e.target[1].value,
@@ -114,14 +125,36 @@
       aadhaar: e.target[4].value,
       abha: e.target[5].value,
       address: e.target[6].value,
+
       email,
       phone,
-      occupation: e.target[9].value
+      occupation: e.target[9].value,
+
+      // 🔑 FILE OBJECTS (THIS FIXES THE BUG)
+      bloodReport,
+      allergyReport,
+      surgeryReport,
+      medicationReport
     };
 
     sessionStorage.setItem("signupRole", "patient");
     sessionStorage.setItem("email", email);
-    sessionStorage.setItem("applicationData", JSON.stringify(data));
+    sessionStorage.setItem("applicationData", JSON.stringify({
+      ...data,
+      // ❌ remove File objects before storing
+      bloodReport: null,
+      allergyReport: null,
+      surgeryReport: null,
+      medicationReport: null
+    }));
+
+    // ✅ STORE FILES TEMPORARILY IN MEMORY (window object)
+    window.__patientFiles = {
+      bloodReport,
+      allergyReport,
+      surgeryReport,
+      medicationReport
+    };
 
     window.location.href = "../login/otp.html";
   });

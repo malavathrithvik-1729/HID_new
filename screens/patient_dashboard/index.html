@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>V-Med ID | Patient Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: #f4f6f8;
+    }
+    header {
+      background: #1e88e5;
+      color: white;
+      padding: 16px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    main {
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      padding: 16px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+    }
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #e53935;
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    Patient Dashboard
+  </header>
+
+  <main>
+
+    <div class="card">
+      <h3>Welcome 👋</h3>
+      <p>This is the patient dashboard (protected).</p>
+    </div>
+
+    <div class="card">
+      <h3>Your Medical Reports</h3>
+      <p>(Reports will appear here later)</p>
+    </div>
+
+    <button id="logoutBtn">Logout</button>
+
+  </main>
+
+  <!-- ROUTE GUARD -->
+  <script type="module">
+    import { protectRoute } from "../../js/routeGuard.js";
+    protectRoute("patient");
+  </script>
+
+</body>
+</html>
