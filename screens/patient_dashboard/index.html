@@ -1,72 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>V-Med ID | Patient Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <title>Patient Dashboard | V-Med ID</title>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: "Segoe UI", sans-serif;
-      background: #f4f6f8;
-    }
-    header {
-      background: #1e88e5;
-      color: white;
-      padding: 16px;
-      font-size: 18px;
-      font-weight: 600;
-    }
-    main {
-      padding: 20px;
-    }
-    .card {
-      background: white;
-      padding: 16px;
-      border-radius: 10px;
-      margin-bottom: 16px;
-      box-shadow: 0 6px 14px rgba(0,0,0,0.08);
-    }
-    button {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      background: #e53935;
-      color: white;
-      cursor: pointer;
-      font-weight: 600;
-    }
-  </style>
+  <!-- Global + Dashboard Styles -->
+  <link rel="stylesheet" href="../../css/global.css">
+  <link rel="stylesheet" href="style.css">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-
 <body>
 
-  <header>
-    Patient Dashboard
-  </header>
+<div class="dashboard-root">
 
-  <main>
+  <!-- ================= SIDEBAR ================= -->
+  <aside id="sideBar" class="sidebar">
 
-    <div class="card">
-      <h3>Welcome 👋</h3>
-      <p>This is the patient dashboard (protected).</p>
+    <!-- BRAND -->
+    <div class="sidebar-header">
+      <span class="brand">V-Med</span>
+      <button id="collapseBtn" class="collapse-btn">☰</button>
     </div>
 
-    <div class="card">
-      <h3>Your Medical Reports</h3>
-      <p>(Reports will appear here later)</p>
+    <!-- PROFILE -->
+    <div class="profile-box">
+      <img src="../../assets/images/logo.jpg" class="avatar" alt="User Avatar">
+
+      <div class="profile-info">
+        <strong id="userName">Patient</strong>
+
+        <div class="role-row">
+          <span class="role-badge">Patient</span>
+          <span class="status-dot" title="Online"></span>
+        </div>
+
+        <div class="small muted" id="userVmed">VMED-XXXX</div>
+      </div>
     </div>
 
-    <button id="logoutBtn">Logout</button>
+    <!-- NAVIGATION -->
+    <nav class="nav">
+      <button class="nav-item active" data-page="home">
+        <span class="icon">🏠</span>
+        <span class="nav-text">Home</span>
+      </button>
+
+      <button class="nav-item" data-page="medications">
+        <span class="icon">💊</span>
+        <span class="nav-text">Medications</span>
+      </button>
+
+      <button class="nav-item" data-page="history">
+        <span class="icon">📜</span>
+        <span class="nav-text">History</span>
+      </button>
+
+      <button class="nav-item" data-page="ai">
+        <span class="icon">🤖</span>
+        <span class="nav-text">AI</span>
+      </button>
+
+      <button class="nav-item" data-page="settings">
+        <span class="icon">⚙️</span>
+        <span class="nav-text">Settings</span>
+      </button>
+    </nav>
+
+    <!-- FOOTER -->
+    <div class="sidebar-footer">
+      <button class="logout-btn" id="logoutBtn">🚪 Logout</button>
+    </div>
+
+  </aside>
+
+  <!-- ================= MAIN CONTENT ================= -->
+  <main id="content" class="main">
+
+    <!-- HOME DEFAULT CONTENT -->
+    <section class="home-welcome">
+
+      <h1 id="greetingText">
+        Hello 👋
+      </h1>
+
+      <p class="muted">
+        Welcome back to your V-Med health dashboard.
+      </p>
+
+      <div class="card status-card">
+        ✅ Your health status looks stable today.
+      </div>
+
+    </section>
 
   </main>
 
-  <!-- ROUTE GUARD -->
-  <script type="module">
-    import { protectRoute } from "../../js/routeGuard.js";
-    protectRoute("patient");
-  </script>
+</div>
+
+<!-- DASHBOARD CONTROLLER -->
+<script type="module" src="js/dashboard.js"></script>
+<script type="module" src="js/userData.js"></script>
+
+<!-- WISHES SCRIPT -->
+<script>
+  (function giveWishes(){
+    const greetingEl = document.getElementById("greetingText");
+    const nameEl = document.getElementById("userName");
+
+    const hour = new Date().getHours();
+    let wish = "Hello";
+
+    if (hour >= 5 && hour < 12) wish = "Good Morning";
+    else if (hour >= 12 && hour < 17) wish = "Good Afternoon";
+    else wish = "Good Evening";
+
+    const name = nameEl ? nameEl.innerText : "Patient";
+    greetingEl.innerText = `${wish}, ${name} 👋`;
+  })();
+</script>
 
 </body>
 </html>

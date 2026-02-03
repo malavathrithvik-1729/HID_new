@@ -70,21 +70,22 @@
 
       <hr style="margin:18px 0;">
 
+      <!-- 🔗 GOOGLE DRIVE URL INPUTS -->
+
       <label>
-        Doctor Certificates / License
+        Doctor License / Certificate (Google Drive URL)
         <span style="color:red">*</span>
       </label>
       <input
-        type="file"
-        accept=".pdf,.jpg,.jpeg,.png"
+        type="url"
+        placeholder="https://drive.google.com/file/d/..."
         required
       />
 
-      <label>Additional Certificates (optional)</label>
+      <label>Additional Certificates (optional – Google Drive URLs)</label>
       <input
-        type="file"
-        accept=".pdf,.jpg,.jpeg,.png"
-        multiple
+        type="url"
+        placeholder="https://drive.google.com/file/d/..."
       />
 
       <p id="contactError" style="color:#d32f2f; font-size:13px;"></p>
@@ -110,6 +111,19 @@
       return;
     }
 
+    const mainCertUrl = e.target[11].value.trim();
+    const extraCertUrl = e.target[12].value.trim();
+
+    if (!mainCertUrl) {
+      alert("Doctor license URL is required.");
+      return;
+    }
+
+    if (!mainCertUrl.includes("drive.google.com")) {
+      alert("Please provide a valid Google Drive link.");
+      return;
+    }
+
     const data = {
       fullName: e.target[0].value,
       fatherName: e.target[1].value,
@@ -121,7 +135,20 @@
       email,
       phone,
       specializations: e.target[9].value,
-      practisingSince: e.target[10].value
+      practisingSince: e.target[10].value,
+
+      documents: [
+        {
+          type: "certificate",
+          title: "Medical License",
+          externalUrl: mainCertUrl
+        },
+        ...(extraCertUrl ? [{
+          type: "certificate",
+          title: "Additional Certificate",
+          externalUrl: extraCertUrl
+        }] : [])
+      ]
     };
 
     sessionStorage.setItem("signupRole", "doctor");

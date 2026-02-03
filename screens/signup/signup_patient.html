@@ -63,24 +63,26 @@
 
       <hr style="margin:18px 0;">
 
+      <!-- 🔗 GOOGLE DRIVE URL INPUTS -->
+
       <label>
-        Recent Blood Report
+        Blood Report (Google Drive URL)
         <span style="color:red">*</span>
       </label>
       <input
-        type="file"
-        accept=".pdf,.jpg,.jpeg,.png"
+        type="url"
+        placeholder="https://drive.google.com/file/d/..."
         required
       />
 
-      <label>Allergy Report (optional)</label>
-      <input type="file" accept=".pdf,.jpg,.jpeg,.png" />
+      <label>Allergy Report (optional – Google Drive URL)</label>
+      <input type="url" placeholder="https://drive.google.com/file/d/..." />
 
-      <label>Surgery Report (optional)</label>
-      <input type="file" accept=".pdf,.jpg,.jpeg,.png" />
+      <label>Surgery Report (optional – Google Drive URL)</label>
+      <input type="url" placeholder="https://drive.google.com/file/d/..." />
 
-      <label>Medication List (optional)</label>
-      <input type="file" accept=".pdf,.jpg,.jpeg,.png" />
+      <label>Medication List (optional – Google Drive URL)</label>
+      <input type="url" placeholder="https://drive.google.com/file/d/..." />
 
       <p id="contactError" style="color:#d32f2f; font-size:13px;"></p>
 
@@ -105,18 +107,23 @@
       return;
     }
 
-    // ✅ FILE INPUTS (CRITICAL FIX)
-    const bloodReport = e.target[10].files[0];      // mandatory
-    const allergyReport = e.target[11].files[0];    // optional
-    const surgeryReport = e.target[12].files[0];    // optional
-    const medicationReport = e.target[13].files[0]; // optional
+    // 🔗 URL INPUTS
+    const bloodReportUrl = e.target[10].value.trim();      // mandatory
+    const allergyReportUrl = e.target[11].value.trim();    // optional
+    const surgeryReportUrl = e.target[12].value.trim();    // optional
+    const medicationReportUrl = e.target[13].value.trim();// optional
 
-    if (!bloodReport) {
-      alert("Blood report is required.");
+    if (!bloodReportUrl) {
+      alert("Blood report URL is required.");
       return;
     }
 
-    // ✅ BUILD formData EXACTLY AS savePatientApplication EXPECTS
+    // Optional: basic Google Drive URL check
+    if (!bloodReportUrl.includes("drive.google.com")) {
+      alert("Please provide a valid Google Drive link.");
+      return;
+    }
+
     const data = {
       fullName: e.target[0].value,
       fatherName: e.target[1].value,
@@ -130,31 +137,34 @@
       phone,
       occupation: e.target[9].value,
 
-      // 🔑 FILE OBJECTS (THIS FIXES THE BUG)
-      bloodReport,
-      allergyReport,
-      surgeryReport,
-      medicationReport
+      // 🔗 DOCUMENT URL REFERENCES
+      documents: [
+        {
+          type: "report",
+          title: "Blood Test",
+          externalUrl: bloodReportUrl
+        },
+        ...(allergyReportUrl ? [{
+          type: "report",
+          title: "Allergy Report",
+          externalUrl: allergyReportUrl
+        }] : []),
+        ...(surgeryReportUrl ? [{
+          type: "report",
+          title: "Surgery Report",
+          externalUrl: surgeryReportUrl
+        }] : []),
+        ...(medicationReportUrl ? [{
+          type: "report",
+          title: "Medication List",
+          externalUrl: medicationReportUrl
+        }] : [])
+      ]
     };
 
     sessionStorage.setItem("signupRole", "patient");
     sessionStorage.setItem("email", email);
-    sessionStorage.setItem("applicationData", JSON.stringify({
-      ...data,
-      // ❌ remove File objects before storing
-      bloodReport: null,
-      allergyReport: null,
-      surgeryReport: null,
-      medicationReport: null
-    }));
-
-    // ✅ STORE FILES TEMPORARILY IN MEMORY (window object)
-    window.__patientFiles = {
-      bloodReport,
-      allergyReport,
-      surgeryReport,
-      medicationReport
-    };
+    sessionStorage.setItem("applicationData", JSON.stringify(data));
 
     window.location.href = "../login/otp.html";
   });

@@ -34,27 +34,14 @@ function generateVMEDId(role, fullName) {
 }
 
 /* =========================================================
-   FILE UPLOAD HELPER (DISABLED — MANUAL DOCUMENTS ONLY)
-   ========================================================= */
-async function uploadFile() {
-  // ❌ Firebase Storage removed
-  // ✅ Documents are added manually via Firestore console
-  return "";
-}
-
-/* =========================================================
    SAVE PATIENT APPLICATION
+   (DOCUMENT URLs STORED IN FIRESTORE)
    ========================================================= */
 async function savePatientApplication(user, formData) {
   const userRef = doc(db, "users", user.uid);
 
-  // ❌ Uploads disabled → empty placeholders
-  const bloodReportURL = "";
-  const allergyReportURL = "";
-  const surgeryReportURL = "";
-  const medicationReportURL = "";
-
   const data = {
+    uid: user.uid,
     vmedId: generateVMEDId("patient", formData.fullName),
     role: "patient",
     status: "pending",
@@ -76,16 +63,13 @@ async function savePatientApplication(user, formData) {
     },
 
     patientData: {
-      occupation: formData.occupation || "",
-      reports: {
-        bloodReport: bloodReportURL,
-        allergyReport: allergyReportURL,
-        surgeryReport: surgeryReportURL,
-        medicationReport: medicationReportURL
-      }
-    }
+      occupation: formData.occupation || ""
+    },
 
-    // documents will be added manually later
+    // ✅ DOCUMENT REFERENCES (GOOGLE DRIVE URLs)
+    documents: Array.isArray(formData.documents)
+      ? formData.documents
+      : []
   };
 
   await setDoc(userRef, data);
@@ -93,15 +77,13 @@ async function savePatientApplication(user, formData) {
 
 /* =========================================================
    SAVE DOCTOR APPLICATION
+   (CERTIFICATE URLs STORED IN FIRESTORE)
    ========================================================= */
 async function saveDoctorApplication(user, formData) {
   const userRef = doc(db, "users", user.uid);
 
-  // ❌ Uploads disabled → empty placeholders
-  const certificateURL = "";
-  const extraCertificateURLs = [];
-
   const data = {
+    uid: user.uid,
     vmedId: generateVMEDId("doctor", formData.fullName),
     role: "doctor",
     status: "pending",
@@ -124,14 +106,13 @@ async function saveDoctorApplication(user, formData) {
 
     doctorData: {
       specializations: formData.specializations,
-      practisingSince: formData.practisingSince,
-      certificates: {
-        main: certificateURL,
-        additional: extraCertificateURLs
-      }
-    }
+      practisingSince: formData.practisingSince
+    },
 
-    // certificates verified & inserted manually by admin
+    // ✅ CERTIFICATE REFERENCES (GOOGLE DRIVE URLs)
+    documents: Array.isArray(formData.documents)
+      ? formData.documents
+      : []
   };
 
   await setDoc(userRef, data);
