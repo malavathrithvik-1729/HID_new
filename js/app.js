@@ -26,12 +26,14 @@ function generateVMEDId(role, fullName) {
 
   const namePart = fullName
     .toLowerCase()
-    .replace(/\s+/g, "");
+    .replace(/\s+/g, "")
+    .slice(0, 12); // 🔒 limit length
 
-  const numberPart = Math.floor(100 + Math.random() * 900);
+  const numberPart = Math.floor(1000 + Math.random() * 9000); // 🔒 4 digits
 
   return `VMED-${roleLetter}-${namePart}-${numberPart}`;
 }
+
 
 /* =========================================================
    SAVE PATIENT APPLICATION

@@ -3,122 +3,47 @@
 <head>
   <meta charset="UTF-8">
   <title>Patient Dashboard | V-Med ID</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Global + Dashboard Styles -->
-  <link rel="stylesheet" href="../../css/global.css">
   <link rel="stylesheet" href="style.css">
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script type="module">
+    import { protectRoute } from "../../js/routeGuard.js";
+    protectRoute("patient");
+  </script>
 </head>
-<body>
 
+<body>
 <div class="dashboard-root">
 
-  <!-- ================= SIDEBAR ================= -->
-  <aside id="sideBar" class="sidebar">
-
-    <!-- BRAND -->
+  <aside class="sidebar">
     <div class="sidebar-header">
-      <span class="brand">V-Med</span>
-      <button id="collapseBtn" class="collapse-btn">☰</button>
+       <h2 class="logo">V-MED ID</h2>
     </div>
-
-    <!-- PROFILE -->
+    
     <div class="profile-box">
-      <img src="../../assets/images/logo.jpg" class="avatar" alt="User Avatar">
-
-      <div class="profile-info">
-        <strong id="userName">Patient</strong>
-
-        <div class="role-row">
-          <span class="role-badge">Patient</span>
-          <span class="status-dot" title="Online"></span>
-        </div>
-
-        <div class="small muted" id="userVmed">VMED-XXXX</div>
-      </div>
+      <strong id="userName">Loading...</strong>
+      <div id="userVmed" class="small muted">VMED-XXXX-XXXX</div>
     </div>
 
-    <!-- NAVIGATION -->
-    <nav class="nav">
-      <button class="nav-item active" data-page="home">
-        <span class="icon">🏠</span>
-        <span class="nav-text">Home</span>
-      </button>
-
-      <button class="nav-item" data-page="medications">
-        <span class="icon">💊</span>
-        <span class="nav-text">Medications</span>
-      </button>
-
-      <button class="nav-item" data-page="history">
-        <span class="icon">📜</span>
-        <span class="nav-text">History</span>
-      </button>
-
-      <button class="nav-item" data-page="ai">
-        <span class="icon">🤖</span>
-        <span class="nav-text">AI</span>
-      </button>
-
-      <button class="nav-item" data-page="settings">
-        <span class="icon">⚙️</span>
-        <span class="nav-text">Settings</span>
-      </button>
+    <nav class="nav-menu">
+      <button class="nav-item active" onclick="loadPage('home')">Dashboard</button>
+      <button class="nav-item" onclick="loadPage('history')">Medical History</button>
+      <button class="nav-item" onclick="loadPage('medications')">Medications</button>
+      <button class="nav-item" onclick="loadPage('settings')">Settings</button>
     </nav>
-
-    <!-- FOOTER -->
-    <div class="sidebar-footer">
-      <button class="logout-btn" id="logoutBtn">🚪 Logout</button>
-    </div>
-
   </aside>
 
-  <!-- ================= MAIN CONTENT ================= -->
-  <main id="content" class="main">
-
-    <!-- HOME DEFAULT CONTENT -->
-    <section class="home-welcome">
-
-      <h1 id="greetingText">
-        Hello 👋
-      </h1>
-
-      <p class="muted">
-        Welcome back to your V-Med health dashboard.
-      </p>
-
-      <div class="card status-card">
-        ✅ Your health status looks stable today.
-      </div>
-
-    </section>
-
+  <main class="main">
+    <div id="content">
+        <div class="loader">Loading your health records...</div>
+    </div>
   </main>
 
 </div>
 
-<!-- DASHBOARD CONTROLLER -->
-<script type="module" src="js/dashboard.js"></script>
-<script type="module" src="js/userData.js"></script>
-
-<!-- WISHES SCRIPT -->
-<script>
-  (function giveWishes(){
-    const greetingEl = document.getElementById("greetingText");
-    const nameEl = document.getElementById("userName");
-
-    const hour = new Date().getHours();
-    let wish = "Hello";
-
-    if (hour >= 5 && hour < 12) wish = "Good Morning";
-    else if (hour >= 12 && hour < 17) wish = "Good Afternoon";
-    else wish = "Good Evening";
-
-    const name = nameEl ? nameEl.innerText : "Patient";
-    greetingEl.innerText = `${wish}, ${name} 👋`;
-  })();
-</script>
+<script type="module" src="./js/userData.js"></script>
+<script type="module" src="./js/dashboard.js"></script>
 
 </body>
 </html>

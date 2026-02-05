@@ -1,68 +1,49 @@
-import { auth, db } from "../../js/firebase.js";
-import {
-  doc,
-  getDoc
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { auth, db } from "../../../js/firebase.js"; 
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-import {
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+window.vmedUser = null; 
 
-/* =========================================================
-   FETCH USER DATA & UPDATE SIDEBAR + GREETING
-   ========================================================= */
 onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    // Not logged in → redirect
-    window.location.href = "../login/login.html";
-    return;
-  }
-
-  try {
-    const userRef = doc(db, "users", user.uid);
-    const snap = await getDoc(userRef);
-
-    if (!snap.exists()) {
-      alert("User record not found.");
-      return;
+    if (user) {
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            window.vmedUser = docSnap.data();
+            updateDashboardUI(); 
+        }
+    } else {
+        window.location.href = "../login/login.html";
     }
-
-    const data = snap.data();
-
-    // Sidebar elements
-    const nameEl = document.getElementById("userName");
-    const vmedEl = document.getElementById("userVmed");
-
-    if (nameEl) {
-      nameEl.innerText = data.identity?.fullName || "Patient";
-    }
-
-    if (vmedEl) {
-      vmedEl.innerText = data.vmedId || "VMED-XXXX";
-    }
-
-    // Greeting
-    updateGreeting(data.identity?.fullName || "Patient");
-
-  } catch (err) {
-    console.error("Failed to load user data:", err);
-    alert("Unable to load user data.");
-  }
 });
 
-/* =========================================================
-   GREETING (WISHES)
-   ========================================================= */
-function updateGreeting(name) {
-  const greetingEl = document.getElementById("greetingText");
-  if (!greetingEl) return;
+export function updateDashboardUI() {
+    const data = window.vmedUser;
+    if (!data) return;
 
-  const hour = new Date().getHours();
-  let wish = "Hello";
+    // Sidebar
+    setText("userName", data.identity.fullName);
+    setText("userVmed", data.vmedId);
 
-  if (hour >= 5 && hour < 12) wish = "Good Morning";
-  else if (hour >= 12 && hour < 17) wish = "Good Afternoon";
-  else wish = "Good Evening";
+    // If main content isn't loaded yet, stop here
+    if (!document.getElementById("detailName")) return;
 
-  greetingEl.innerText = `${wish}, ${name} 👋`;
+    // Main Content
+    setText("greetingText", `Welcome back, ${data.identity.fullName.split(' ')[0]} 👋`);
+    setText("detailName", data.identity.fullName);
+    setText("detailFatherName", data.identity.fatherName);
+    setText("detailGender", data.identity.gender);
+    setText("detailDob", data.identity.dob);
+    setText("detailEmail", data.contact.email);
+    setText("detailPhone", data.contact.phone);
+    
+    const aadhaar = data.identity.aadhaar;
+    setText("detailAadhaar", aadhaar ? `•••• •••• ${aadhaar.slice(-4)}` : "Not Linked");
+    setText("detailAbha", data.identity.abha || "Not Generated");
+}
+
+// ONLY ONE COPY OF THIS FUNCTION
+function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
 }

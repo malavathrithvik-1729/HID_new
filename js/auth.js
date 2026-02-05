@@ -38,7 +38,7 @@ async function signupUser(email, password) {
    ========================================================= */
 async function loginWithVMEDId(vmedId, password) {
   try {
-    // 1️⃣ Find user document using VMED ID
+    // 1️⃣ Find Firestore document using VMED ID
     const q = query(
       collection(db, "users"),
       where("vmedId", "==", vmedId)
@@ -50,22 +50,29 @@ async function loginWithVMEDId(vmedId, password) {
       throw new Error("Invalid V-Med ID");
     }
 
-    const userData = snapshot.docs[0].data();
-    const email = userData.contact.email;
+    // 🔑 IMPORTANT: capture document + UID
+    const docSnap = snapshot.docs[0];
+    const userData = docSnap.data();
+    const firestoreUid = docSnap.id;
+
+    const email = userData.contact?.email;
     const role = userData.role;
 
     if (!email) {
       throw new Error("Email not linked with this V-Med ID");
     }
 
-    // 2️⃣ Login using Firebase Auth (email + password)
+    // 2️⃣ Login with Firebase Auth
     const userCredential = await signInWithEmailAndPassword(
       auth,
       email,
       password
     );
 
-    console.log("Login successful:", userCredential.user.uid);
+    // 🔐 SAFETY CHECK (CRITICAL)
+    if (userCredential.user.uid !== firestoreUid) {
+      throw new Error("Account mismatch. Please contact support.");
+    }
 
     return {
       user: userCredential.user,
@@ -77,6 +84,7 @@ async function loginWithVMEDId(vmedId, password) {
     throw error;
   }
 }
+
 
 /* =========================================================
    EXPORT FUNCTIONS

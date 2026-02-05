@@ -233,3 +233,46 @@
     margin-left: 72px;
   }
 }
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 25px;
+    margin-top: 20px;
+}
+
+.card {
+    background: #ffffff;
+    border-radius: 15px;
+    padding: 24px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    border: 1px solid #edf2f7;
+}
+
+.detail-row {
+    margin-bottom: 18px;
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-row label {
+    font-size: 0.75rem;
+    color: #718096;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.detail-row span {
+    font-size: 1.05rem;
+    color: #2d3748;
+    font-weight: 600;
+}
+
+.status-badge {
+    background: #c6f6d5;
+    color: #22543d;
+    font-size: 0.7rem;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-weight: bold;
+}
