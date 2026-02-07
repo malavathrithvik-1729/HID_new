@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Patient Dashboard | V-Med ID</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <link rel="stylesheet" href="style.css">
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css" />
 
+  <!-- Route Guard -->
   <script type="module">
     import { protectRoute } from "../../js/routeGuard.js";
     protectRoute("patient");
@@ -14,36 +16,109 @@
 </head>
 
 <body>
-<div class="dashboard-root">
+  <div class="dashboard-root">
 
-  <aside class="sidebar">
-    <div class="sidebar-header">
-       <h2 class="logo">V-MED ID</h2>
-    </div>
-    
-    <div class="profile-box">
-      <strong id="userName">Loading...</strong>
-      <div id="userVmed" class="small muted">VMED-XXXX-XXXX</div>
-    </div>
+    <!-- ================= SIDEBAR ================= -->
+    <aside class="sidebar" id="sidebar">
 
-    <nav class="nav-menu">
-      <button class="nav-item active" onclick="loadPage('home')">Dashboard</button>
-      <button class="nav-item" onclick="loadPage('history')">Medical History</button>
-      <button class="nav-item" onclick="loadPage('medications')">Medications</button>
-      <button class="nav-item" onclick="loadPage('settings')">Settings</button>
-    </nav>
-  </aside>
+      <!-- Header -->
+      <div class="sidebar-header">
+        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
 
-  <main class="main">
-    <div id="content">
-        <div class="loader">Loading your health records...</div>
-    </div>
-  </main>
+        <div class="brand">
+          <img
+            src="../../assets/images/logo.jpg"
+            alt="V-Med Logo"
+            class="sidebar-logo"
+          />
+          <span class="logo-text">V-MED ID</span>
+        </div>
+      </div>
 
-</div>
+      <!-- User Profile -->
+      <div class="profile-box">
+        <strong id="userName">Loading...</strong>
+        <div id="userVmed" class="muted">VMED-XXXX</div>
+      </div>
 
-<script type="module" src="./js/userData.js"></script>
-<script type="module" src="./js/dashboard.js"></script>
+      <!-- Navigation -->
+      <nav class="nav-menu">
+        <button
+          class="nav-item"
+          data-page="home"
+          onclick="loadSection(this, 'home')"
+        >
+          <span class="icon">🏠</span>
+          <span class="label">Home</span>
+        </button>
 
+        <button
+          class="nav-item"
+          data-page="history"
+          onclick="loadSection(this, 'history')"
+        >
+          <span class="icon">📜</span>
+          <span class="label">History</span>
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="medications"
+          onclick="loadSection(this, 'medications')"
+        >
+          <span class="icon">💊</span>
+          <span class="label">Medications</span>
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="ai"
+          onclick="loadSection(this, 'ai')"
+        >
+          <span class="icon">🤖</span>
+          <span class="label">AI Suggestions</span>
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="settings"
+          onclick="loadSection(this, 'settings')"
+        >
+          <span class="icon">⚙️</span>
+          <span class="label">Settings</span>
+        </button>
+      </nav>
+
+    </aside>
+
+    <!-- ================= MAIN ================= -->
+    <main class="main">
+      <div id="content" class="loader-screen">
+
+        <!-- Loader -->
+        <div class="loader-box">
+          <img
+            src="../../assets/images/logo.jpg"
+            alt="V-Med Logo"
+            class="loader-logo"
+          />
+          <div class="pulse-ring"></div>
+
+          <p class="loader-text">
+            Preparing your health dashboard
+          </p>
+          <small class="muted">
+            स्वास्थ्यं परमं धनम्
+          </small>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Scripts -->
+  <script type="module" src="./js/userData.js"></script>
+  <script type="module" src="./js/dashboard.js"></script>
 </body>
 </html>

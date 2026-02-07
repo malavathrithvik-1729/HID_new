@@ -1,102 +1,81 @@
-/* =========================================================
-   ROOT & LAYOUT
-   ========================================================= */
+/* ==================================================
+   GLOBAL
+================================================== */
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: #f4f6f8;
+  color: #1f2d3d;
+}
+
 .dashboard-root {
   display: flex;
   min-height: 100vh;
-  background: #f4f6f8;
-  color: #1f2d3d;
-  font-family: "Segoe UI", system-ui, sans-serif;
 }
 
-/* =========================================================
+/* ==================================================
    SIDEBAR
-   ========================================================= */
+================================================== */
 .sidebar {
   width: 260px;
-  background: #0f172a;
+  background: linear-gradient(180deg, #0f172a, #020617);
   color: #e5e7eb;
   display: flex;
   flex-direction: column;
-  transition: width 0.25s ease;
 }
 
-.sidebar.collapsed {
-  width: 72px;
-}
-
-/* HEADER */
 .sidebar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
+  padding: 20px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
-.brand {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+.logo-text {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 1px;
 }
 
-.collapse-btn {
-  background: none;
-  border: none;
-  color: #e5e7eb;
-  font-size: 20px;
-  cursor: pointer;
-}
-
-/* PROFILE */
-.profile-box {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-
-.avatar {
-  width: 44px;
-  height: 44px;
+.sidebar-logo {
+  width: 56px;
+  height: 56px;
+  margin-top: 10px;
   border-radius: 50%;
-  object-fit: cover;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.4);
 }
 
-.profile-info {
-  line-height: 1.2;
+/* User profile */
+.profile-box {
+  padding: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
-.profile-info strong {
+.profile-box strong {
+  display: block;
   font-size: 14px;
 }
 
-.profile-info .small {
-  font-size: 12px;
+.muted {
   color: #9ca3af;
+  font-size: 12px;
 }
 
-/* NAV */
-.nav {
-  flex: 1;
-  padding: 10px 6px;
+/* Navigation */
+.nav-menu {
+  padding: 12px;
 }
 
 .nav-item {
   width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 12px;
   padding: 12px 14px;
-  margin-bottom: 6px;
-  background: none;
+  margin-bottom: 8px;
+  border-radius: 10px;
   border: none;
+  background: transparent;
   color: #e5e7eb;
   font-size: 14px;
-  border-radius: 10px;
   cursor: pointer;
-  transition: background 0.2s ease;
+  text-align: left;
+  transition: background 0.25s ease;
 }
 
 .nav-item:hover {
@@ -107,172 +86,431 @@
   background: #1e40af;
 }
 
-.nav-text {
-  white-space: nowrap;
-}
-
-/* COLLAPSED SIDEBAR TEXT HIDE */
-.sidebar.collapsed .brand,
-.sidebar.collapsed .profile-info,
-.sidebar.collapsed .nav-text {
-  display: none;
-}
-
-/* FOOTER */
-.sidebar-footer {
-  padding: 12px;
-  border-top: 1px solid rgba(255,255,255,0.08);
-}
-
-.logout-btn {
-  width: 100%;
-  padding: 10px;
-  background: #b91c1c;
-  border: none;
-  border-radius: 10px;
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.logout-btn:hover {
-  background: #991b1b;
-}
-
-/* =========================================================
+/* ==================================================
    MAIN CONTENT
-   ========================================================= */
+================================================== */
 .main {
   flex: 1;
-  padding: 24px;
+  padding: 28px 32px;
   overflow-y: auto;
 }
 
-/* =========================================================
-   COMMON UI
-   ========================================================= */
-.pane {
-  animation: fadeIn 0.25s ease;
+/* ==================================================
+   LOADER (INITIAL ONLY)
+================================================== */
+.loader-screen {
+  display: block;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+.loader-box {
+  text-align: center;
+  margin-top: 80px;
+  animation: fadeUp 0.8s ease forwards;
 }
 
-.card {
-  background: #ffffff;
-  padding: 18px;
-  border-radius: 14px;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.06);
-  margin-bottom: 18px;
+.loader-logo {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
 }
 
-.small {
-  font-size: 12px;
+.pulse-ring {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  border: 3px solid rgba(30,136,229,0.4);
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin: auto;
+  animation: pulse 1.8s infinite;
 }
 
-.muted {
+.loader-text {
+  margin-top: 20px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* ==================================================
+   HOME (FINAL – SINGLE SOURCE OF TRUTH)
+================================================== */
+
+/* Top row: Welcome (left) + Shield (right) */
+.home-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 900px;
+  margin-bottom: 16px;
+}
+
+.home-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.welcome-title {
+  font-size: 38px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.welcome-sub {
+  margin-top: 4px;
+  font-size: 14px;
   color: #6b7280;
 }
 
-/* BUTTONS */
-.btn {
-  padding: 10px 16px;
-  border-radius: 10px;
-  border: none;
-  background: #1e40af;
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
+.home-right {
+  display: flex;
+  align-items: center;
 }
 
-.btn:hover {
-  background: #1e3a8a;
+.home-shield {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  box-shadow: 0 14px 30px rgba(0,0,0,0.22);
 }
 
-.btn.ghost {
-  background: #eef2ff;
-  color: #1e40af;
+/* Quick summary cards */
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  gap: 16px;
+  max-width: 900px;
+  margin-top: 20px;
 }
 
-.btn.ghost:hover {
-  background: #e0e7ff;
-}
-
-/* INPUTS */
-.input {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
-  margin-bottom: 12px;
+.quick-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.06);
   font-size: 14px;
 }
 
-.input:focus {
-  outline: none;
-  border-color: #1e40af;
+.quick-label {
+  color: #6b7280;
 }
 
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
-@media (max-width: 900px) {
-  .sidebar {
-    position: fixed;
-    z-index: 100;
-    height: 100vh;
+.quick-value {
+  display: block;
+  margin-top: 8px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* Helper text */
+.home-helper {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #9ca3af;
+  max-width: 600px;
+}
+
+/* ==================================================
+   ANIMATIONS
+================================================== */
+@keyframes pulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.6;
   }
-
-  .main {
-    margin-left: 260px;
+  70% {
+    transform: scale(1.1);
+    opacity: 0;
   }
-
-  .sidebar.collapsed + .main {
-    margin-left: 72px;
+  100% {
+    opacity: 0;
   }
 }
-.grid-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 25px;
-    margin-top: 20px;
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* ==================================================
+   HOME BACKGROUND WATERMARK (BLURRED LOGO)
+================================================== */
+.main {
+  position: relative;
+  overflow: hidden;
 }
 
-.card {
-    background: #ffffff;
-    border-radius: 15px;
-    padding: 24px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-    border: 1px solid #edf2f7;
+.main::after {
+  content: "";
+  position: absolute;
+  top: 60px;
+  right: 80px;
+  width: 280px;
+  height: 280px;
+
+  background-image: url("../../assets/images/logo.jpg");
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+
+  opacity: 0.08;
+  filter: blur(6px);
+
+  pointer-events: none;
+  z-index: 0;
 }
 
-.detail-row {
-    margin-bottom: 18px;
-    display: flex;
-    flex-direction: column;
+/* Ensure content stays above background */
+.main > * {
+  position: relative;
+  z-index: 1;
+}
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+/* ==================================================
+   HOME DECORATIVE YELLOW BLUR LOGO
+================================================== */
+
+.main {
+  position: relative;
+  overflow: hidden;
+}
+/* ==================================================
+   HOME CENTER WATERMARK LOGO (FINAL)
+================================================== */
+
+.main {
+  position: relative;
+  overflow: hidden;
 }
 
-.detail-row label {
-    font-size: 0.75rem;
-    color: #718096;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 4px;
+/* Centered blurred logo */
+.main::after {
+  content: "";
+  position: absolute;
+
+  /* TRUE CENTER of content area */
+  top: 55%;
+  left: 60%;
+  transform: translate(-50%, -50%);
+
+  width: 420px;
+  height: 420px;
+
+  background-image: url("../../assets/images/logo.jpg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+
+  opacity: 0.06;
+  filter: blur(8px);
+
+  pointer-events: none;
+  z-index: 0;
 }
 
-.detail-row span {
-    font-size: 1.05rem;
-    color: #2d3748;
-    font-weight: 600;
+/* Ensure dashboard content stays above watermark */
+.main > * {
+  position: relative;
+  z-index: 1;
+}
+/* ===============================
+   EMPTY STATE STYLING
+================================ */
+
+.quick-card.empty {
+  background: #ffffff;
+  border: 1px dashed #d1d5db;
+  box-shadow: none;
 }
 
-.status-badge {
-    background: #c6f6d5;
-    color: #22543d;
-    font-size: 0.7rem;
-    padding: 2px 10px;
-    border-radius: 20px;
-    font-weight: bold;
+.empty-text {
+  margin: 14px 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.hint {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* Info section */
+.home-info {
+  margin-top: 20px;
+  max-width: 640px;
+  font-size: 14px;
+  color: #6b7280;
+}
+/* ===============================
+   ALERT BANNER
+================================ */
+.alert-banner {
+  margin: 16px 0 22px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.alert-banner.info {
+  background: #eff6ff;
+  color: #1e3a8a;
+  border: 1px solid #bfdbfe;
+}
+
+/* ===============================
+   EMPTY STATE CARDS
+================================ */
+.quick-card.empty {
+  background: #ffffff;
+  border: 1px dashed #d1d5db;
+  box-shadow: none;
+}
+
+.empty-text {
+  margin: 14px 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.hint {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* ===============================
+   AI PLACEHOLDER
+================================ */
+.ai-placeholder {
+  margin-top: 26px;
+  padding: 20px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px dashed #c7d2fe;
+  max-width: 700px;
+}
+
+.ai-placeholder h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.ai-placeholder p {
+  font-size: 14px;
+  color: #374151;
+}
+/* ===============================
+   SIDEBAR TOGGLE
+================================ */
+.toggle-btn {
+  background: none;
+  border: none;
+  color: #e5e7eb;
+  font-size: 20px;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar.collapsed {
+  width: 80px;
+}
+
+.sidebar.collapsed .label,
+.sidebar.collapsed .logo-text,
+.sidebar.collapsed .profile-box {
+  display: none;
+}
+
+.sidebar.collapsed .nav-item {
+  justify-content: center;
+}
+
+/* ===============================
+   NAV ACTIVE STATE
+================================ */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-item.active {
+  background: #1e40af;
+}
+
+.nav-item .icon {
+  font-size: 18px;
+}
+/* ===============================
+   HISTORY PAGE
+================================ */
+
+.history-header {
+  margin-bottom: 12px;
+}
+
+.history-list {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+
+.history-icon {
+  font-size: 22px;
+}
+
+.history-content {
+  flex: 1;
+}
+
+.history-link {
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  background: #1e40af;
+  color: #ffffff;
+}
+
+.history-link:hover {
+  background: #1e3a8a;
+}
+
+.history-empty {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.hidden {
+  display: none;
 }

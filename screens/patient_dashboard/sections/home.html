@@ -1,53 +1,61 @@
-<div class="dashboard-header">
-    <h1 id="greetingText">Welcome back</h1>
-    <p class="subtitle">Virtual Medical ID: <span id="displayVmed">--</span></p>
+<!-- ===============================
+     HOME HEADER
+================================ -->
+<div class="home-header-row">
+  <div class="home-left">
+    <h1 class="welcome-title" id="greetingText">
+      Welcome back 👋
+    </h1>
+    <p class="welcome-sub">
+      Your health dashboard will activate once patient data is available
+    </p>
+  </div>
 </div>
 
-<div class="grid-container">
-    <div class="card fade-in">
-        <div class="card-header">
-            <h3>Personal Identity</h3>
-            <span class="status-badge">Official</span>
-        </div>
-        <div class="details-list">
-            <div class="detail-row">
-                <label>Full Name</label>
-                <span id="detailName">--</span>
-            </div>
-            <div class="detail-row">
-                <label>Father's Name</label>
-                <span id="detailFatherName">--</span>
-            </div>
-            <div class="detail-row">
-                <label>Gender</label>
-                <span id="detailGender">--</span>
-            </div>
-            <div class="detail-row">
-                <label>Date of Birth</label>
-                <span id="detailDob">--</span>
-            </div>
-        </div>
-    </div>
+<!-- ===============================
+     ALERT / STATUS BANNER
+================================ -->
+<div class="alert-banner info">
+  <strong>Status:</strong>
+  No patient health data is available yet.
+  Add records to begin tracking vitals and insights.
+</div>
 
-    <div class="card fade-in">
-        <h3>Contact & Government IDs</h3>
-        <div class="details-list">
-            <div class="detail-row">
-                <label>Email Address</label>
-                <span id="detailEmail">--</span>
-            </div>
-            <div class="detail-row">
-                <label>Phone Number</label>
-                <span id="detailPhone">--</span>
-            </div>
-            <div class="detail-row">
-                <label>Aadhaar Number</label>
-                <span id="detailAadhaar">•••• •••• ••••</span>
-            </div>
-            <div class="detail-row">
-                <label>ABHA Number</label>
-                <span id="detailAbha">--</span>
-            </div>
-        </div>
-    </div>
+<!-- ===============================
+     HEALTH OVERVIEW (NO DATA)
+================================ -->
+<div class="quick-grid">
+
+  <div class="quick-card empty">
+    <span class="quick-label">🫀 Blood Pressure</span>
+    <p class="empty-text">No data available</p>
+    <small class="hint">BP readings will appear here</small>
+  </div>
+
+  <div class="quick-card empty">
+    <span class="quick-label">🍬 Sugar</span>
+    <p class="empty-text">No data available</p>
+    <small class="hint">Sugar levels will be tracked here</small>
+  </div>
+
+  <div class="quick-card empty">
+    <span class="quick-label">📅 Last Visit</span>
+    <p class="empty-text">No visits recorded</p>
+    <small class="hint">Doctor visits will appear here</small>
+  </div>
+
+</div>
+
+<!-- ===============================
+     AI SUGGESTIONS (PLACEHOLDER)
+================================ -->
+<div class="ai-placeholder">
+  <h3>🤖 AI Health Suggestions</h3>
+  <p>
+    AI-powered health insights will be generated once
+    sufficient patient data is available.
+  </p>
+  <small class="hint">
+    Add vitals, medications, and visit history to activate AI suggestions.
+  </small>
 </div>

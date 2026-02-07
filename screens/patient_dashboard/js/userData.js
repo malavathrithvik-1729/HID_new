@@ -1,49 +1,74 @@
-import { auth, db } from "../../../js/firebase.js"; 
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { auth, db } from "../../../../js/firebase.js";
+
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-window.vmedUser = null; 
+/* ===============================
+   GLOBAL USER STATE (FIX)
+================================ */
+let currentUserData = null;
 
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            window.vmedUser = docSnap.data();
-            updateDashboardUI(); 
-        }
-    } else {
-        window.location.href = "../login/login.html";
-    }
-});
+/* ===============================
+   FETCH + UPDATE UI
+================================ */
+export async function updateDashboardUI() {
+  const user = auth.currentUser;
+  if (!user) return;
 
-export function updateDashboardUI() {
-    const data = window.vmedUser;
-    if (!data) return;
+  try {
+    const snap = await getDoc(doc(db, "users", user.uid));
+    if (!snap.exists()) return;
 
-    // Sidebar
-    setText("userName", data.identity.fullName);
-    setText("userVmed", data.vmedId);
+    currentUserData = snap.data();
 
-    // If main content isn't loaded yet, stop here
-    if (!document.getElementById("detailName")) return;
+    // BASIC INFO
+    const nameEl = document.getElementById("userName");
+    const vmedEl = document.getElementById("userVmed");
 
-    // Main Content
-    setText("greetingText", `Welcome back, ${data.identity.fullName.split(' ')[0]} 👋`);
-    setText("detailName", data.identity.fullName);
-    setText("detailFatherName", data.identity.fatherName);
-    setText("detailGender", data.identity.gender);
-    setText("detailDob", data.identity.dob);
-    setText("detailEmail", data.contact.email);
-    setText("detailPhone", data.contact.phone);
-    
-    const aadhaar = data.identity.aadhaar;
-    setText("detailAadhaar", aadhaar ? `•••• •••• ${aadhaar.slice(-4)}` : "Not Linked");
-    setText("detailAbha", data.identity.abha || "Not Generated");
+    if (nameEl) nameEl.textContent = currentUserData.identity?.fullName || "Patient";
+    if (vmedEl) vmedEl.textContent = currentUserData.patientData?.vmedId || "VMED-ID";
+
+    // HISTORY PAGE (SAFE CALL)
+    renderHistory(currentUserData.documents || []);
+
+  } catch (err) {
+    console.error("Dashboard UI Error:", err);
+  }
 }
 
-// ONLY ONE COPY OF THIS FUNCTION
-function setText(id, text) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = text;
+/* ===============================
+   HISTORY RENDER
+================================ */
+function renderHistory(documents = []) {
+  const list = document.getElementById("historyList");
+  const empty = document.getElementById("historyEmpty");
+
+  // If not on History page, do nothing
+  if (!list || !empty) return;
+
+  list.innerHTML = "";
+
+  if (!documents.length) {
+    empty.classList.remove("hidden");
+    return;
+  }
+
+  empty.classList.add("hidden");
+
+  documents.forEach(docItem => {
+    const card = document.createElement("div");
+    card.className = "history-card";
+
+    card.innerHTML = `
+      <div class="history-icon">📄</div>
+      <div class="history-content">
+        <strong>${docItem.title || "Medical Report"}</strong>
+        <div class="muted">Type: ${docItem.type || "document"}</div>
+      </div>
+      <a href="${docItem.externalUrl}" target="_blank" class="history-link">
+        View
+      </a>
+    `;
+
+    list.appendChild(card);
+  });
 }
