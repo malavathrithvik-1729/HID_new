@@ -8,10 +8,12 @@ body {
   color: #1f2d3d;
 }
 
+
 .dashboard-root {
   display: flex;
   min-height: 100vh;
 }
+
 
 /* ==================================================
    SIDEBAR
@@ -24,16 +26,19 @@ body {
   flex-direction: column;
 }
 
+
 .sidebar-header {
   padding: 20px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
+
 
 .logo-text {
   font-size: 22px;
   font-weight: 800;
   letter-spacing: 1px;
 }
+
 
 .sidebar-logo {
   width: 56px;
@@ -43,26 +48,31 @@ body {
   box-shadow: 0 6px 16px rgba(0,0,0,0.4);
 }
 
+
 /* User profile */
 .profile-box {
   padding: 16px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
+
 .profile-box strong {
   display: block;
   font-size: 14px;
 }
+
 
 .muted {
   color: #9ca3af;
   font-size: 12px;
 }
 
+
 /* Navigation */
 .nav-menu {
   padding: 12px;
 }
+
 
 .nav-item {
   width: 100%;
@@ -78,13 +88,16 @@ body {
   transition: background 0.25s ease;
 }
 
+
 .nav-item:hover {
   background: rgba(255,255,255,0.08);
 }
 
+
 .nav-item.active {
   background: #1e40af;
 }
+
 
 /* ==================================================
    MAIN CONTENT
@@ -95,6 +108,7 @@ body {
   overflow-y: auto;
 }
 
+
 /* ==================================================
    LOADER (INITIAL ONLY)
 ================================================== */
@@ -102,11 +116,13 @@ body {
   display: block;
 }
 
+
 .loader-box {
   text-align: center;
   margin-top: 80px;
   animation: fadeUp 0.8s ease forwards;
 }
+
 
 .loader-logo {
   width: 100px;
@@ -114,6 +130,7 @@ body {
   border-radius: 50%;
   box-shadow: 0 20px 40px rgba(0,0,0,0.25);
 }
+
 
 .pulse-ring {
   width: 130px;
@@ -127,15 +144,18 @@ body {
   animation: pulse 1.8s infinite;
 }
 
+
 .loader-text {
   margin-top: 20px;
   font-size: 16px;
   font-weight: 600;
 }
 
+
 /* ==================================================
    HOME (FINAL – SINGLE SOURCE OF TRUTH)
 ================================================== */
+
 
 /* Top row: Welcome (left) + Shield (right) */
 .home-header-row {
@@ -146,10 +166,12 @@ body {
   margin-bottom: 16px;
 }
 
+
 .home-left {
   display: flex;
   flex-direction: column;
 }
+
 
 .welcome-title {
   font-size: 38px;
@@ -157,16 +179,19 @@ body {
   margin: 0;
 }
 
+
 .welcome-sub {
   margin-top: 4px;
   font-size: 14px;
   color: #6b7280;
 }
 
+
 .home-right {
   display: flex;
   align-items: center;
 }
+
 
 .home-shield {
   width: 90px;
@@ -174,6 +199,7 @@ body {
   border-radius: 50%;
   box-shadow: 0 14px 30px rgba(0,0,0,0.22);
 }
+
 
 /* Quick summary cards */
 .quick-grid {
@@ -184,6 +210,7 @@ body {
   margin-top: 20px;
 }
 
+
 .quick-card {
   background: #ffffff;
   border-radius: 14px;
@@ -192,9 +219,11 @@ body {
   font-size: 14px;
 }
 
+
 .quick-label {
   color: #6b7280;
 }
+
 
 .quick-value {
   display: block;
@@ -203,6 +232,7 @@ body {
   font-weight: 700;
 }
 
+
 /* Helper text */
 .home-helper {
   margin-top: 12px;
@@ -210,6 +240,7 @@ body {
   color: #9ca3af;
   max-width: 600px;
 }
+
 
 /* ==================================================
    ANIMATIONS
@@ -227,6 +258,7 @@ body {
     opacity: 0;
   }
 }
+
 
 @keyframes fadeUp {
   from {
@@ -246,6 +278,7 @@ body {
   overflow: hidden;
 }
 
+
 .main::after {
   content: "";
   position: absolute;
@@ -254,17 +287,21 @@ body {
   width: 280px;
   height: 280px;
 
+
   background-image: url("../../assets/images/logo.jpg");
   background-repeat: no-repeat;
   background-size: contain;
   background-position: center;
 
+
   opacity: 0.08;
   filter: blur(6px);
+
 
   pointer-events: none;
   z-index: 0;
 }
+
 
 /* Ensure content stays above background */
 .main > * {
@@ -282,6 +319,7 @@ body {
    HOME DECORATIVE YELLOW BLUR LOGO
 ================================================== */
 
+
 .main {
   position: relative;
   overflow: hidden;
@@ -290,35 +328,43 @@ body {
    HOME CENTER WATERMARK LOGO (FINAL)
 ================================================== */
 
+
 .main {
   position: relative;
   overflow: hidden;
 }
+
 
 /* Centered blurred logo */
 .main::after {
   content: "";
   position: absolute;
 
+
   /* TRUE CENTER of content area */
   top: 55%;
   left: 60%;
   transform: translate(-50%, -50%);
 
+
   width: 420px;
   height: 420px;
+
 
   background-image: url("../../assets/images/logo.jpg");
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
 
+
   opacity: 0.06;
   filter: blur(8px);
+
 
   pointer-events: none;
   z-index: 0;
 }
+
 
 /* Ensure dashboard content stays above watermark */
 .main > * {
@@ -329,11 +375,13 @@ body {
    EMPTY STATE STYLING
 ================================ */
 
+
 .quick-card.empty {
   background: #ffffff;
   border: 1px dashed #d1d5db;
   box-shadow: none;
 }
+
 
 .empty-text {
   margin: 14px 0 4px;
@@ -342,10 +390,12 @@ body {
   color: #374151;
 }
 
+
 .hint {
   font-size: 12px;
   color: #9ca3af;
 }
+
 
 /* Info section */
 .home-info {
@@ -364,11 +414,13 @@ body {
   font-size: 14px;
 }
 
+
 .alert-banner.info {
   background: #eff6ff;
   color: #1e3a8a;
   border: 1px solid #bfdbfe;
 }
+
 
 /* ===============================
    EMPTY STATE CARDS
@@ -379,6 +431,7 @@ body {
   box-shadow: none;
 }
 
+
 .empty-text {
   margin: 14px 0 4px;
   font-size: 15px;
@@ -386,10 +439,12 @@ body {
   color: #374151;
 }
 
+
 .hint {
   font-size: 12px;
   color: #9ca3af;
 }
+
 
 /* ===============================
    AI PLACEHOLDER
@@ -403,10 +458,12 @@ body {
   max-width: 700px;
 }
 
+
 .ai-placeholder h3 {
   margin: 0 0 6px;
   font-size: 16px;
 }
+
 
 .ai-placeholder p {
   font-size: 14px;
@@ -424,15 +481,18 @@ body {
   margin-right: 10px;
 }
 
+
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
+
 .sidebar.collapsed {
   width: 80px;
 }
+
 
 .sidebar.collapsed .label,
 .sidebar.collapsed .logo-text,
@@ -440,9 +500,11 @@ body {
   display: none;
 }
 
+
 .sidebar.collapsed .nav-item {
   justify-content: center;
 }
+
 
 /* ===============================
    NAV ACTIVE STATE
@@ -453,9 +515,11 @@ body {
   gap: 10px;
 }
 
+
 .nav-item.active {
   background: #1e40af;
 }
+
 
 .nav-item .icon {
   font-size: 18px;
@@ -464,9 +528,11 @@ body {
    HISTORY PAGE
 ================================ */
 
+
 .history-header {
   margin-bottom: 12px;
 }
+
 
 .history-list {
   margin-top: 16px;
@@ -474,6 +540,7 @@ body {
   flex-direction: column;
   gap: 12px;
 }
+
 
 .history-card {
   display: flex;
@@ -485,13 +552,16 @@ body {
   box-shadow: 0 6px 18px rgba(0,0,0,0.06);
 }
 
+
 .history-icon {
   font-size: 22px;
 }
 
+
 .history-content {
   flex: 1;
 }
+
 
 .history-link {
   text-decoration: none;
@@ -502,15 +572,130 @@ body {
   color: #ffffff;
 }
 
+
 .history-link:hover {
   background: #1e3a8a;
 }
+
 
 .history-empty {
   margin-top: 24px;
   text-align: center;
 }
 
+
 .hidden {
   display: none;
+}
+/* ===============================
+   SETTINGS – CLEAN MEDICAL UI
+================================ */
+
+.detail-row {
+  display: grid;
+  grid-template-columns: 160px 10px 1fr;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 14px;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #1f2937; /* dark medical text */
+}
+
+.detail-separator {
+  text-align: center;
+  color: #6b7280;
+}
+
+.detail-value {
+  color: #374151;
+  word-break: break-word;
+}
+
+/* Card spacing improvement */
+.card {
+  padding: 20px 22px;
+}
+
+/* Section headings */
+.settings-header h1 {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.settings-header .muted {
+  margin-top: 4px;
+}
+/* ===============================
+   AI CHAT UI (CLEAN MEDICAL)
+================================ */
+
+.ai-chat {
+  height: calc(100vh - 260px);
+  background: #f9fafb;
+  border-radius: 14px;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ai-message {
+  max-width: 75%;
+  display: flex;
+}
+
+.ai-message.ai {
+  justify-content: flex-start;
+}
+
+.ai-message.user {
+  align-self: flex-end;
+  justify-content: flex-end;
+}
+
+.bubble {
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+}
+
+.ai-message.ai .bubble {
+  background: #e5e7eb;
+  border-radius: 14px 14px 14px 4px;
+}
+
+.ai-message.user .bubble {
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  color: #fff;
+  border-radius: 14px 14px 4px 14px;
+}
+
+.ai-input-bar {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+}
+
+.ai-input-bar input {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+}
+
+.ai-input-bar button {
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
 }

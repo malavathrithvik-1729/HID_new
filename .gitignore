@@ -1,9 +1,14 @@
+# Node
+node_modules/
+.env
+
+# Firebase
+.firebase/
+firebase-debug.log
+
 # OS
 .DS_Store
 Thumbs.db
-
-# Firebase / secrets
-.env
 
 # Logs
 *.log

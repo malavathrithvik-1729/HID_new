@@ -1,9 +1,8 @@
 import { auth, db } from "../../../../js/firebase.js";
-
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /* ===============================
-   GLOBAL USER STATE (FIX)
+   GLOBAL USER STATE
 ================================ */
 let currentUserData = null;
 
@@ -20,15 +19,30 @@ export async function updateDashboardUI() {
 
     currentUserData = snap.data();
 
-    // BASIC INFO
+    /* ===============================
+       SIDEBAR BASIC INFO
+    ================================ */
     const nameEl = document.getElementById("userName");
     const vmedEl = document.getElementById("userVmed");
 
-    if (nameEl) nameEl.textContent = currentUserData.identity?.fullName || "Patient";
-    if (vmedEl) vmedEl.textContent = currentUserData.patientData?.vmedId || "VMED-ID";
+    if (nameEl) {
+      nameEl.textContent = currentUserData.identity?.fullName || "Patient";
+    }
 
-    // HISTORY PAGE (SAFE CALL)
+    // 🔧 FIX: vmedId is at ROOT level
+    if (vmedEl) {
+      vmedEl.textContent = currentUserData.vmedId || "VMED-ID";
+    }
+
+    /* ===============================
+       HISTORY PAGE
+    ================================ */
     renderHistory(currentUserData.documents || []);
+
+    /* ===============================
+       SETTINGS PAGE
+    ================================ */
+    renderSettings(currentUserData);
 
   } catch (err) {
     console.error("Dashboard UI Error:", err);
@@ -42,7 +56,7 @@ function renderHistory(documents = []) {
   const list = document.getElementById("historyList");
   const empty = document.getElementById("historyEmpty");
 
-  // If not on History page, do nothing
+  // If not on History page, do nothing (SPA safe)
   if (!list || !empty) return;
 
   list.innerHTML = "";
@@ -70,5 +84,28 @@ function renderHistory(documents = []) {
     `;
 
     list.appendChild(card);
+  });
+}
+
+/* ===============================
+   SETTINGS RENDER (READ-ONLY)
+================================ */
+function renderSettings(data) {
+  const bindings = {
+    detailName: data.identity?.fullName,
+    detailFatherName: data.identity?.fatherName,
+    detailGender: data.identity?.gender,
+    detailDob: data.identity?.dob,
+    detailEmail: data.contact?.email,
+    detailPhone: data.contact?.phone,
+    detailAadhaar: data.identity?.aadhaar,
+    detailAbha: data.identity?.abha
+  };
+
+  Object.entries(bindings).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = value || "--";
+    }
   });
 }

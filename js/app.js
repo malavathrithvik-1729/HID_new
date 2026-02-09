@@ -24,15 +24,20 @@ function generateVMEDId(role, fullName) {
     throw new Error("Invalid role for VMED ID generation");
   }
 
+
   const namePart = fullName
     .toLowerCase()
     .replace(/\s+/g, "")
     .slice(0, 12); // 🔒 limit length
 
+
   const numberPart = Math.floor(1000 + Math.random() * 9000); // 🔒 4 digits
+
 
   return `VMED-${roleLetter}-${namePart}-${numberPart}`;
 }
+
+
 
 
 /* =========================================================
@@ -42,6 +47,7 @@ function generateVMEDId(role, fullName) {
 async function savePatientApplication(user, formData) {
   const userRef = doc(db, "users", user.uid);
 
+
   const data = {
     uid: user.uid,
     vmedId: generateVMEDId("patient", formData.fullName),
@@ -49,10 +55,12 @@ async function savePatientApplication(user, formData) {
     status: "pending",
     createdAt: serverTimestamp(),
 
+
     contact: {
       email: formData.email || "",
       phone: formData.phone || ""
     },
+
 
     identity: {
       fullName: formData.fullName,
@@ -64,9 +72,11 @@ async function savePatientApplication(user, formData) {
       address: formData.address
     },
 
+
     patientData: {
       occupation: formData.occupation || ""
     },
+
 
     // ✅ DOCUMENT REFERENCES (GOOGLE DRIVE URLs)
     documents: Array.isArray(formData.documents)
@@ -74,8 +84,10 @@ async function savePatientApplication(user, formData) {
       : []
   };
 
+
   await setDoc(userRef, data);
 }
+
 
 /* =========================================================
    SAVE DOCTOR APPLICATION
@@ -84,6 +96,7 @@ async function savePatientApplication(user, formData) {
 async function saveDoctorApplication(user, formData) {
   const userRef = doc(db, "users", user.uid);
 
+
   const data = {
     uid: user.uid,
     vmedId: generateVMEDId("doctor", formData.fullName),
@@ -91,10 +104,12 @@ async function saveDoctorApplication(user, formData) {
     status: "pending",
     createdAt: serverTimestamp(),
 
+
     contact: {
       email: formData.email || "",
       phone: formData.phone || ""
     },
+
 
     identity: {
       fullName: formData.fullName,
@@ -106,10 +121,12 @@ async function saveDoctorApplication(user, formData) {
       address: formData.address
     },
 
+
     doctorData: {
       specializations: formData.specializations,
       practisingSince: formData.practisingSince
     },
+
 
     // ✅ CERTIFICATE REFERENCES (GOOGLE DRIVE URLs)
     documents: Array.isArray(formData.documents)
@@ -117,8 +134,10 @@ async function saveDoctorApplication(user, formData) {
       : []
   };
 
+
   await setDoc(userRef, data);
 }
+
 
 /* =========================================================
    EXPORTS
