@@ -3,6 +3,13 @@ function initAIChat() {
   const chat = document.getElementById("aiChat");
   const sendBtn = document.getElementById("aiSendBtn");
 
+  function formatAIText(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") // bold
+    .replace(/\*(.*?)\*/g, "<em>$1</em>")             // italic
+    .replace(/\n/g, "<br>");                          // new lines
+}
+
   if (!input || !chat || !sendBtn) {
     console.warn("AI elements not found");
     return;

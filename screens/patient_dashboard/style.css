@@ -699,3 +699,14 @@ body {
   font-weight: 600;
   cursor: pointer;
 }
+.bubble strong {
+  display: block;
+  font-size: 15px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.bubble em {
+  color: #374151;
+  font-style: italic;
+}
