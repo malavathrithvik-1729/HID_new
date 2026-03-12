@@ -1,58 +1,99 @@
-<div class="settings-header">
-  <h1>⚙️ Settings</h1>
-  <p class="muted">Manage your personal and identity details</p>
+<div class="settings-wrapper">
+
+  <!-- HEADER -->
+  <div class="settings-header">
+    <div>
+      <h1>⚙️ Settings</h1>
+      <p class="muted">Manage your personal and identity details</p>
+    </div>
+    <button id="logoutBtn" class="logout-btn">Logout</button>
+  </div>
+
+  <!-- PERSONAL INFORMATION -->
+  <div class="settings-card">
+    <h2 class="section-title">Personal Information</h2>
+
+    <div class="detail-row">
+      <span class="detail-label">Full Name</span>
+      <span class="detail-value" id="detailName">--</span>
+    </div>
+
+    <div class="detail-row">
+      <span class="detail-label">Father’s Name</span>
+      <span class="detail-value" id="detailFatherName">--</span>
+    </div>
+
+    <div class="detail-row">
+      <span class="detail-label">Gender</span>
+      <span class="detail-value" id="detailGender">--</span>
+    </div>
+
+    <div class="detail-row">
+      <span class="detail-label">Date of Birth</span>
+      <span class="detail-value" id="detailDob">--</span>
+    </div>
+  </div>
+
+  <!-- CONTACT & GOV IDS -->
+  <div class="settings-card">
+    <h2 class="section-title">Contact & Government IDs</h2>
+
+    <div class="detail-row editable">
+      <span class="detail-label">Email</span>
+      <span class="detail-value" id="detailEmail">--</span>
+      <button class="edit-btn" data-field="email">Edit</button>
+    </div>
+
+    <div class="detail-row editable">
+      <span class="detail-label">Phone</span>
+      <span class="detail-value" id="detailPhone">--</span>
+      <button class="edit-btn" data-field="phone">Edit</button>
+    </div>
+
+    <div class="detail-row">
+      <span class="detail-label">Aadhaar</span>
+      <span class="detail-value masked" id="detailAadhaar">--</span>
+    </div>
+
+    <div class="detail-row">
+      <span class="detail-label">ABHA</span>
+      <span class="detail-value" id="detailAbha">--</span>
+    </div>
+  </div>
+
+  <!-- SECURITY SECTION -->
+  <div class="settings-card">
+    <h2 class="section-title">Security</h2>
+
+    <div class="security-row">
+      <div>
+        <h3>Password</h3>
+        <p class="muted small">Update your account password</p>
+      </div>
+      <button id="changePasswordBtn" class="primary-btn">
+        Change Password
+      </button>
+    </div>
+  </div>
+
 </div>
 
-<div class="grid-container">
 
-  <!-- PERSONAL IDENTITY -->
-  <div class="detail-row">
-  <span class="detail-label">Full Name</span>
-  <span class="detail-separator">:</span>
-  <span class="detail-value" id="detailName">--</span>
+<!-- PASSWORD MODAL -->
+<div id="passwordModal" class="modal">
+  <div class="modal-content">
+    <h2>Change Password</h2>
+
+    <input type="password" id="currentPassword" placeholder="Current Password">
+    <input type="password" id="newPassword" placeholder="New Password">
+    <input type="password" id="confirmPassword" placeholder="Confirm New Password">
+
+    <div class="modal-actions">
+      <button id="cancelPasswordBtn" class="secondary-btn">Cancel</button>
+      <button id="savePasswordBtn" class="primary-btn">Update</button>
+    </div>
+  </div>
 </div>
 
-<div class="detail-row">
-  <span class="detail-label">Father’s Name</span>
-  <span class="detail-separator">:</span>
-  <span class="detail-value" id="detailFatherName">--</span>
-</div>
-
-<div class="detail-row">
-  <span class="detail-label">Gender</span>
-  <span class="detail-separator">:</span>
-  <span class="detail-value" id="detailGender">--</span>
-</div>
-
-<div class="detail-row">
-  <span class="detail-label">Date of Birth</span>
-  <span class="detail-separator">:</span>
-  <span class="detail-value" id="detailDob">--</span>
-</div>
-
-  <!-- CONTACT & GOV IDs -->
-<div class="detail-row">
-  <span class="detail-label">Email</span>
-  <span class="detail-separator">:</span>
-  <span class="detail-value" id="detailEmail">--</span>
-</div>
-
-<div class="detail-row">
-  <span class="detail-label">Phone</span>
-  <span class="detail-separator">:</span>
-  <span class="detail-value" id="detailPhone">--</span>
-</div>
-
-<div class="detail-row">
-  <span class="detail-label">Aadhaar</span>
-  <span class="detail-separator">:</span>
-  <span class="detail-value" id="detailAadhaar">--</span>
-</div>
-
-<div class="detail-row">
-  <span class="detail-label">ABHA</span>
-  <span class="detail-separator">:</span>
-  <span class="detail-value" id="detailAbha">--</span>
-</div>
-
-</div>
+<!-- IMPORTANT -->
+<script type="module" src="settings.js"></script>

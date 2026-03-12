@@ -3,13 +3,6 @@ function initAIChat() {
   const chat = document.getElementById("aiChat");
   const sendBtn = document.getElementById("aiSendBtn");
 
-  function formatAIText(text) {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") // bold
-    .replace(/\*(.*?)\*/g, "<em>$1</em>")             // italic
-    .replace(/\n/g, "<br>");                          // new lines
-}
-
   if (!input || !chat || !sendBtn) {
     console.warn("AI elements not found");
     return;
@@ -19,7 +12,9 @@ function initAIChat() {
     const text = input.value.trim();
     if (!text) return;
 
-    // User message
+    /* ===============================
+       USER MESSAGE
+    =============================== */
     chat.insertAdjacentHTML(
       "beforeend",
       `<div class="ai-message user">
@@ -30,13 +25,19 @@ function initAIChat() {
     input.value = "";
     chat.scrollTop = chat.scrollHeight;
 
-    // Typing indicator
+    /* ===============================
+       TYPING INDICATOR
+    =============================== */
     const typing = document.createElement("div");
     typing.className = "ai-message ai";
     typing.innerHTML = `<div class="bubble">Typing…</div>`;
     chat.appendChild(typing);
+    chat.scrollTop = chat.scrollHeight;
 
     try {
+      /* ===============================
+         CALL AI BACKEND
+      =============================== */
       const res = await fetch("http://localhost:3000/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -46,30 +47,45 @@ function initAIChat() {
       const data = await res.json();
       typing.remove();
 
+      /* ===============================
+         MARKDOWN → HTML
+      =============================== */
+      const html = window.marked
+        ? marked.parse(data.reply)
+        : data.reply;
+
       chat.insertAdjacentHTML(
         "beforeend",
         `<div class="ai-message ai">
-          <div class="bubble">${data.reply}</div>
+          <div class="bubble">${html}</div>
         </div>`
       );
 
       chat.scrollTop = chat.scrollHeight;
 
-    } catch (err) {
-      console.error("AI error:", err);
+    } catch (error) {
+      console.error("AI error:", error);
       typing.remove();
 
+      /* ===============================
+         FALLBACK MESSAGE
+      =============================== */
       chat.insertAdjacentHTML(
         "beforeend",
         `<div class="ai-message ai">
           <div class="bubble">
-            AI service is unavailable right now.
+            ⚠️ AI service is temporarily unavailable.<br>
+            Please try again later or consult a healthcare professional.
           </div>
         </div>`
       );
+
+      chat.scrollTop = chat.scrollHeight;
     }
   };
 }
 
-// 🔑 expose for SPA
+/* ===============================
+   EXPOSE FOR SPA
+================================ */
 window.initAIChat = initAIChat;

@@ -5,6 +5,7 @@
   <title>V-Med ID | Doctor Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+
   <style>
     body {
       margin: 0;
@@ -40,33 +41,42 @@
   </style>
 </head>
 
+
 <body>
+
 
   <header>
     Doctor Dashboard
   </header>
 
+
   <main>
+
 
     <div class="card">
       <h3>Welcome Doctor 👨‍⚕️</h3>
       <p>This is the doctor dashboard (protected).</p>
     </div>
 
+
     <div class="card">
       <h3>Your Certificates</h3>
       <p>(Certificates will appear here later)</p>
     </div>
 
+
     <button id="logoutBtn">Logout</button>
 
+
   </main>
+
 
   <!-- ROUTE GUARD -->
   <script type="module">
     import { protectRoute } from "../../js/routeGuard.js";
     protectRoute("doctor");
   </script>
+
 
 </body>
 </html>
