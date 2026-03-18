@@ -946,3 +946,44 @@ body {
   justify-content: flex-end;
   gap: 10px;
 }
+/* ===============================
+AI FORMATTED OUTPUT
+================================ */
+.bubble.ai-formatted h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin: 10px 0 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.bubble.ai-formatted h4 {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  margin: 8px 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.bubble.ai-formatted ul {
+  padding-left: 16px;
+  margin: 6px 0;
+}
+.bubble.ai-formatted li {
+  margin-bottom: 5px;
+  line-height: 1.5;
+  color: #374151;
+}
+.bubble.ai-formatted em {
+  color: #2563eb;
+  font-style: italic;
+  font-weight: 500;
+}
+.bubble.ai-formatted strong {
+  color: #111827;
+  font-weight: 700;
+}
+.bubble.ai-formatted p {
+  margin: 6px 0;
+  line-height: 1.6;
+}

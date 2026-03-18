@@ -1,0 +1,29 @@
+<!-- ===============================
+     HOME — Doctor Welcome
+================================ -->
+<div class="home-wrapper">
+
+  <!-- Greeting -->
+  <div class="home-greeting">
+    <h1 id="greetDoctor">Good Morning, Doctor 👋</h1>
+    <p class="muted">Here's your clinical overview for today</p>
+  </div>
+
+  <!-- Logo watermark area -->
+  <div class="home-logo-area">
+    <img src="../../assets/images/logo.jpg" alt="" class="home-logo-big" />
+    <p class="home-logo-tagline">V-Med ID · Intelligent Healthcare</p>
+  </div>
+
+</div>
+
+<script type="module">
+  const data = window.currentDoctorData;
+  const greet = document.getElementById("greetDoctor");
+  if (greet) {
+    const name = data?.identity?.fullName?.split(" ")[0] || "Doctor";
+    const hour = new Date().getHours();
+    const time = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
+    greet.textContent = `${time}, Dr. ${name} 👋`;
+  }
+</script>

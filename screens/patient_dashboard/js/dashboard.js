@@ -88,13 +88,10 @@ function initAIChat() {
     if (!text) return;
 
     // User message
-    chat.insertAdjacentHTML(
-      "beforeend",
-      `<div class="ai-message user">
+    chat.insertAdjacentHTML("beforeend", `
+      <div class="ai-message user">
         <div class="bubble">${text}</div>
-      </div>`
-    );
-
+      </div>`);
     input.value = "";
     chat.scrollTop = chat.scrollHeight;
 
@@ -103,6 +100,7 @@ function initAIChat() {
     typing.className = "ai-message ai";
     typing.innerHTML = `<div class="bubble">Typing…</div>`;
     chat.appendChild(typing);
+    chat.scrollTop = chat.scrollHeight;
 
     try {
       const res = await fetch("http://localhost:3000/api/ai/chat", {
@@ -111,39 +109,55 @@ function initAIChat() {
         body: JSON.stringify({ message: text })
       });
 
-      const data = await res.json();
+      const data = await res.json();   // ← data is declared INSIDE try
       typing.remove();
 
-      chat.insertAdjacentHTML(
-        "beforeend",
-        `<div class="ai-message ai">
-          <div class="bubble">${data.reply}</div>
-        </div>`
-      );
+      const html = parseMarkdown(data.reply);
 
+      chat.insertAdjacentHTML("beforeend", `
+        <div class="ai-message ai">
+          <div class="bubble ai-formatted">${html}</div>
+        </div>`);
       chat.scrollTop = chat.scrollHeight;
 
     } catch (err) {
       console.error("AI error:", err);
       typing.remove();
-
-      chat.insertAdjacentHTML(
-        "beforeend",
-        `<div class="ai-message ai">
+      chat.insertAdjacentHTML("beforeend", `
+        <div class="ai-message ai">
           <div class="bubble">
-            AI service is unavailable right now.
+            ⚠️ AI service is unavailable right now. Please try again later.
           </div>
-        </div>`
-      );
+        </div>`);
+      chat.scrollTop = chat.scrollHeight;
     }
   };
 }
 
-/* ===============================
-   🔑 EXPOSE FOR SPA (IMPORTANT)
-================================ */
 window.initAIChat = initAIChat;
-
+// ===============================
+// MINI MARKDOWN PARSER (no library needed)
+// ===============================
+function parseMarkdown(text) {
+  return text
+    // ### Heading 3
+    .replace(/^### \*\*(.*?)\*\*/gm, '<h3>$1</h3>')
+    .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
+    // #### Heading 4
+    .replace(/^#### \*\*(.*?)\*\*/gm, '<h4>$1</h4>')
+    .replace(/^#### (.*?)$/gm, '<h4>$1</h4>')
+    // **bold**
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    // *italic*
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    // - bullet points
+    .replace(/^[\-\*] (.+)$/gm, '<li>$1</li>')
+    // wrap consecutive <li> in <ul>
+    .replace(/(<li>.*<\/li>(\n|$))+/gs, (match) => `<ul>${match}</ul>`)
+    // blank lines → paragraph breaks
+    .replace(/\n{2,}/g, '<br><br>')
+    .replace(/\n/g, ' ');
+}
 /* ===============================
    MAKE FUNCTIONS GLOBAL
 ================================ */

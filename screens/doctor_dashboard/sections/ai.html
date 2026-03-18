@@ -1,0 +1,25 @@
+<!-- ===============================
+     AI CLINICAL ASSISTANT
+================================ -->
+<div class="ai-header">
+  <h1>🤖 AI Clinical Assistant</h1>
+  <p class="muted">Ask clinical questions for general guidance. Does not replace medical judgment.</p>
+</div>
+
+<div id="aiChat" class="ai-chat">
+  <div class="ai-message ai">
+    <div class="bubble">
+      👋 Hello Doctor! I can assist with general clinical information, drug references, and health education. How can I help?
+    </div>
+  </div>
+</div>
+
+<div class="ai-input-bar">
+  <input id="aiInput" type="text" placeholder="Ask a clinical question…" />
+  <button id="aiSendBtn">Send</button>
+</div>
+
+<script>
+  // Hook up AI after section loads
+  if (window.initDoctorAI) window.initDoctorAI();
+</script>

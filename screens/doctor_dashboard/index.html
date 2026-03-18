@@ -4,79 +4,85 @@
   <meta charset="UTF-8" />
   <title>V-Med ID | Doctor Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-
-  <style>
-    body {
-      margin: 0;
-      font-family: "Segoe UI", sans-serif;
-      background: #f4f6f8;
-    }
-    header {
-      background: #2e7d32;
-      color: white;
-      padding: 16px;
-      font-size: 18px;
-      font-weight: 600;
-    }
-    main {
-      padding: 20px;
-    }
-    .card {
-      background: white;
-      padding: 16px;
-      border-radius: 10px;
-      margin-bottom: 16px;
-      box-shadow: 0 6px 14px rgba(0,0,0,0.08);
-    }
-    button {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      background: #e53935;
-      color: white;
-      cursor: pointer;
-      font-weight: 600;
-    }
-  </style>
-</head>
-
-
-<body>
-
-
-  <header>
-    Doctor Dashboard
-  </header>
-
-
-  <main>
-
-
-    <div class="card">
-      <h3>Welcome Doctor 👨‍⚕️</h3>
-      <p>This is the doctor dashboard (protected).</p>
-    </div>
-
-
-    <div class="card">
-      <h3>Your Certificates</h3>
-      <p>(Certificates will appear here later)</p>
-    </div>
-
-
-    <button id="logoutBtn">Logout</button>
-
-
-  </main>
-
-
-  <!-- ROUTE GUARD -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <!-- Route Guard -->
   <script type="module">
     import { protectRoute } from "../../js/routeGuard.js";
     protectRoute("doctor");
   </script>
+</head>
+<body>
+  <div class="dashboard-root">
 
+    <!-- ================= SIDEBAR ================= -->
+    <aside class="sidebar" id="sidebar">
 
+      <!-- Toggle -->
+      <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+
+      <!-- Brand -->
+      <div class="sidebar-brand">
+        <img src="../../assets/images/logo.jpg" alt="V-Med" class="sidebar-logo" />
+        <span class="brand-text">V-MED ID</span>
+      </div>
+
+      <!-- Profile Showcase (not a button) -->
+      <div class="profile-showcase">
+        <div class="profile-avatar" id="doctorInitials">DR</div>
+        <div class="profile-info">
+          <strong id="sidebarDoctorName">Loading...</strong>
+          <span id="sidebarVmedId" class="vmed-badge">VMED-d-...</span>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="nav-menu">
+        <button class="nav-item active" data-page="home" onclick="loadSection(this,'home')">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-label">Home</span>
+        </button>
+        <button class="nav-item" data-page="patients" onclick="loadSection(this,'patients')">
+          <span class="nav-icon">👥</span>
+          <span class="nav-label">Present Patients</span>
+        </button>
+        <button class="nav-item" data-page="history" onclick="loadSection(this,'history')">
+          <span class="nav-icon">📋</span>
+          <span class="nav-label">Patient History</span>
+        </button>
+        <button class="nav-item" data-page="add_patient" onclick="loadSection(this,'add_patient')">
+          <span class="nav-icon">➕</span>
+          <span class="nav-label">Add Patient</span>
+        </button>
+        <button class="nav-item" data-page="ai" onclick="loadSection(this,'ai')">
+          <span class="nav-icon">🤖</span>
+          <span class="nav-label">AI Suggestions</span>
+        </button>
+        <button class="nav-item" data-page="settings" onclick="loadSection(this,'settings')">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-label">Settings</span>
+        </button>
+      </nav>
+
+    </aside>
+
+    <!-- ================= MAIN ================= -->
+    <main class="main" id="mainContent">
+      <!-- Loader -->
+      <div id="content" class="loader-screen">
+        <div class="loader-box">
+          <img src="../../assets/images/logo.jpg" alt="V-Med Logo" class="loader-logo" />
+          <div class="pulse-ring"></div>
+          <p class="loader-text">Preparing your clinical dashboard</p>
+          <small class="muted">स्वास्थ्य ं परमं धनम्</small>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <script type="module" src="./js/doctorData.js"></script>
+  <script type="module" src="./js/dashboard.js"></script>
 </body>
 </html>
