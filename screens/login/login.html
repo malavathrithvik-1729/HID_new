@@ -1,93 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>V-Med ID | Login</title>
-  <link rel="stylesheet" href="login.css" />
+<meta charset="UTF-8"/>
+<title>V-Med ID | Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--ink:#0a1628;--paper:#f8f6f1;--accent:#1a6b4a;--muted:#6b7a8d;--err:#dc2626}
+body{font-family:'Outfit',sans-serif;background:var(--paper);min-height:100vh;display:flex}
+.left-panel{width:45%;background:linear-gradient(135deg,#0a1628 0%,#1a3a2a 100%);padding:60px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
+.left-panel::before{content:'';position:absolute;width:500px;height:500px;border-radius:50%;background:rgba(26,107,74,0.15);top:-150px;right:-150px}
+.left-panel::after{content:'';position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(200,150,90,0.08);bottom:-80px;left:-80px}
+.panel-brand{font-family:'Playfair Display',serif;font-size:24px;color:#fff;font-weight:700;position:relative;z-index:1}
+.panel-brand span{color:#1a6b4a}
+.panel-content{position:relative;z-index:1}
+.panel-content h2{font-family:'Playfair Display',serif;font-size:40px;color:#fff;line-height:1.2;margin-bottom:20px}
+.panel-content h2 em{font-style:normal;color:rgba(255,255,255,0.5)}
+.panel-content p{font-size:15px;color:rgba(255,255,255,0.55);line-height:1.7;font-weight:300;max-width:320px}
+.panel-pills{display:flex;flex-direction:column;gap:12px;position:relative;z-index:1}
+.pill{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px 16px}
+.pill-icon{font-size:20px}
+.pill-text strong{display:block;font-size:13px;color:#fff;font-weight:500}
+.pill-text span{font-size:12px;color:rgba(255,255,255,0.45)}
+
+.right-panel{flex:1;display:flex;align-items:center;justify-content:center;padding:40px}
+.form-box{width:100%;max-width:420px}
+.form-box h1{font-family:'Playfair Display',serif;font-size:32px;color:var(--ink);margin-bottom:8px}
+.form-box .subtitle{font-size:14px;color:var(--muted);margin-bottom:36px;font-weight:300}
+.form-group{margin-bottom:20px}
+.form-group label{display:block;font-size:13px;font-weight:500;color:var(--ink);margin-bottom:7px}
+.form-group input,.form-group select{width:100%;padding:13px 16px;border:1.5px solid rgba(10,22,40,0.15);border-radius:12px;font-family:'Outfit',sans-serif;font-size:14px;color:var(--ink);background:#fff;transition:border .2s;outline:none}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group select{cursor:pointer}
+.btn-submit{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s;margin-top:8px}
+.btn-submit:hover{background:#155a3d;transform:translateY(-1px)}
+.btn-submit:disabled{opacity:.6;transform:none;cursor:not-allowed}
+.err-msg{background:rgba(220,38,38,0.08);color:var(--err);border:1px solid rgba(220,38,38,0.15);border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:16px;display:none}
+.err-msg.show{display:block}
+.form-footer{text-align:center;margin-top:24px;font-size:14px;color:var(--muted)}
+.form-footer a{color:var(--accent);font-weight:500;text-decoration:none}
+.form-footer a:hover{text-decoration:underline}
+.divider{display:flex;align-items:center;gap:12px;margin:24px 0;color:var(--muted);font-size:12px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:rgba(10,22,40,0.1)}
+
+@media(max-width:768px){.left-panel{display:none}.right-panel{padding:40px 24px}}
+</style>
 </head>
 <body>
-
-  <div class="login-container">
-
-    <!-- Logo -->
-    <img src="../../assets/images/logo.jpg" alt="V-Med ID Logo" class="logo" />
-
-    <h2>Login to V-Med ID</h2>
-    <p class="subtitle">Secure Virtual Medical Identity Access</p>
-
-    <!-- Login Form -->
-    <form id="loginForm">
-
-      <!-- Role Selection (for UI clarity & safety check) -->
-      <label for="role">Select Role</label>
-      <select id="role" required>
-        <option value="">-- Choose Role --</option>
+<div class="left-panel">
+  <div class="panel-brand">V<span>-</span>Med ID</div>
+  <div class="panel-content">
+    <h2>Your health,<br/><em>your identity.</em></h2>
+    <p>Securely access your complete medical history, AI health assistant, and more — all in one place.</p>
+  </div>
+  <div class="panel-pills">
+    <div class="pill"><span class="pill-icon">🔒</span><div class="pill-text"><strong>End-to-End Secure</strong><span>Firebase Authentication</span></div></div>
+    <div class="pill"><span class="pill-icon">🤖</span><div class="pill-text"><strong>AI-Powered</strong><span>Gemini Clinical Assistant</span></div></div>
+    <div class="pill"><span class="pill-icon">📋</span><div class="pill-text"><strong>Complete Records</strong><span>Lifetime medical history</span></div></div>
+  </div>
+</div>
+<div class="right-panel">
+  <div class="form-box">
+    <h1>Welcome back</h1>
+    <p class="subtitle">Sign in to your V-Med ID account</p>
+    <div class="err-msg" id="errMsg"></div>
+    <div class="form-group">
+      <label>Select your role</label>
+      <select id="role">
+        <option value="">— Choose role —</option>
         <option value="patient">Patient</option>
         <option value="doctor">Doctor</option>
         <option value="government">Government</option>
       </select>
-
-      <!-- VMED ID -->
-      <label for="userId">V-Med ID</label>
-      <input
-        type="text"
-        id="userId"
-        placeholder="VMED-p-name-123"
-        required
-      />
-
-      <!-- Password -->
-      <label for="password">Password</label>
-      <input
-        type="password"
-        id="password"
-        placeholder="Enter your password"
-        required
-      />
-
-      <!-- Submit -->
-      <button type="submit">Proceed to OTP</button>
-
-    </form>
-
+    </div>
+    <div class="form-group">
+      <label>V-Med ID</label>
+      <input type="text" id="vmedId" placeholder="e.g. VMED-p-name-1234"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="Enter your password"/>
+    </div>
+    <button class="btn-submit" id="loginBtn" onclick="handleLogin()">Sign In</button>
+    <div class="form-footer">
+      Don't have an account? <a href="../signup/signup.html">Create V-Med ID</a>
+    </div>
   </div>
+</div>
 
-  <!-- LOGIN LOGIC -->
-  <script type="module">
-    import { loginWithVMEDId } from "../../js/auth.js";
-
-    document.getElementById("loginForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const selectedRole = document.getElementById("role").value;
-      const vmedId = document.getElementById("userId").value.trim();
-      const password = document.getElementById("password").value;
-
-      if (!selectedRole) {
-        alert("Please select a role.");
-        return;
-      }
-
-      try {
-        const result = await loginWithVMEDId(vmedId, password);
-
-        // Optional safety check: role mismatch
-        if (result.role !== selectedRole) {
-          alert("Selected role does not match this V-Med ID.");
-          return;
-        }
-
-        // Store role for OTP → dashboard routing
-        sessionStorage.setItem("role", result.role);
-
-        // Go to OTP page
-        window.location.href = "otp.html";
-
-      } catch (error) {
-        alert(error.message);
-      }
-    });
-  </script>
-
+<script type="module">
+import { loginWithVMEDId } from "../../js/auth.js";
+window.handleLogin = async function() {
+  const role = document.getElementById("role").value;
+  const vmedId = document.getElementById("vmedId").value.trim();
+  const password = document.getElementById("password").value;
+  const errMsg = document.getElementById("errMsg");
+  const btn = document.getElementById("loginBtn");
+  errMsg.classList.remove("show");
+  if (!role) { errMsg.textContent = "Please select your role."; errMsg.classList.add("show"); return; }
+  if (!vmedId) { errMsg.textContent = "Please enter your V-Med ID."; errMsg.classList.add("show"); return; }
+  if (!password) { errMsg.textContent = "Please enter your password."; errMsg.classList.add("show"); return; }
+  btn.disabled = true; btn.textContent = "Signing in...";
+  try {
+    const result = await loginWithVMEDId(vmedId, password);
+    if (result.role !== role) { throw new Error("Selected role doesn't match this V-Med ID."); }
+    sessionStorage.setItem("role", result.role);
+    if (result.role === "patient") window.location.href = "../patient_dashboard/index.html";
+    else if (result.role === "doctor") window.location.href = "../doctor_dashboard/index.html";
+    else window.location.href = "../gov_dashboard/index.html";
+  } catch(e) {
+    errMsg.textContent = e.message;
+    errMsg.classList.add("show");
+    btn.disabled = false; btn.textContent = "Sign In";
+  }
+};
+document.getElementById("password").addEventListener("keydown", e => { if(e.key==="Enter") handleLogin(); });
+</script>
 </body>
 </html>

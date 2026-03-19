@@ -1,94 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>V-Med ID | Registration Successful</title>
-  <link rel="stylesheet" href="../login/login.css" />
+<meta charset="UTF-8"/>
+<title>V-Med ID | Registration Successful</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--ink:#0a1628;--paper:#f8f6f1;--accent:#1a6b4a;--muted:#6b7a8d}
+body{font-family:'Outfit',sans-serif;background:var(--paper);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 24px}
+.wrapper{width:100%;max-width:480px;text-align:center}
+.success-ring{width:80px;height:80px;border-radius:50%;background:rgba(26,107,74,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:36px;animation:pop .5s ease}
+@keyframes pop{from{transform:scale(0.5);opacity:0}to{transform:scale(1);opacity:1}}
+h1{font-family:'Playfair Display',serif;font-size:36px;color:var(--ink);margin-bottom:10px}
+.subtitle{font-size:15px;color:var(--muted);margin-bottom:36px;font-weight:300;line-height:1.6}
+.vmed-card{background:#0a1628;border-radius:16px;padding:28px;margin-bottom:28px;text-align:center}
+.vmed-label{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:10px}
+.vmed-id{font-family:'Outfit',sans-serif;font-size:22px;font-weight:600;color:#fff;letter-spacing:1px;word-break:break-all}
+.vmed-note{font-size:12px;color:rgba(255,255,255,0.35);margin-top:10px}
+.btn-go{display:block;width:100%;padding:15px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:.2s;text-decoration:none}
+.btn-go:hover{background:#155a3d}
+</style>
 </head>
 <body>
-
-  <div class="login-container">
-
-    <img src="../../assets/images/logo.jpg" alt="V-Med ID Logo" class="logo" />
-
-    <h2>Registration Successful 🎉</h2>
-
-    <p class="subtitle">
-      Your Virtual Medical ID has been created successfully.
-    </p>
-
-    <div
-      style="
-        background:#f4f6f8;
-        padding:14px;
-        border-radius:10px;
-        margin:16px 0;
-        font-weight:600;
-        color:#203a43;
-        word-break:break-all;
-      "
-      id="vmedIdBox"
-    >
-      Loading VMED ID...
-    </div>
-
-    <p class="subtitle">
-      Please save this ID carefully.  
-      You will use it for future logins.
-    </p>
-
-    <button id="goDashboardBtn">
-      Go to Dashboard
-    </button>
-
+<div class="wrapper">
+  <div class="success-ring">✅</div>
+  <h1>You're all set!</h1>
+  <p class="subtitle">Your V-Med ID has been created successfully. Save this ID — you'll use it to log in every time.</p>
+  <div class="vmed-card">
+    <div class="vmed-label">Your V-Med ID</div>
+    <div class="vmed-id" id="vmedDisplay">Loading...</div>
+    <div class="vmed-note">Keep this ID safe. You'll need it to sign in.</div>
   </div>
+  <button class="btn-go" id="goBtn">Go to Dashboard →</button>
+</div>
 
- <script type="module">
-  import { auth, db } from "../../js/firebase.js";
-  import {
-    doc,
-    getDoc
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-  import {
-    onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+<script type="module">
+import { auth, db } from "../../js/firebase.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  const vmedBox = document.getElementById("vmedIdBox");
-  const btn = document.getElementById("goDashboardBtn");
-
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      vmedBox.textContent = "Session expired. Please login again.";
-      btn.style.display = "none";
-      return;
-    }
-
-    const docRef = doc(db, "users", user.uid);
-    const snap = await getDoc(docRef);
-
-    if (!snap.exists()) {
-      vmedBox.textContent = "User record not found.";
-      btn.style.display = "none";
-      return;
-    }
-
-    const data = snap.data();
-
-    // ✅ SHOW VMED ID
-    vmedBox.textContent = data.vmedId;
-
-    // ✅ DASHBOARD ROUTING
-    btn.addEventListener("click", () => {
-      if (data.role === "patient") {
-        window.location.href = "../patient_dashboard/index.html";
-      } else if (data.role === "doctor") {
-        window.location.href = "../doctor_dashboard/index.html";
-      } else if (data.role === "government") {
-        window.location.href = "../gov_dashboard/index.html";
-      }
-    });
-  });
+onAuthStateChanged(auth, async user => {
+  if (!user) { window.location.href = "../login/login.html"; return; }
+  const snap = await getDoc(doc(db, "users", user.uid));
+  if (!snap.exists()) { document.getElementById("vmedDisplay").textContent = "Error loading ID"; return; }
+  const data = snap.data();
+  document.getElementById("vmedDisplay").textContent = data.vmedId;
+  document.getElementById("goBtn").onclick = () => {
+    if(data.role==="patient") window.location.href="../patient_dashboard/index.html";
+    else if(data.role==="doctor") window.location.href="../doctor_dashboard/index.html";
+    else window.location.href="../gov_dashboard/index.html";
+  };
+});
 </script>
-
 </body>
 </html>

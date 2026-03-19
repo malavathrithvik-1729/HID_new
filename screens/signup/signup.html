@@ -1,41 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>V-Med ID | Choose Role</title>
-  <link rel="stylesheet" href="../login/login.css" />
+<meta charset="UTF-8"/>
+<title>V-Med ID | Create Account</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--ink:#0a1628;--paper:#f8f6f1;--accent:#1a6b4a;--muted:#6b7a8d}
+body{font-family:'Outfit',sans-serif;background:var(--paper);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 24px}
+.wrapper{width:100%;max-width:680px}
+.back-link{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--muted);text-decoration:none;margin-bottom:40px;transition:color .2s}
+.back-link:hover{color:var(--accent)}
+h1{font-family:'Playfair Display',serif;font-size:40px;color:var(--ink);margin-bottom:10px}
+.sub{font-size:15px;color:var(--muted);margin-bottom:44px;font-weight:300}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:32px}
+.role-btn{background:#fff;border:1.5px solid rgba(10,22,40,0.1);border-radius:20px;padding:36px 28px;cursor:pointer;transition:all .25s;text-align:left;position:relative;overflow:hidden}
+.role-btn::before{content:'';position:absolute;inset:0;opacity:0;transition:.25s}
+.role-btn.patient::before{background:linear-gradient(135deg,rgba(26,107,74,0.06),transparent)}
+.role-btn.doctor::before{background:linear-gradient(135deg,rgba(59,130,246,0.06),transparent)}
+.role-btn:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 16px 40px rgba(10,22,40,0.1)}
+.role-btn:hover::before{opacity:1}
+.role-emoji{font-size:40px;display:block;margin-bottom:16px}
+.role-btn h3{font-size:20px;font-weight:600;color:var(--ink);margin-bottom:8px}
+.role-btn p{font-size:13px;color:var(--muted);line-height:1.6;font-weight:300}
+.role-arrow{position:absolute;top:28px;right:28px;font-size:20px;color:rgba(10,22,40,0.2);transition:all .25s}
+.role-btn:hover .role-arrow{color:var(--accent);transform:translateX(3px)}
+.gov-note{text-align:center;font-size:13px;color:var(--muted);padding:16px;background:rgba(10,22,40,0.04);border-radius:12px}
+.login-link{text-align:center;margin-top:24px;font-size:14px;color:var(--muted)}
+.login-link a{color:var(--accent);font-weight:500;text-decoration:none}
+</style>
 </head>
 <body>
-
-  <div class="login-container">
-
-    <img src="../../assets/images/logo.jpg" alt="V-Med ID Logo" class="logo" />
-
-    <h2>Apply for V-Med ID</h2>
-    <p class="subtitle">
-      Select your role to continue registration
-    </p>
-
-    <button id="patientBtn">I am a Patient</button>
-    <button id="doctorBtn" style="margin-top:12px;">I am a Doctor</button>
-
-    <p class="subtitle" style="margin-top:20px;">
-      Government accounts are created internally
-    </p>
-
+<div class="wrapper">
+  <a class="back-link" href="../splash/splash.html">← Back to home</a>
+  <h1>Create your<br/>V-Med ID</h1>
+  <p class="sub">Choose your role to begin registration. Each role has different requirements and access levels.</p>
+  <div class="role-grid">
+    <button class="role-btn patient" onclick="go('patient')">
+      <span class="role-emoji">🏥</span>
+      <h3>Patient</h3>
+      <p>Access your medical records, AI health assistant, and connect with doctors.</p>
+      <span class="role-arrow">→</span>
+    </button>
+    <button class="role-btn doctor" onclick="go('doctor')">
+      <span class="role-emoji">👨‍⚕️</span>
+      <h3>Doctor</h3>
+      <p>Manage patients, add prescriptions, and use the AI clinical assistant.</p>
+      <span class="role-arrow">→</span>
+    </button>
   </div>
-
-  <script>
-    document.getElementById("patientBtn").addEventListener("click", () => {
-      sessionStorage.setItem("signupRole", "patient");
-      window.location.href = "signup_patient.html";
-    });
-
-    document.getElementById("doctorBtn").addEventListener("click", () => {
-      sessionStorage.setItem("signupRole", "doctor");
-      window.location.href = "signup_doctor.html";
-    });
-  </script>
-
+  <div class="gov-note">🏛️ Government accounts are created internally by the administration.</div>
+  <div class="login-link">Already have an account? <a href="../login/login.html">Sign in</a></div>
+</div>
+<script>
+function go(role) {
+  sessionStorage.setItem("signupRole", role);
+  window.location.href = role === "patient" ? "signup_patient.html" : "signup_doctor.html";
+}
+</script>
 </body>
 </html>

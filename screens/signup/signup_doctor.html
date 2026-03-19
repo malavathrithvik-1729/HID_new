@@ -1,163 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>V-Med ID | Doctor Application</title>
-  <link rel="stylesheet" href="../login/login.css" />
+<meta charset="UTF-8"/>
+<title>V-Med ID | Doctor Registration</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--ink:#0a1628;--paper:#f8f6f1;--accent:#1a6b4a;--muted:#6b7a8d;--err:#dc2626}
+body{font-family:'Outfit',sans-serif;background:var(--paper);min-height:100vh;padding:40px 24px}
+.wrapper{max-width:680px;margin:0 auto}
+.back-link{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--muted);text-decoration:none;margin-bottom:32px;transition:color .2s}
+.back-link:hover{color:var(--accent)}
+h1{font-family:'Playfair Display',serif;font-size:32px;color:var(--ink);margin-bottom:6px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:32px;font-weight:300}
+.card{background:#fff;border-radius:20px;border:1px solid rgba(10,22,40,0.07);padding:32px;margin-bottom:20px}
+.card h2{font-size:14px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid rgba(10,22,40,0.06)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;font-weight:500;color:var(--ink);margin-bottom:6px}
+.req{color:var(--err);margin-left:2px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:12px 14px;border:1.5px solid rgba(10,22,40,0.12);border-radius:10px;font-family:'Outfit',sans-serif;font-size:14px;color:var(--ink);background:#fff;outline:none;transition:border .2s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:80px}
+.form-group .hint{font-size:11px;color:var(--muted);margin-top:5px}
+.err-msg{background:rgba(220,38,38,0.08);color:var(--err);border:1px solid rgba(220,38,38,0.15);border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:16px;display:none}
+.err-msg.show{display:block}
+.btn-submit{width:100%;padding:15px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s;margin-top:8px}
+.btn-submit:hover{background:#155a3d}
+@media(max-width:600px){.grid-2{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
+<div class="wrapper">
+  <a class="back-link" href="signup.html">← Back</a>
+  <h1>Doctor Registration</h1>
+  <p class="subtitle">Provide your professional and personal details to create your V-Med ID.</p>
+  <div class="err-msg" id="errMsg"></div>
 
-  <div class="login-container" style="width:440px;">
-
-    <img src="../../assets/images/logo.jpg" alt="V-Med ID Logo" class="logo" />
-
-    <h2>Doctor Application</h2>
-    <p class="subtitle">
-      Fields marked with <b style="color:red">*</b> are compulsory
-    </p>
-
-    <form id="doctorForm">
-
-      <label>Full Name <span style="color:red">*</span></label>
-      <input type="text" required />
-
-      <label>Father Name <span style="color:red">*</span></label>
-      <input type="text" required />
-
-      <label>Gender <span style="color:red">*</span></label>
-      <select required>
-        <option value="">-- Select --</option>
-        <option>Male</option>
-        <option>Female</option>
-        <option>Other</option>
-      </select>
-
-      <label>Date of Birth <span style="color:red">*</span></label>
-      <input type="date" required />
-
-      <label>Aadhaar Number <span style="color:red">*</span></label>
-      <input type="text" placeholder="12-digit Aadhaar" required />
-
-      <label>ABHA Number <span style="color:red">*</span></label>
-      <input type="text" placeholder="ABHA Health ID" required />
-
-      <label>Address <span style="color:red">*</span></label>
-      <input type="text" required />
-
-      <label>
-        Email
-        <span style="color:red">*</span>
-        <small>(at least one contact required)</small>
-      </label>
-      <input type="email" id="email" />
-
-      <label>
-        Phone Number
-        <span style="color:red">*</span>
-        <small>(at least one contact required)</small>
-      </label>
-      <input type="tel" id="phone" />
-
-      <label>Specializations <span style="color:red">*</span></label>
-      <input
-        type="text"
-        placeholder="e.g., Cardiology, General Medicine"
-        required
-      />
-
-      <label>Practising Since <span style="color:red">*</span></label>
-      <input type="number" placeholder="Year (e.g., 2015)" required />
-
-      <hr style="margin:18px 0;">
-
-      <!-- 🔗 GOOGLE DRIVE URL INPUTS -->
-
-      <label>
-        Doctor License / Certificate (Google Drive URL)
-        <span style="color:red">*</span>
-      </label>
-      <input
-        type="url"
-        placeholder="https://drive.google.com/file/d/..."
-        required
-      />
-
-      <label>Additional Certificates (optional – Google Drive URLs)</label>
-      <input
-        type="url"
-        placeholder="https://drive.google.com/file/d/..."
-      />
-
-      <p id="contactError" style="color:#d32f2f; font-size:13px;"></p>
-
-      <button type="submit" style="margin-top:14px;">
-        Continue to OTP
-      </button>
-
-    </form>
-
+  <div class="card">
+    <h2>Personal Identity</h2>
+    <div class="grid-2">
+      <div class="form-group"><label>Full Name <span class="req">*</span></label><input type="text" id="fullName" placeholder="As per Aadhaar"/></div>
+      <div class="form-group"><label>Father's Name <span class="req">*</span></label><input type="text" id="fatherName"/></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Gender <span class="req">*</span></label><select id="gender"><option value="">— Select —</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+      <div class="form-group"><label>Date of Birth <span class="req">*</span></label><input type="date" id="dob"/></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Aadhaar Number <span class="req">*</span></label><input type="text" id="aadhaar" placeholder="12-digit" maxlength="12"/></div>
+      <div class="form-group"><label>ABHA Number <span class="req">*</span></label><input type="text" id="abha"/></div>
+    </div>
+    <div class="form-group"><label>Address <span class="req">*</span></label><textarea id="address" placeholder="Full address"></textarea></div>
   </div>
 
+  <div class="card">
+    <h2>Professional Details</h2>
+    <div class="grid-2">
+      <div class="form-group"><label>Specializations <span class="req">*</span></label><input type="text" id="specializations" placeholder="e.g. Cardiology, General"/></div>
+      <div class="form-group"><label>Practising Since <span class="req">*</span></label><input type="number" id="practisingSince" placeholder="Year e.g. 2015" min="1970" max="2025"/></div>
+    </div>
+    <div class="form-group"><label>Qualification <span class="req">*</span></label><input type="text" id="qualification" placeholder="e.g. MBBS, MD Cardiology"/></div>
+  </div>
+
+  <div class="card">
+    <h2>Contact Details</h2>
+    <div class="grid-2">
+      <div class="form-group"><label>Email <span class="req">*</span></label><input type="email" id="email"/></div>
+      <div class="form-group"><label>Phone</label><input type="tel" id="phone" placeholder="+91 XXXXX XXXXX"/></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Certificates (Google Drive Links)</h2>
+    <div class="form-group"><label>Medical License / Degree <span class="req">*</span></label><input type="url" id="docLicense" placeholder="https://drive.google.com/file/d/..."/><div class="hint">Share with anyone with the link</div></div>
+    <div class="form-group"><label>Additional Certificate</label><input type="url" id="docExtra" placeholder="Optional additional certificate URL"/></div>
+  </div>
+
+  <button class="btn-submit" onclick="handleSubmit()">Continue to Create Password →</button>
+</div>
+
 <script>
-  document.getElementById("doctorForm").addEventListener("submit", function (e) {
-    e.preventDefault();
+function handleSubmit() {
+  const get = id => document.getElementById(id).value.trim();
+  const err = document.getElementById("errMsg");
+  err.classList.remove("show");
+  const required = [
+    [get("fullName"),"Full name required"],[get("fatherName"),"Father's name required"],
+    [get("gender"),"Gender required"],[get("dob"),"Date of birth required"],
+    [get("aadhaar"),"Aadhaar required"],[get("abha"),"ABHA required"],
+    [get("address"),"Address required"],[get("email"),"Email required"],
+    [get("specializations"),"Specializations required"],
+    [get("practisingSince"),"Year of practice required"],
+    [get("qualification"),"Qualification required"],
+    [get("docLicense"),"Medical license URL required"],
+  ];
+  for (const [val, msg] of required) { if(!val){err.textContent=msg;err.classList.add("show");return;} }
+  if(get("aadhaar").length!==12){err.textContent="Aadhaar must be 12 digits.";err.classList.add("show");return;}
 
-    const email = document.getElementById("email").value.trim();
-    const phone = document.getElementById("phone").value.trim();
+  const docs = [{type:"certificate",title:"Medical License",externalUrl:get("docLicense")}];
+  const extra = get("docExtra"); if(extra) docs.push({type:"certificate",title:"Additional Certificate",externalUrl:extra});
 
-    if (!email && !phone) {
-      document.getElementById("contactError").textContent =
-        "Please provide at least one contact.";
-      return;
-    }
-
-    const mainCertUrl = e.target[11].value.trim();
-    const extraCertUrl = e.target[12].value.trim();
-
-    if (!mainCertUrl) {
-      alert("Doctor license URL is required.");
-      return;
-    }
-
-    if (!mainCertUrl.includes("drive.google.com")) {
-      alert("Please provide a valid Google Drive link.");
-      return;
-    }
-
-    const data = {
-      fullName: e.target[0].value,
-      fatherName: e.target[1].value,
-      gender: e.target[2].value,
-      dob: e.target[3].value,
-      aadhaar: e.target[4].value,
-      abha: e.target[5].value,
-      address: e.target[6].value,
-      email,
-      phone,
-      specializations: e.target[9].value,
-      practisingSince: e.target[10].value,
-
-      documents: [
-        {
-          type: "certificate",
-          title: "Medical License",
-          externalUrl: mainCertUrl
-        },
-        ...(extraCertUrl ? [{
-          type: "certificate",
-          title: "Additional Certificate",
-          externalUrl: extraCertUrl
-        }] : [])
-      ]
-    };
-
-    sessionStorage.setItem("signupRole", "doctor");
-    sessionStorage.setItem("email", email);
-    sessionStorage.setItem("applicationData", JSON.stringify(data));
-
-    window.location.href = "../login/otp.html";
-  });
+  const data = {
+    fullName:get("fullName"),fatherName:get("fatherName"),gender:get("gender"),dob:get("dob"),
+    aadhaar:get("aadhaar"),abha:get("abha"),address:get("address"),
+    email:get("email"),phone:get("phone"),
+    specializations:get("specializations"),practisingSince:get("practisingSince"),
+    qualification:get("qualification"),documents:docs
+  };
+  sessionStorage.setItem("signupRole","doctor");
+  sessionStorage.setItem("email",data.email);
+  sessionStorage.setItem("applicationData",JSON.stringify(data));
+  window.location.href="create_password.html";
+}
 </script>
-
 </body>
 </html>
