@@ -1,27 +1,16 @@
-<!-- ===============================
-     HISTORY PAGE
-================================ -->
-<div class="history-header">
-  <h1>📜 Medical History</h1>
-  <p class="muted">
-    Uploaded medical reports and documents
-  </p>
-</div>
-
-<!-- STATUS -->
-<div class="alert-banner info">
-  These records were added during registration or by healthcare providers.
-</div>
-
-<!-- REPORT LIST -->
-<div id="historyList" class="history-list">
-  <!-- JS will inject reports here -->
-</div>
-
-<!-- EMPTY STATE -->
-<div id="historyEmpty" class="history-empty hidden">
-  <p>No medical records found.</p>
-  <small class="muted">
-    Uploaded reports will appear here.
-  </small>
+<div class="section-wrap">
+  <div class="page-header">
+    <h1 class="page-title">Medical History</h1>
+    <p class="page-sub">Uploaded medical reports and documents</p>
+  </div>
+  <div class="alert info">ℹ️ These are documents you uploaded during registration. Doctors can add records during consultations.</div>
+  <div class="card">
+    <div class="card-title">Your Documents</div>
+    <div id="historyList"></div>
+    <div id="historyEmpty" class="empty-state" style="display:none">
+      <div class="empty-icon">📂</div>
+      <h3>No documents yet</h3>
+      <p>Medical reports uploaded during registration will appear here. Contact your doctor to add consultation records.</p>
+    </div>
+  </div>
 </div>

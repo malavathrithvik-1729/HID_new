@@ -1,19 +1,15 @@
-<div class="medications-header">
-  <h1>💊 Medications</h1>
-  <p class="muted">
-    Doctor-prescribed medications and treatment plans
-  </p>
-</div>
-
-<div class="alert-banner info">
-  <strong>No medication records available</strong><br>
-  Medication details are added after a doctor consultation.
-  Once a healthcare provider updates your prescriptions,
-  they will appear here automatically.
-</div>
-
-<div class="medications-empty">
-  <p class="muted">
-    You don’t need to take any action right now.
-  </p>
+<div class="section-wrap">
+  <div class="page-header">
+    <h1 class="page-title">Medications</h1>
+    <p class="page-sub">Prescriptions added by your doctors</p>
+  </div>
+  <div class="card">
+    <div class="card-title">Current Prescriptions</div>
+    <div id="medList"></div>
+    <div id="medEmpty" class="empty-state" style="display:none">
+      <div class="empty-icon">💊</div>
+      <h3>No medications yet</h3>
+      <p>When a doctor adds a prescription during a consultation, it will appear here automatically.</p>
+    </div>
+  </div>
 </div>

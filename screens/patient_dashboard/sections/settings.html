@@ -1,99 +1,251 @@
-<div class="settings-wrapper">
+<div class="section-wrap">
 
-  <!-- HEADER -->
-  <div class="settings-header">
-    <div>
-      <h1>⚙️ Settings</h1>
-      <p class="muted">Manage your personal and identity details</p>
-    </div>
-    <button id="logoutBtn" class="logout-btn">Logout</button>
-  </div>
-
-  <!-- PERSONAL INFORMATION -->
-  <div class="settings-card">
-    <h2 class="section-title">Personal Information</h2>
-
-    <div class="detail-row">
-      <span class="detail-label">Full Name</span>
-      <span class="detail-value" id="detailName">--</span>
-    </div>
-
-    <div class="detail-row">
-      <span class="detail-label">Father’s Name</span>
-      <span class="detail-value" id="detailFatherName">--</span>
-    </div>
-
-    <div class="detail-row">
-      <span class="detail-label">Gender</span>
-      <span class="detail-value" id="detailGender">--</span>
-    </div>
-
-    <div class="detail-row">
-      <span class="detail-label">Date of Birth</span>
-      <span class="detail-value" id="detailDob">--</span>
-    </div>
-  </div>
-
-  <!-- CONTACT & GOV IDS -->
-  <div class="settings-card">
-    <h2 class="section-title">Contact & Government IDs</h2>
-
-    <div class="detail-row editable">
-      <span class="detail-label">Email</span>
-      <span class="detail-value" id="detailEmail">--</span>
-      <button class="edit-btn" data-field="email">Edit</button>
-    </div>
-
-    <div class="detail-row editable">
-      <span class="detail-label">Phone</span>
-      <span class="detail-value" id="detailPhone">--</span>
-      <button class="edit-btn" data-field="phone">Edit</button>
-    </div>
-
-    <div class="detail-row">
-      <span class="detail-label">Aadhaar</span>
-      <span class="detail-value masked" id="detailAadhaar">--</span>
-    </div>
-
-    <div class="detail-row">
-      <span class="detail-label">ABHA</span>
-      <span class="detail-value" id="detailAbha">--</span>
-    </div>
-  </div>
-
-  <!-- SECURITY SECTION -->
-  <div class="settings-card">
-    <h2 class="section-title">Security</h2>
-
-    <div class="security-row">
+  <!-- ── APPEARANCE ────────────────────────────────────────────── -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title" style="margin-bottom:16px" id="settingsAppearanceTitle">Appearance</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
       <div>
-        <h3>Password</h3>
-        <p class="muted small">Update your account password</p>
+        <div style="font-size:14px;font-weight:600;color:var(--ink)" id="settingsThemeLabel">Theme</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:3px" id="settingsThemeDesc">Choose light or dark display. Saved automatically.</div>
       </div>
-      <button id="changePasswordBtn" class="primary-btn">
-        Change Password
-      </button>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none">
+        <span style="font-size:13px;color:var(--muted)" id="themeLabel"></span>
+        <div id="dmSwitchTrack" style="position:relative;width:48px;height:26px;border-radius:100px;background:var(--border-strong);transition:background 0.25s;cursor:pointer" onclick="toggleDark();syncDmSwitch()">
+          <div id="dmSwitchThumb" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform 0.25s;pointer-events:none;display:flex;align-items:center;justify-content:center;font-size:11px">🌙</div>
+        </div>
+      </label>
     </div>
+    <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+      <div id="lightPreview" onclick="setTheme(false)" style="flex:1;min-width:120px;padding:12px 16px;border-radius:10px;border:2px solid transparent;background:#f0ede6;cursor:pointer;transition:border-color 0.2s;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">☀️</span>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#0a1628" id="settingsLightLabel">Light</div>
+          <div style="font-size:11px;color:#6b7a8d" id="settingsLightDesc">Warm paper background</div>
+        </div>
+      </div>
+      <div id="darkPreview" onclick="setTheme(true)" style="flex:1;min-width:120px;padding:12px 16px;border-radius:10px;border:2px solid transparent;background:#1a2535;cursor:pointer;transition:border-color 0.2s;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">🌙</span>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#e8edf3" id="settingsDarkLabel">Dark</div>
+          <div style="font-size:11px;color:#8a9bb0" id="settingsDarkDesc">Easy on the eyes</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LANGUAGE ───────────────────────────────────────────────── -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title" style="margin-bottom:4px;padding-bottom:0;border-bottom:none" id="settingsLangTitle">Language</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px" id="settingsLangDesc">Choose your preferred language for the dashboard.</div>
+    <!-- Buttons are injected by initSettings() via LANGUAGES array -->
+    <div id="langBtnWrap" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+  </div>
+
+  <!-- ── EMERGENCY CONTACTS ─────────────────────────────────────── -->
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+      <div>
+        <div class="card-title" style="margin-bottom:2px;padding-bottom:0;border-bottom:none" id="settingsEcTitle">Emergency contacts</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px" id="settingsEcDesc">Shown to doctors when they scan your QR code. Max 3 contacts.</div>
+      </div>
+      <button id="addContactBtn" class="ec-add-btn">+ Add contact</button>
+    </div>
+    <div id="ecList"></div>
+    <div id="ecEmpty" style="display:none;text-align:center;padding:28px 0">
+      <div style="font-size:36px;margin-bottom:10px">🆘</div>
+      <div class="ec-empty-title" style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px">No emergency contacts yet</div>
+      <div class="ec-empty-desc" style="font-size:13px;color:var(--muted)">Add a contact so doctors can reach your family in an emergency.</div>
+    </div>
+  </div>
+
+  <!-- ── PERSONAL INFORMATION ───────────────────────────────────── -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title" style="margin-bottom:16px" id="settingsPersonalTitle">Personal information</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="detail-row"><span class="detail-label" id="lbl_fullName">Full name</span>     <span class="detail-val" id="detailName">--</span></div>
+      <div class="detail-row"><span class="detail-label" id="lbl_father">Father's name</span>   <span class="detail-val" id="detailFather">--</span></div>
+      <div class="detail-row"><span class="detail-label" id="lbl_gender">Gender</span>           <span class="detail-val" id="detailGender">--</span></div>
+      <div class="detail-row"><span class="detail-label" id="lbl_dob">Date of birth</span>       <span class="detail-val" id="detailDob">--</span></div>
+      <div class="detail-row"><span class="detail-label" id="lbl_blood">Blood group</span>       <span class="detail-val" id="detailBlood">--</span></div>
+      <div class="detail-row"><span class="detail-label" id="lbl_occ">Occupation</span>          <span class="detail-val" id="detailOccupation">--</span></div>
+      <div class="detail-row" style="grid-column:1/-1">
+        <span class="detail-label" id="lbl_address">Address</span>
+        <span class="detail-val" id="detailAddress">--</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CONTACT DETAILS ────────────────────────────────────────── -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title" style="margin-bottom:16px" id="settingsContactTitle">Contact details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="detail-row"><span class="detail-label" id="lbl_email">Email</span> <span class="detail-val" id="detailEmail">--</span></div>
+      <div class="detail-row"><span class="detail-label" id="lbl_phone">Phone</span> <span class="detail-val" id="detailPhone">--</span></div>
+    </div>
+  </div>
+
+  <!-- ── IDENTITY DOCUMENTS ─────────────────────────────────────── -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title" style="margin-bottom:16px" id="settingsIdTitle">Identity documents</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="detail-row"><span class="detail-label" id="lbl_aadhaar">Aadhaar</span> <span class="detail-val" id="detailAadhaar">--</span></div>
+      <div class="detail-row"><span class="detail-label" id="lbl_abha">ABHA</span>        <span class="detail-val" id="detailAbha">--</span></div>
+    </div>
+  </div>
+
+  <!-- ── V-MED ID ───────────────────────────────────────────────── -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title" style="margin-bottom:8px" id="settingsVmedTitle">Your V-Med ID</div>
+    <div id="shareVmedId" style="font-size:22px;font-family:'Playfair Display',serif;color:var(--accent);letter-spacing:1px;margin-bottom:4px">--</div>
+    <div style="font-size:12px;color:var(--muted)" id="settingsVmedDesc">Share this ID with doctors for instant profile access</div>
+  </div>
+
+  <!-- ── SECURITY ───────────────────────────────────────────────── -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title" style="margin-bottom:16px" id="settingsSecTitle">Security</div>
+    <button id="changePassBtn" class="ec-sec-btn">🔒 Change password</button>
+  </div>
+
+  <!-- ── ACCOUNT ────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title" style="margin-bottom:12px" id="settingsAccTitle">Account</div>
+    <button id="logoutBtnSettings" class="ec-logout-btn">🚪 Log out</button>
   </div>
 
 </div>
 
-
-<!-- PASSWORD MODAL -->
-<div id="passwordModal" class="modal">
-  <div class="modal-content">
-    <h2>Change Password</h2>
-
-    <input type="password" id="currentPassword" placeholder="Current Password">
-    <input type="password" id="newPassword" placeholder="New Password">
-    <input type="password" id="confirmPassword" placeholder="Confirm New Password">
-
-    <div class="modal-actions">
-      <button id="cancelPasswordBtn" class="secondary-btn">Cancel</button>
-      <button id="savePasswordBtn" class="primary-btn">Update</button>
+<!-- ── EMERGENCY CONTACT MODAL ────────────────────────────────── -->
+<div id="ecModal" style="display:none;position:fixed;inset:0;background:rgba(5,10,20,0.72);z-index:1000;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--surface);border-radius:18px;padding:28px;width:100%;max-width:420px;border:1px solid var(--border);max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h3 id="ecModalTitle" style="font-family:'Playfair Display',serif;font-size:18px;color:var(--ink);margin:0">Add emergency contact</h3>
+      <button onclick="document.getElementById('ecModal').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--muted);line-height:1">×</button>
+    </div>
+    <div style="margin-bottom:14px">
+      <label class="ec-label" id="ecNameLabel">Full name <span style="color:var(--danger)">*</span></label>
+      <input id="ecName" type="text" class="ec-input" maxlength="60"/>
+    </div>
+    <div style="margin-bottom:14px">
+      <label class="ec-label" id="ecPhoneLabel">Phone number <span style="color:var(--danger)">*</span></label>
+      <input id="ecPhone" type="tel" class="ec-input" maxlength="15"/>
+    </div>
+    <div style="margin-bottom:14px">
+      <label class="ec-label" id="ecRelationLabel">Relationship <span style="color:var(--danger)">*</span></label>
+      <select id="ecRelation" class="ec-input">
+        <option value="">Select relationship</option>
+        <option value="Father">Father</option>
+        <option value="Mother">Mother</option>
+        <option value="Spouse">Spouse</option>
+        <option value="Son">Son</option>
+        <option value="Daughter">Daughter</option>
+        <option value="Brother">Brother</option>
+        <option value="Sister">Sister</option>
+        <option value="Friend">Friend</option>
+        <option value="Guardian">Guardian</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div style="margin-bottom:20px">
+      <label class="ec-label">
+        <span id="ecAltPhoneLabel">Alternate phone</span>
+        <span id="ecOptionalLabel" style="font-size:11px;color:var(--faint);font-weight:400;margin-left:4px">(optional)</span>
+      </label>
+      <input id="ecAltPhone" type="tel" class="ec-input" maxlength="15"/>
+    </div>
+    <div id="ecError" style="display:none;font-size:13px;color:var(--danger);background:var(--danger-bg);padding:10px 14px;border-radius:8px;margin-bottom:14px"></div>
+    <div style="display:flex;gap:10px">
+      <button id="ecSaveBtn" class="ec-save-btn">Save contact</button>
+      <button class="ec-cancel-btn ec-modal-cancel" onclick="document.getElementById('ecModal').style.display='none'">Cancel</button>
     </div>
   </div>
 </div>
 
-<!-- IMPORTANT -->
-<script type="module" src="settings.js"></script>
+<!-- ── PASSWORD MODAL ─────────────────────────────────────────── -->
+<div id="passwordModal" style="display:none;position:fixed;inset:0;background:rgba(5,10,20,0.7);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:16px;padding:28px;width:90%;max-width:380px;border:1px solid var(--border)">
+    <h3 id="passModalTitle" style="font-family:'Playfair Display',serif;font-size:18px;color:var(--ink);margin:0 0 20px">Change password</h3>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <input id="currPass" type="password" class="ec-input"/>
+      <input id="newPass"  type="password" class="ec-input"/>
+      <input id="confPass" type="password" class="ec-input"/>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button id="savePassBtn"   class="ec-save-btn"   style="flex:1">Save</button>
+      <button id="cancelPassBtn" class="ec-cancel-btn" style="flex:1">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.detail-row   { display:flex;flex-direction:column;gap:3px; }
+.detail-label { font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px; }
+.detail-val   { font-size:14px;color:var(--ink); }
+
+/* Language buttons */
+.lang-btn {
+  padding:8px 18px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--surface-2,#f7f5f0);
+  cursor:pointer;
+  transition:all .15s;
+  font-family:'Outfit',sans-serif;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  min-width:90px;
+}
+.lang-btn:hover { border-color:var(--accent); }
+.lang-btn-active {
+  border-color:var(--accent) !important;
+  background:var(--accent-light) !important;
+}
+.lang-native { font-size:15px;font-weight:600;color:var(--ink); }
+.lang-en     { font-size:11px;color:var(--muted); }
+
+/* Emergency contacts */
+.ec-label { display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px; }
+.ec-input { width:100%;padding:10px 14px;border:1px solid var(--input-border);border-radius:10px;font-family:'Outfit',sans-serif;font-size:14px;color:var(--ink);background:var(--input-bg);outline:none;transition:border-color .2s; }
+.ec-input:focus { border-color:var(--accent); }
+.ec-add-btn { padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .2s; }
+.ec-add-btn:hover { background:var(--accent-hover,#155a3d); }
+.ec-add-btn:disabled { opacity:.5;cursor:not-allowed; }
+.ec-save-btn { flex:1;padding:10px 20px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s; }
+.ec-save-btn:hover    { background:var(--accent-hover,#155a3d); }
+.ec-save-btn:disabled { opacity:.6;cursor:not-allowed; }
+.ec-cancel-btn { flex:1;padding:10px 20px;background:var(--surface-2,#f7f5f0);border:1px solid var(--border);border-radius:10px;font-family:'Outfit',sans-serif;font-size:14px;color:var(--muted);cursor:pointer; }
+.ec-contact-card { display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface-2,#f7f5f0);border:1px solid var(--border);border-radius:12px;margin-bottom:10px; }
+.ec-avatar { width:44px;height:44px;border-radius:50%;background:var(--danger-bg);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0; }
+.ec-info    { flex:1;min-width:0; }
+.ec-name    { font-size:14px;font-weight:600;color:var(--ink);margin-bottom:2px; }
+.ec-relation{ display:inline-block;font-size:11px;font-weight:600;background:var(--accent-light);color:var(--accent);padding:2px 8px;border-radius:100px;margin-bottom:4px; }
+.ec-phone   { font-size:13px;color:var(--muted); }
+.ec-actions { display:flex;gap:6px;flex-shrink:0; }
+.ec-edit-btn { padding:5px 12px;background:transparent;border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif;transition:.2s; }
+.ec-edit-btn:hover { border-color:var(--accent);color:var(--accent); }
+.ec-del-btn  { padding:5px 10px;background:transparent;border:1px solid var(--border);border-radius:7px;font-size:12px;color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif;transition:.2s; }
+.ec-del-btn:hover  { border-color:var(--danger);color:var(--danger);background:var(--danger-bg); }
+.ec-spinner { width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;display:inline-block;animation:spin .8s linear infinite;margin-right:6px;vertical-align:middle; }
+.ec-sec-btn { padding:10px 20px;background:var(--surface-2,#f7f5f0);border:1px solid var(--border);border-radius:10px;font-family:'Outfit',sans-serif;font-size:14px;color:var(--ink);cursor:pointer; }
+.ec-logout-btn { padding:10px 20px;background:var(--danger-bg);border:1px solid rgba(192,57,43,0.2);border-radius:10px;font-family:'Outfit',sans-serif;font-size:14px;color:var(--danger);cursor:pointer;transition:.2s; }
+.ec-logout-btn:hover { background:var(--danger);color:#fff; }
+</style>
+
+<script>
+function syncDmSwitch() {
+  const dark  = document.documentElement.classList.contains("dark");
+  const track = document.getElementById("dmSwitchTrack");
+  const thumb = document.getElementById("dmSwitchThumb");
+  const label = document.getElementById("themeLabel");
+  const lp    = document.getElementById("lightPreview");
+  const dp    = document.getElementById("darkPreview");
+  if (track) track.style.background = dark ? "#1a6b4a" : "rgba(0,0,0,0.16)";
+  if (thumb) { thumb.style.transform = dark ? "translateX(22px)" : "translateX(0)"; thumb.textContent = dark ? "☀️" : "🌙"; }
+  if (label) label.textContent = dark ? (window.__i18nDarkOn || "Dark mode on") : (window.__i18nLightOn || "Light mode on");
+  if (lp) lp.style.borderColor = dark ? "transparent" : "#1a6b4a";
+  if (dp) dp.style.borderColor = dark ? "#1a6b4a"     : "transparent";
+}
+function setTheme(dark) {
+  if (document.documentElement.classList.contains("dark") !== dark) window.toggleDark();
+  syncDmSwitch();
+}
+syncDmSwitch();
+</script>
