@@ -1,149 +1,64 @@
-/* =========================================================
-   FIREBASE IMPORTS
-   ========================================================= */
-import { auth, db } from "./firebase.js";
+import { db } from "./firebase.js";
+import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-import {
-  doc,
-  setDoc,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-/* =========================================================
-   VMED ID GENERATOR
-   ========================================================= */
 function generateVMEDId(role, fullName) {
-  const roleMap = {
-    patient: "p",
-    doctor: "d",
-    government: "g"
-  };
-
-  const roleLetter = roleMap[role];
-  if (!roleLetter) {
-    throw new Error("Invalid role for VMED ID generation");
-  }
-
-
-  const namePart = fullName
-    .toLowerCase()
-    .replace(/\s+/g, "")
-    .slice(0, 12); // 🔒 limit length
-
-
-  const numberPart = Math.floor(1000 + Math.random() * 9000); // 🔒 4 digits
-
-
-  return `VMED-${roleLetter}-${namePart}-${numberPart}`;
+  const roleMap = { patient: "p", doctor: "d", government: "g" };
+  const letter = roleMap[role];
+  const name = fullName.toLowerCase().replace(/\s+/g, "").slice(0, 10);
+  const num = Math.floor(1000 + Math.random() * 9000);
+  return `VMED-${letter}-${name}-${num}`;
 }
 
-
-
-
-/* =========================================================
-   SAVE PATIENT APPLICATION
-   (DOCUMENT URLs STORED IN FIRESTORE)
-   ========================================================= */
-async function savePatientApplication(user, formData) {
-  const userRef = doc(db, "users", user.uid);
-
-
-  const data = {
+export async function savePatientApplication(user, data) {
+  await setDoc(doc(db, "users", user.uid), {
     uid: user.uid,
-    vmedId: generateVMEDId("patient", formData.fullName),
+    vmedId: generateVMEDId("patient", data.fullName),
     role: "patient",
-    status: "pending",
+    status: "active",
     createdAt: serverTimestamp(),
-
-
-    contact: {
-      email: formData.email || "",
-      phone: formData.phone || ""
-    },
-
-
+    contact: { email: data.email || "", phone: data.phone || "" },
     identity: {
-      fullName: formData.fullName,
-      fatherName: formData.fatherName,
-      gender: formData.gender,
-      dob: formData.dob,
-      aadhaar: formData.aadhaar,
-      abha: formData.abha,
-      address: formData.address
+      fullName: data.fullName,
+      fatherName: data.fatherName,
+      gender: data.gender,
+      dob: data.dob,
+      aadhaar: data.aadhaar,
+      abha: data.abha,
+      address: data.address
     },
-
-
-    patientData: {
-      occupation: formData.occupation || ""
-    },
-
-
-    // ✅ DOCUMENT REFERENCES (GOOGLE DRIVE URLs)
-    documents: Array.isArray(formData.documents)
-      ? formData.documents
-      : []
-  };
-
-
-  await setDoc(userRef, data);
+    patientData: { occupation: data.occupation || "", bloodGroup: data.bloodGroup || "" },
+    documents: Array.isArray(data.documents) ? data.documents : [],
+    vitals: {},
+    medications: [],
+    visits: []
+  });
 }
 
-
-/* =========================================================
-   SAVE DOCTOR APPLICATION
-   (CERTIFICATE URLs STORED IN FIRESTORE)
-   ========================================================= */
-async function saveDoctorApplication(user, formData) {
-  const userRef = doc(db, "users", user.uid);
-
-
-  const data = {
+export async function saveDoctorApplication(user, data) {
+  await setDoc(doc(db, "users", user.uid), {
     uid: user.uid,
-    vmedId: generateVMEDId("doctor", formData.fullName),
+    vmedId: generateVMEDId("doctor", data.fullName),
     role: "doctor",
-    status: "pending",
+    status: "active",
     createdAt: serverTimestamp(),
-
-
-    contact: {
-      email: formData.email || "",
-      phone: formData.phone || ""
-    },
-
-
+    contact: { email: data.email || "", phone: data.phone || "" },
     identity: {
-      fullName: formData.fullName,
-      fatherName: formData.fatherName,
-      gender: formData.gender,
-      dob: formData.dob,
-      aadhaar: formData.aadhaar,
-      abha: formData.abha,
-      address: formData.address
+      fullName: data.fullName,
+      fatherName: data.fatherName,
+      gender: data.gender,
+      dob: data.dob,
+      aadhaar: data.aadhaar,
+      abha: data.abha,
+      address: data.address
     },
-
-
     doctorData: {
-      specializations: formData.specializations,
-      practisingSince: formData.practisingSince
+      specializations: data.specializations,
+      practisingSince: data.practisingSince,
+      qualification: data.qualification || ""
     },
-
-
-    // ✅ CERTIFICATE REFERENCES (GOOGLE DRIVE URLs)
-    documents: Array.isArray(formData.documents)
-      ? formData.documents
-      : []
-  };
-
-
-  await setDoc(userRef, data);
+    documents: Array.isArray(data.documents) ? data.documents : [],
+    patients: []
+  });
 }
 
-
-/* =========================================================
-   EXPORTS
-   ========================================================= */
-export {
-  savePatientApplication,
-  saveDoctorApplication,
-  generateVMEDId
-};
+export { generateVMEDId };
