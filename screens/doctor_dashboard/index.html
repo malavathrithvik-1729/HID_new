@@ -1,88 +1,555 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>V-Med ID | Doctor Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
-  <!-- Route Guard -->
-  <script type="module">
-    import { protectRoute } from "../../js/routeGuard.js";
-    protectRoute("doctor");
-  </script>
+<meta charset="UTF-8"/>
+<title>V-Med ID | Doctor Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+/* ══ LIGHT MODE ══════════════════════════════════════════════ */
+:root {
+  --sidebar-w:     220px;
+  --radius:        14px;
+  --radius-sm:     10px;
+  --radius-xs:     8px;
+
+  /* Doctor accent = blue */
+  --accent:        #1a4a8a;
+  --accent-light:  rgba(26,74,138,0.10);
+  --accent-hover:  #153d74;
+  --accent-dark:   #153d74;
+
+  --bg:            #f0ede6;
+  --paper:         #f0ede6;
+  --surface:       #ffffff;
+  --surface-2:     #f7f5f0;
+  --sidebar-bg:    #0a1628;
+  --sidebar-hover: rgba(255,255,255,0.06);
+  --sidebar-active:rgba(26,74,138,0.30);
+
+  --ink:           #0a1628;
+  --muted:         #6b7a8d;
+  --faint:         #a0aab8;
+
+  --border:        rgba(0,0,0,0.09);
+  --border-strong: rgba(0,0,0,0.16);
+
+  --success:       #1a6b4a;
+  --success-bg:    rgba(26,107,74,0.08);
+  --warning:       #b45309;
+  --warning-bg:    rgba(180,83,9,0.08);
+  --danger:        #c0392b;
+  --danger-bg:     rgba(192,57,43,0.08);
+  --info:          #1a4a8a;
+  --info-bg:       rgba(26,74,138,0.08);
+
+  --stat-bg:       #ffffff;
+  --stat-border:   rgba(0,0,0,0.07);
+  --input-bg:      #ffffff;
+  --input-border:  rgba(0,0,0,0.14);
+  --input-focus:   #1a4a8a;
+
+  --theme-transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+/* ══ DARK MODE ═══════════════════════════════════════════════ */
+html.dark {
+  --bg:            #0f1923;
+  --paper:         #0f1923;
+  --surface:       #1a2535;
+  --surface-2:     #222f42;
+  --sidebar-bg:    #0a111c;
+  --sidebar-hover: rgba(255,255,255,0.07);
+  --sidebar-active:rgba(26,74,138,0.35);
+
+  --ink:           #e8edf3;
+  --muted:         #8a9bb0;
+  --faint:         #5a6a7e;
+
+  --border:        rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.15);
+
+  --success:       #2ecc71;
+  --success-bg:    rgba(46,204,113,0.10);
+  --warning:       #f0a500;
+  --warning-bg:    rgba(240,165,0,0.10);
+  --danger:        #e74c3c;
+  --danger-bg:     rgba(231,76,60,0.10);
+  --info:          #3b9de8;
+  --info-bg:       rgba(59,157,232,0.10);
+
+  --stat-bg:       #1e2d40;
+  --stat-border:   rgba(255,255,255,0.06);
+  --input-bg:      #1e2d40;
+  --input-border:  rgba(255,255,255,0.12);
+  --input-focus:   #3b9de8;
+}
+
+/* ══ TRANSITIONS ═════════════════════════════════════════════ */
+body,.card,.stat-card,.section-wrap,#sidebar,#main,#content,
+input,textarea,select,button,.welcome-banner,.alert,.nav-item {
+  transition: var(--theme-transition);
+}
+
+/* ══ BASE ════════════════════════════════════════════════════ */
+html,body { height:100%; overflow:hidden; }
+body { font-family:'Outfit',sans-serif; background:var(--bg); color:var(--ink); }
+.app-shell { display:flex; height:100vh; width:100vw; overflow:hidden; }
+
+/* ══ SIDEBAR ══════════════════════════════════════════════════ */
+.sidebar {
+  width:var(--sidebar-w); min-width:var(--sidebar-w);
+  height:100vh; background:var(--sidebar-bg);
+  display:flex; flex-direction:column; flex-shrink:0;
+  transition:width .3s,min-width .3s,background 0.25s;
+  overflow:hidden; z-index:50;
+}
+.sidebar.collapsed { width:72px; min-width:72px; }
+.sidebar-top {
+  display:flex; align-items:center; gap:12px;
+  padding:20px 18px;
+  border-bottom:1px solid rgba(255,255,255,.06); flex-shrink:0;
+}
+.toggle-btn {
+  background:none; border:none; color:rgba(255,255,255,.4);
+  cursor:pointer; padding:4px; border-radius:6px;
+  display:flex; align-items:center; transition:color .2s; flex-shrink:0;
+}
+.toggle-btn:hover { color:#fff; }
+.brand { display:flex; align-items:center; gap:8px; overflow:hidden; min-width:0; }
+.brand-mark {
+  width:34px; height:34px; border-radius:10px; background:var(--accent);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Playfair Display',serif; font-size:16px; font-weight:700; color:#fff; flex-shrink:0;
+}
+.brand-text {
+  font-family:'Playfair Display',serif; font-size:15px; font-weight:700;
+  color:#fff; letter-spacing:1px; white-space:nowrap; transition:opacity .2s;
+}
+.sidebar.collapsed .brand-text { opacity:0; width:0; overflow:hidden; }
+.profile-cell {
+  display:flex; align-items:center; gap:10px; padding:16px 18px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  background:rgba(255,255,255,.03); flex-shrink:0; overflow:hidden;
+}
+.avatar {
+  width:38px; height:38px; border-radius:50%; background:var(--accent);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Playfair Display',serif; font-size:14px; font-weight:700; color:#fff; flex-shrink:0;
+}
+.profile-info { overflow:hidden; min-width:0; transition:opacity .2s; }
+.sidebar.collapsed .profile-info { opacity:0; width:0; }
+.profile-info strong { display:block; font-size:13px; font-weight:500; color:#f0f9ff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.vmed-chip { font-size:10px; color:#60a5fa; letter-spacing:.4px; font-weight:500; }
+.nav { flex:1; padding:12px 10px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; overflow-x:hidden; }
+.nav-item {
+  width:100%; display:flex; align-items:center; gap:10px; padding:11px 12px;
+  border-radius:var(--radius-xs); border:none; background:transparent;
+  color:rgba(255,255,255,.5); font-family:'Outfit',sans-serif; font-size:13px;
+  cursor:pointer; text-align:left; transition:background .2s,color .2s;
+  white-space:nowrap; overflow:hidden; flex-shrink:0;
+}
+.nav-item:hover  { background:var(--sidebar-hover); color:rgba(255,255,255,.85); }
+.nav-item.active { background:var(--accent); color:#fff; }
+.nav-icon  { font-size:16px; flex-shrink:0; }
+.nav-label { white-space:nowrap; transition:opacity .2s; }
+.sidebar.collapsed .nav-label { opacity:0; width:0; overflow:hidden; }
+.sidebar.collapsed .nav-item  { justify-content:center; padding:12px; }
+
+/* Dark mode toggle in sidebar */
+.dark-toggle-nav {
+  display:flex; align-items:center; gap:10px; padding:11px 12px;
+  border-radius:var(--radius-xs); border:none; background:transparent;
+  color:rgba(255,255,255,.45); font-family:'Outfit',sans-serif; font-size:13px;
+  cursor:pointer; text-align:left; transition:background .2s,color .2s;
+  white-space:nowrap; overflow:hidden; width:100%; flex-shrink:0;
+}
+.dark-toggle-nav:hover { background:var(--sidebar-hover); color:rgba(255,255,255,.85); }
+.sidebar.collapsed .dark-toggle-nav { justify-content:center; padding:12px; }
+.sidebar.collapsed .dark-toggle-nav .nav-label { opacity:0; width:0; overflow:hidden; }
+
+.logout-btn {
+  display:flex; align-items:center; gap:10px; padding:14px 22px;
+  border:none; background:none; color:rgba(255,255,255,.3);
+  font-family:'Outfit',sans-serif; font-size:13px; cursor:pointer;
+  transition:color .2s,background .2s;
+  border-top:1px solid rgba(255,255,255,.06); flex-shrink:0;
+  white-space:nowrap; overflow:hidden;
+}
+.logout-btn:hover { color:#ef4444; background:rgba(239,68,68,.06); }
+.sidebar.collapsed .logout-btn { justify-content:center; padding:14px; }
+
+/* ══ MAIN ═════════════════════════════════════════════════════ */
+.main { flex:1; height:100vh; overflow-y:auto; background:var(--bg); min-width:0; }
+
+/* ══ LOADER ══════════════════════════════════════════════════ */
+.loader-wrap { display:flex; align-items:center; justify-content:center; height:100vh; }
+.loader-box  { text-align:center; }
+.loader-ring {
+  width:48px; height:48px; border:3px solid rgba(26,74,138,.2);
+  border-top-color:var(--accent); border-radius:50%;
+  animation:spin 1s linear infinite; margin:0 auto 16px;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.loader-box p     { font-size:15px; color:var(--muted); margin-bottom:6px; }
+.loader-box small { font-size:12px; color:var(--faint); }
+
+/* ══ LAYOUT ══════════════════════════════════════════════════ */
+.section-wrap { padding:32px 36px; max-width:1100px; }
+.page-header  { margin-bottom:24px; }
+.page-title   { font-family:'Playfair Display',serif; font-size:28px; font-weight:700; color:var(--ink); margin-bottom:4px; }
+.page-sub     { font-size:14px; color:var(--muted); font-weight:300; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr;        gap:16px; }
+.grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+
+/* ══ CARDS ═══════════════════════════════════════════════════ */
+.card {
+  background:var(--surface); border-radius:var(--radius);
+  border:1px solid var(--border); padding:24px;
+}
+.card-title {
+  font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.8px;
+  color:var(--accent); margin-bottom:16px; padding-bottom:10px;
+  border-bottom:1px solid var(--border);
+}
+.stat-card {
+  background:var(--stat-bg); border-radius:var(--radius);
+  border:1px solid var(--stat-border); padding:20px;
+  display:flex; flex-direction:column; gap:6px;
+  transition:transform .2s,box-shadow .2s,background 0.25s,border-color 0.25s;
+}
+.stat-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(10,22,40,.08); }
+.stat-icon  { font-size:28px; margin-bottom:4px; }
+.stat-label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+.stat-value { font-family:'Playfair Display',serif; font-size:28px; color:var(--ink); }
+
+/* ══ WELCOME BANNER ══════════════════════════════════════════ */
+.welcome-banner {
+  background:linear-gradient(135deg,#0a1628 0%,#1a3060 100%);
+  border-radius:var(--radius); padding:32px; margin-bottom:24px;
+  color:#fff; position:relative; overflow:hidden; border:none;
+}
+.welcome-banner::before {
+  content:''; position:absolute; width:300px; height:300px; border-radius:50%;
+  background:rgba(26,74,138,.2); top:-80px; right:-60px;
+}
+.welcome-banner h2 { font-family:'Playfair Display',serif; font-size:26px; margin-bottom:8px; position:relative; z-index:1; color:#fff; }
+.welcome-banner p  { font-size:14px; color:rgba(255,255,255,.6); font-weight:300; position:relative; z-index:1; }
+.welcome-meta { display:flex; gap:16px; margin-top:20px; flex-wrap:wrap; position:relative; z-index:1; }
+.welcome-tag  {
+  display:flex; align-items:center; gap:7px;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
+  padding:7px 14px; border-radius:100px; font-size:12px; color:rgba(255,255,255,.75);
+}
+html.dark .welcome-banner { background:linear-gradient(135deg,#1a2f50 0%,#1a3060 100%); border:1px solid rgba(255,255,255,.07); }
+
+/* ══ FORMS ═══════════════════════════════════════════════════ */
+.form-group { margin-bottom:16px; }
+.form-group label { display:block; font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px; }
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width:100%; padding:10px 14px;
+  border:1px solid var(--input-border); border-radius:var(--radius-xs);
+  font-family:'Outfit',sans-serif; font-size:14px;
+  color:var(--ink); background:var(--input-bg);
+  outline:none; transition:border-color .2s;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus { border-color:var(--input-focus); }
+.form-group input::placeholder,
+.form-group textarea::placeholder { color:var(--faint); }
+.form-hint { font-size:12px; color:var(--faint); margin-top:5px; }
+.req { color:var(--danger); }
+
+/* ══ BUTTONS ═════════════════════════════════════════════════ */
+.btn-primary {
+  padding:10px 20px; background:var(--accent); color:#fff;
+  border:none; border-radius:var(--radius-xs);
+  font-family:'Outfit',sans-serif; font-size:14px; font-weight:500;
+  cursor:pointer; transition:.2s;
+}
+.btn-primary:hover    { background:var(--accent-dark); }
+.btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+.btn-sm { padding:7px 14px; font-size:13px; }
+.btn-secondary {
+  padding:8px 16px; background:var(--surface-2,#f7f5f0);
+  border:1px solid var(--border); border-radius:var(--radius-xs);
+  font-family:'Outfit',sans-serif; font-size:13px; color:var(--ink); cursor:pointer;
+}
+.btn-danger {
+  padding:10px 20px; background:var(--danger-bg); color:var(--danger);
+  border:1px solid rgba(192,57,43,.2); border-radius:var(--radius-xs);
+  font-family:'Outfit',sans-serif; font-size:14px; cursor:pointer; transition:.2s;
+}
+.btn-danger:hover { background:var(--danger); color:#fff; }
+
+/* ══ ALERTS ══════════════════════════════════════════════════ */
+.alert {
+  padding:12px 16px; border-radius:var(--radius-xs);
+  font-size:13px; margin-bottom:16px; line-height:1.5;
+}
+.alert.info    { background:var(--info-bg);    color:var(--info);    border:1px solid rgba(26,74,138,.2); }
+.alert.success { background:var(--success-bg); color:var(--success); border:1px solid rgba(26,107,74,.2); }
+.alert.warning { background:var(--warning-bg); color:var(--warning); border:1px solid rgba(180,83,9,.2); }
+.alert.error   { background:var(--danger-bg);  color:var(--danger);  border:1px solid rgba(192,57,43,.2); }
+
+/* ══ PATIENTS LIST ═══════════════════════════════════════════ */
+.search-bar { margin-bottom:16px; }
+.search-input {
+  width:100%; padding:11px 16px;
+  border:1px solid var(--border); border-radius:var(--radius-sm);
+  font-family:'Outfit',sans-serif; font-size:14px;
+  color:var(--ink); background:var(--surface); outline:none;
+  transition:border-color .2s;
+}
+.search-input:focus { border-color:var(--accent); }
+.patient-card {
+  display:flex; align-items:center; gap:14px; padding:14px 16px;
+  background:var(--surface-2,#f7f5f0); border:1px solid var(--border);
+  border-radius:var(--radius-sm); margin-bottom:10px;
+  cursor:pointer; transition:background .2s,border-color .2s;
+}
+.patient-card:hover { background:var(--accent-light); border-color:rgba(26,74,138,.2); }
+.patient-avatar {
+  width:44px; height:44px; border-radius:50%; background:var(--accent);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Playfair Display',serif; font-size:16px; font-weight:700;
+  color:#fff; flex-shrink:0;
+}
+.patient-detail-avatar {
+  width:48px; height:48px; border-radius:50%; background:var(--accent);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Playfair Display',serif; font-size:16px; font-weight:700; color:#fff;
+}
+.patient-info { flex:1; min-width:0; }
+.patient-info strong { display:block; font-size:14px; font-weight:600; color:var(--ink); margin-bottom:2px; }
+.patient-info span   { display:block; font-size:12px; color:var(--muted); }
+.patient-vmed { color:var(--accent) !important; font-weight:500 !important; }
+.patient-tag  { display:inline-block; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:600; }
+.tag-active   { background:rgba(26,107,74,.1); color:var(--success); }
+
+/* ══ VISIT / MED CARDS ═══════════════════════════════════════ */
+.visit-card {
+  background:var(--surface); border-radius:var(--radius-sm);
+  padding:14px; margin-bottom:10px;
+  border-left:3px solid var(--accent);
+  border-top:1px solid var(--border);
+  border-right:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+.visit-header  { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+.visit-header h4 { font-size:14px; font-weight:600; color:var(--ink); }
+.visit-date    { font-size:12px; color:var(--muted); }
+.visit-detail  { font-size:13px; color:var(--muted); line-height:1.5; margin-bottom:4px; }
+.visit-pills   { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.visit-pill    { padding:3px 10px; background:var(--accent-light); color:var(--accent); border-radius:100px; font-size:11px; font-weight:500; }
+
+/* ══ PRESCRIPTIONS ════════════════════════════════════════════ */
+.med-row {
+  display:grid; grid-template-columns:2fr 1fr 1fr 1fr auto;
+  gap:10px; align-items:end; padding:14px;
+  background:var(--surface-2,#f7f5f0); border:1px solid var(--border);
+  border-radius:var(--radius-sm); margin-bottom:10px;
+}
+.med-remove {
+  width:32px; height:32px; border-radius:50%; border:none;
+  background:var(--danger-bg); color:var(--danger);
+  font-size:18px; cursor:pointer; display:flex;
+  align-items:center; justify-content:center; transition:.2s; flex-shrink:0;
+}
+.med-remove:hover { background:var(--danger); color:#fff; }
+.add-med-btn {
+  padding:8px 16px; background:transparent;
+  border:1px dashed var(--accent); color:var(--accent);
+  border-radius:var(--radius-xs); font-family:'Outfit',sans-serif;
+  font-size:13px; cursor:pointer; transition:.2s; margin-top:4px;
+}
+.add-med-btn:hover { background:var(--accent-light); }
+
+/* ══ AI CHAT ══════════════════════════════════════════════════ */
+.ai-chat {
+  background:var(--surface); border-radius:var(--radius);
+  border:1px solid var(--border); padding:20px;
+  overflow-y:auto; display:flex; flex-direction:column; gap:14px;
+}
+.ai-msg      { display:flex; max-width:82%; }
+.ai-msg.user { align-self:flex-end; justify-content:flex-end; }
+.ai-msg.ai   { align-self:flex-start; }
+.bubble {
+  padding:13px 17px; border-radius:16px; font-size:14px; line-height:1.6;
+}
+.ai-msg.user .bubble { background:var(--accent); color:#fff; border-radius:16px 16px 4px 16px; }
+.ai-msg.ai   .bubble { background:var(--surface-2,#f7f5f0); border:1px solid var(--border); border-radius:4px 16px 16px 16px; color:var(--ink); }
+.ai-input-row { display:flex; gap:10px; flex-shrink:0; }
+.ai-input-row input {
+  flex:1; padding:12px 18px; border:1.5px solid var(--border);
+  border-radius:100px; font-family:'Outfit',sans-serif; font-size:14px;
+  color:var(--ink); background:var(--surface); outline:none; transition:border-color .2s;
+}
+.ai-input-row input:focus { border-color:var(--accent); }
+.ai-send-btn {
+  padding:12px 24px; background:var(--accent); color:#fff;
+  border:none; border-radius:100px; font-family:'Outfit',sans-serif;
+  font-size:14px; font-weight:500; cursor:pointer; transition:.2s;
+}
+.ai-send-btn:hover { background:var(--accent-dark); }
+
+/* ══ SETTINGS ═════════════════════════════════════════════════ */
+.settings-wrap { max-width:720px; }
+.detail-row {
+  display:grid; grid-template-columns:180px 1fr auto;
+  align-items:center; padding:12px 0;
+  border-bottom:1px solid var(--border); font-size:14px; gap:16px;
+}
+.detail-row:last-child { border-bottom:none; }
+.detail-label { font-weight:500; color:var(--muted); font-size:13px; }
+.detail-value { color:var(--ink); }
+.masked { letter-spacing:2px; }
+
+/* ══ MODAL ════════════════════════════════════════════════════ */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(10,22,40,.55);
+  display:none; align-items:center; justify-content:center; z-index:200;
+}
+.modal-overlay.open { display:flex; }
+.modal-box {
+  background:var(--surface); border-radius:20px; padding:28px;
+  width:100%; max-width:440px;
+  border:1px solid var(--border); color:var(--ink);
+  max-height:90vh; overflow-y:auto;
+}
+.modal-box h2 { font-family:'Playfair Display',serif; font-size:22px; color:var(--ink); margin-bottom:20px; }
+.modal-input {
+  width:100%; padding:11px 14px;
+  border:1.5px solid var(--input-border); border-radius:var(--radius-xs);
+  font-family:'Outfit',sans-serif; font-size:14px;
+  color:var(--ink); background:var(--input-bg); outline:none;
+  transition:border-color .2s; margin-bottom:12px;
+}
+.modal-input:focus { border-color:var(--input-focus); }
+.modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:8px; }
+.btn-cancel  { padding:10px 20px; background:var(--surface-2,#f7f5f0); border:1px solid var(--border); border-radius:var(--radius-xs); font-family:'Outfit',sans-serif; font-size:14px; cursor:pointer; color:var(--muted); }
+.btn-confirm { padding:10px 20px; background:var(--accent); color:#fff; border:none; border-radius:var(--radius-xs); font-family:'Outfit',sans-serif; font-size:14px; font-weight:500; cursor:pointer; }
+
+/* ══ EMPTY STATE ══════════════════════════════════════════════ */
+.empty-state { text-align:center; padding:48px 20px; }
+.empty-icon  { font-size:48px; margin-bottom:14px; }
+.empty-state h3 { font-size:18px; font-weight:600; color:var(--ink); margin-bottom:8px; }
+.empty-state p  { font-size:14px; color:var(--muted); max-width:320px; margin:0 auto; }
+
+/* ══ HISTORY CARDS ════════════════════════════════════════════ */
+.history-card {
+  background:var(--surface); border-radius:var(--radius-sm);
+  border:1px solid var(--border); padding:16px; margin-bottom:12px;
+  transition:background .2s;
+}
+.history-card:hover { background:var(--surface-2,#f7f5f0); }
+.history-patient-name { font-size:15px; font-weight:600; color:var(--ink); margin-bottom:4px; }
+.history-meta { font-size:12px; color:var(--muted); margin-bottom:8px; }
+
+/* ══ RESPONSIVE ═══════════════════════════════════════════════ */
+@media(max-width:900px) {
+  .section-wrap { padding:20px 16px; }
+  .grid-3,.grid-4 { grid-template-columns:repeat(2,1fr); }
+  .med-row { grid-template-columns:1fr 1fr; }
+}
+@media(max-width:600px) {
+  .sidebar { position:fixed; }
+  .grid-2,.grid-3,.grid-4 { grid-template-columns:1fr; }
+  .section-wrap { padding:16px 12px; }
+  .med-row { grid-template-columns:1fr; }
+}
+</style>
+
+<!-- Route guard -->
+<script type="module">
+import { protectRoute } from "../../js/routeGuard.js";
+protectRoute("doctor");
+</script>
 </head>
+
 <body>
-  <div class="dashboard-root">
+<div class="app-shell">
 
-    <!-- ================= SIDEBAR ================= -->
-    <aside class="sidebar" id="sidebar">
-
-      <!-- Toggle -->
-      <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
-
-      <!-- Brand -->
-      <div class="sidebar-brand">
-        <img src="../../assets/images/logo.jpg" alt="V-Med" class="sidebar-logo" />
-        <span class="brand-text">V-MED ID</span>
+  <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <button class="toggle-btn" onclick="toggleSidebar()" title="Toggle sidebar">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <rect y="3"  width="18" height="2" rx="1" fill="currentColor"/>
+          <rect y="8"  width="18" height="2" rx="1" fill="currentColor"/>
+          <rect y="13" width="18" height="2" rx="1" fill="currentColor"/>
+        </svg>
+      </button>
+      <div class="brand">
+        <div class="brand-mark">V</div>
+        <span class="brand-text">MED ID</span>
       </div>
+    </div>
 
-      <!-- Profile Showcase (not a button) -->
-      <div class="profile-showcase">
-        <div class="profile-avatar" id="doctorInitials">DR</div>
-        <div class="profile-info">
-          <strong id="sidebarDoctorName">Loading...</strong>
-          <span id="sidebarVmedId" class="vmed-badge">VMED-d-...</span>
-        </div>
+    <div class="profile-cell">
+      <div class="avatar" id="doctorAvatar">DR</div>
+      <div class="profile-info">
+        <strong id="sidebarName">Loading...</strong>
+        <span id="sidebarVmed" class="vmed-chip">VMED-d-...</span>
       </div>
+    </div>
 
-      <!-- Navigation -->
-      <nav class="nav-menu">
-        <button class="nav-item active" data-page="home" onclick="loadSection(this,'home')">
-          <span class="nav-icon">🏠</span>
-          <span class="nav-label">Home</span>
-        </button>
-        <button class="nav-item" data-page="patients" onclick="loadSection(this,'patients')">
-          <span class="nav-icon">👥</span>
-          <span class="nav-label">Present Patients</span>
-        </button>
-        <button class="nav-item" data-page="history" onclick="loadSection(this,'history')">
-          <span class="nav-icon">📋</span>
-          <span class="nav-label">Patient History</span>
-        </button>
-        <button class="nav-item" data-page="add_patient" onclick="loadSection(this,'add_patient')">
-          <span class="nav-icon">➕</span>
-          <span class="nav-label">Add Patient</span>
-        </button>
-        <button class="nav-item" data-page="ai" onclick="loadSection(this,'ai')">
-          <span class="nav-icon">🤖</span>
-          <span class="nav-label">AI Suggestions</span>
-        </button>
-        <button class="nav-item" data-page="settings" onclick="loadSection(this,'settings')">
-          <span class="nav-icon">⚙️</span>
-          <span class="nav-label">Settings</span>
-        </button>
-      </nav>
+    <nav class="nav">
+      <button class="nav-item active" data-page="home"         onclick="loadSection(this,'home')">
+        <span class="nav-icon">🏠</span><span class="nav-label">Home</span>
+      </button>
+      <button class="nav-item" data-page="patients"            onclick="loadSection(this,'patients')">
+        <span class="nav-icon">👥</span><span class="nav-label">My Patients</span>
+      </button>
+      <button class="nav-item" data-page="add_patient"         onclick="loadSection(this,'add_patient')">
+        <span class="nav-icon">➕</span><span class="nav-label">Add Patient</span>
+      </button>
+      <button class="nav-item" data-page="consultation"        onclick="loadSection(this,'consultation')">
+        <span class="nav-icon">📝</span><span class="nav-label">Add Consultation</span>
+      </button>
+      <button class="nav-item" data-page="history"             onclick="loadSection(this,'history')">
+        <span class="nav-icon">📋</span><span class="nav-label">Consultation History</span>
+      </button>
+      <button class="nav-item" data-page="ai"                  onclick="loadSection(this,'ai')">
+        <span class="nav-icon">🤖</span><span class="nav-label">AI Assistant</span>
+      </button>
+      <button class="nav-item" data-page="settings"            onclick="loadSection(this,'settings')">
+        <span class="nav-icon">⚙️</span><span class="nav-label">Settings</span>
+      </button>
 
-    </aside>
+      <!-- Dark mode toggle -->
+      <button class="dark-toggle-nav" id="sidebarDarkBtn" onclick="toggleDark()" title="Toggle dark mode">
+        <span class="nav-icon" style="font-size:16px">🌙</span>
+        <span class="nav-label">Dark mode</span>
+      </button>
+    </nav>
 
-    <!-- ================= MAIN ================= -->
-    <main class="main" id="mainContent">
-      <!-- Loader -->
-      <div id="content" class="loader-screen">
-        <div class="loader-box">
-          <img src="../../assets/images/logo.jpg" alt="V-Med Logo" class="loader-logo" />
-          <div class="pulse-ring"></div>
-          <p class="loader-text">Preparing your clinical dashboard</p>
-          <small class="muted">स्वास्थ्य ं परमं धनम्</small>
-        </div>
+    <button class="logout-btn" onclick="handleLogout()">
+      <span class="nav-icon">🚪</span>
+      <span class="nav-label">Logout</span>
+    </button>
+  </aside>
+
+  <!-- ── MAIN ────────────────────────────────────────────── -->
+  <main class="main" id="main">
+    <div id="content" class="loader-wrap">
+      <div class="loader-box">
+        <div class="loader-ring"></div>
+        <p>Loading your clinical dashboard...</p>
+        <small>स्वास्थ्यं परमं धनम्</small>
       </div>
-    </main>
+    </div>
+  </main>
 
-  </div>
+</div>
 
-  <script type="module" src="./js/doctorData.js"></script>
-  <script type="module" src="./js/dashboard.js"></script>
+<script type="module" src="./js/doctorData.js"></script>
+<script type="module" src="./js/dashboard.js"></script>
 </body>
 </html>

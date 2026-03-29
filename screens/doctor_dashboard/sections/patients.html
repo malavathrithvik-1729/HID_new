@@ -1,21 +1,73 @@
-<!-- ===============================
-     PRESENT PATIENTS
-================================ -->
-<div class="section-header">
-  <h1>👥 Present Patients</h1>
-  <p class="muted">Patients currently under your care</p>
+<div class="section-wrap">
+  <div class="page-header">
+    <h1 class="page-title">My Patients</h1>
+    <p class="page-sub">All patients linked to your profile</p>
+  </div>
+
+  <div class="search-bar">
+    <input class="search-input" type="text" id="patientSearch"
+      placeholder="Search by name, V-Med ID, or blood group…"/>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Patient list</div>
+    <div id="patientList"></div>
+    <div id="patientEmpty" class="empty-state" style="display:none">
+      <div class="empty-icon">👥</div>
+      <h3>No patients yet</h3>
+      <p>Use "Add Patient" to link patients to your profile using their V-Med ID.</p>
+    </div>
+  </div>
 </div>
 
-<div class="alert-banner info">
-  Patients added via <strong>Add Patient</strong> will appear here.
+<!-- ── Patient Detail Modal ──────────────────────────────────── -->
+<div class="modal-overlay" id="patientModal" style="display:none">
+  <div class="modal-box" style="max-width:600px;width:95%">
+
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="patient-detail-avatar" id="modalPatientAvatar">P</div>
+        <div>
+          <h2 style="font-size:20px;margin-bottom:2px;color:var(--ink)" id="modalPatientName">Patient</h2>
+          <p style="font-size:13px;color:var(--accent);font-weight:500" id="modalPatientVmed">--</p>
+        </div>
+      </div>
+      <button onclick="(function(){var m=document.getElementById('patientModal');m.classList.remove('open');m.style.display='none';})()"
+        style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">×</button>
+    </div>
+
+    <!-- Details -->
+    <div style="background:var(--surface-2,#f7f5f0);border-radius:10px;padding:16px;margin-bottom:16px;border:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);margin-bottom:12px">Patient details</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><div style="font-size:11px;color:var(--muted)">Gender</div>         <div style="font-size:14px;font-weight:500;color:var(--ink)" id="modalGender">--</div></div>
+        <div><div style="font-size:11px;color:var(--muted)">Date of birth</div>  <div style="font-size:14px;font-weight:500;color:var(--ink)" id="modalDob">--</div></div>
+        <div><div style="font-size:11px;color:var(--muted)">Blood group</div>    <div style="font-size:14px;font-weight:500;color:var(--ink)" id="modalBlood">--</div></div>
+        <div><div style="font-size:11px;color:var(--muted)">ABHA</div>           <div style="font-size:14px;font-weight:500;color:var(--ink)" id="modalAbha">--</div></div>
+        <div><div style="font-size:11px;color:var(--muted)">Email</div>          <div style="font-size:13px;font-weight:500;color:var(--ink)" id="modalEmail">--</div></div>
+        <div><div style="font-size:11px;color:var(--muted)">Phone</div>          <div style="font-size:14px;font-weight:500;color:var(--ink)" id="modalPhone">--</div></div>
+      </div>
+    </div>
+
+    <!-- Visits -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);margin-bottom:10px">Visit history</div>
+      <div id="modalVisitList"></div>
+    </div>
+
+    <!-- Medications -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);margin-bottom:10px">Medications</div>
+      <div id="modalMedList"></div>
+    </div>
+
+    <!-- Documents -->
+    <div>
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);margin-bottom:10px">Documents</div>
+      <div id="modalDocList"></div>
+    </div>
+  </div>
 </div>
 
-<div id="presentList" class="patient-list">
-  <!-- JS will inject patient cards here -->
-</div>
-
-<div id="presentEmpty" class="empty-state">
-  <div class="empty-icon">👤</div>
-  <p>No present patients yet.</p>
-  <small class="muted">Use <strong>Add Patient</strong> to link a patient to your care.</small>
-</div>
+<!-- Modal close on backdrop click is handled by dashboard.js -->

@@ -1,21 +1,54 @@
-<!-- ===============================
-     PATIENT HISTORY
-================================ -->
-<div class="section-header">
-  <h1>📋 Patient History</h1>
-  <p class="muted">Records of all patients you've treated</p>
-</div>
+<div class="section-wrap">
+  <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <h1 class="page-title">Consultation History</h1>
+      <p class="page-sub">All visits you have recorded across your patients</p>
+    </div>
+    <div id="historyStats" style="font-size:13px;color:var(--muted);padding-top:6px"></div>
+  </div>
 
-<div class="alert-banner info">
-  Full patient history will appear here after consultations are recorded.
-</div>
+  <!-- Loading spinner -->
+  <div id="historySpinner" style="display:none;text-align:center;padding:32px;color:var(--muted)">
+    <div style="width:32px;height:32px;border:3px solid rgba(26,74,138,.2);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px"></div>
+    Loading consultations…
+  </div>
 
-<div id="historyList" class="patient-list">
-  <!-- JS will inject records here -->
-</div>
+  <!-- Records -->
+  <div id="historyList"></div>
 
-<div id="historyEmpty" class="empty-state">
-  <div class="empty-icon">📂</div>
-  <p>No patient history available.</p>
-  <small class="muted">Patient records will appear here after visits.</small>
+  <!-- Empty state -->
+  <div id="historyEmpty" class="empty-state" style="display:none">
+    <div class="empty-icon">📂</div>
+    <h3>No consultations yet</h3>
+    <p>Use "Add Consultation" to record patient visits. They will appear here.</p>
+  </div>
+
+  <!-- Edit Consultation Modal -->
+  <div id="editConsultModal" class="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+    <div class="modal-content card" style="background:var(--surface);width:100%;max-width:600px;border-radius:12px;padding:24px;position:relative;max-height:90vh;overflow-y:auto;box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+      <button onclick="document.getElementById('editConsultModal').style.display='none'" style="position:absolute;right:16px;top:16px;background:transparent;border:none;font-size:20px;cursor:pointer;color:var(--muted);">&times;</button>
+      <h2 style="margin-top:0;margin-bottom:8px;font-size:20px;color:var(--ink);">Edit Consultation</h2>
+      <p id="editConsultPatientName" style="color:var(--muted);font-size:14px;margin-bottom:20px;"></p>
+
+      <div id="editConsultMsg" style="display:none;margin-bottom:12px;"></div>
+
+      <div class="form-group">
+        <label>Reason for visit <span class="req">*</span></label>
+        <input type="text" id="editVisitReason"/>
+      </div>
+      <div class="form-group">
+        <label>Diagnosis</label>
+        <input type="text" id="editVisitDiagnosis"/>
+      </div>
+      <div class="form-group">
+        <label>Clinical notes</label>
+        <textarea id="editVisitNotes" rows="3"></textarea>
+      </div>
+
+      <div style="margin-top:20px;display:flex;justify-content:flex-end;gap:12px;">
+        <button style="padding:10px 20px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--ink);cursor:pointer;" onclick="document.getElementById('editConsultModal').style.display='none'">Cancel</button>
+        <button id="saveEditConsultBtn" class="btn-primary" style="padding:10px 24px;">Save Changes</button>
+      </div>
+    </div>
+  </div>
 </div>

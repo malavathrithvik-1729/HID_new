@@ -1,64 +1,44 @@
-/* =========================================================
-   DOCTOR DATA — Fetch from Firestore & expose globally
-   ========================================================= */
 import { auth, db } from "../../../js/firebase.js";
-import {
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import {
-  doc,
-  getDoc
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-/* =========================================================
-   GLOBAL DOCTOR STATE
-   ========================================================= */
 window.currentDoctorData = null;
+window.currentDoctorId   = null;
 
-/* =========================================================
-   FETCH & POPULATE
-   ========================================================= */
-export async function loadDoctorData() {
-  return new Promise((resolve) => {
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) return;
+// A Promise<data|null> that resolves once Firebase Auth fires AND
+// the Firestore doc is fetched. dashboard.js awaits this before
+// loading any section — eliminates setTimeout race conditions.
+window.doctorDataReady = new Promise(resolve => {
+  onAuthStateChanged(auth, async user => {
+    if (!user) return resolve(null);
+    try {
+      const snap = await getDoc(doc(db, "users", user.uid));
+      if (!snap.exists()) return resolve(null);
 
-      try {
-        const snap = await getDoc(doc(db, "users", user.uid));
-        if (!snap.exists()) return;
+      const data = snap.data();
+      window.currentDoctorData = data;
+      window.currentDoctorId   = user.uid;
 
-        const data = snap.data();
-        window.currentDoctorData = data;
+      console.log("✅ Doctor loaded:", user.uid, data.identity?.fullName);
 
-        // Sidebar — name
-        const fullName = data.identity?.fullName || "Doctor";
-        const nameEl = document.getElementById("sidebarDoctorName");
-        if (nameEl) nameEl.textContent = "Dr. " + fullName;
+      // Populate sidebar
+      const el   = id => document.getElementById(id);
+      const name = data.identity?.fullName || "Doctor";
 
-        // Sidebar — vmed id
-        const vmedEl = document.getElementById("sidebarVmedId");
-        if (vmedEl) vmedEl.textContent = data.vmedId || "VMED-d-...";
+      if (el("sidebarName")) el("sidebarName").textContent = "Dr. " + name.split(" ")[0];
+      if (el("sidebarVmed")) el("sidebarVmed").textContent = data.vmedId || "VMED-d-...";
 
-        // Sidebar — initials avatar
-        const initialsEl = document.getElementById("doctorInitials");
-        if (initialsEl) {
-          const parts = fullName.trim().split(" ");
-          const initials = parts.length >= 2
-            ? parts[0][0] + parts[1][0]
-            : parts[0].slice(0, 2);
-          initialsEl.textContent = initials.toUpperCase();
-        }
-
-        resolve(data);
-      } catch (err) {
-        console.error("Doctor data error:", err);
-        resolve(null);
+      if (el("doctorAvatar")) {
+        const parts = name.trim().split(" ");
+        el("doctorAvatar").textContent = parts.length >= 2
+          ? (parts[0][0] + parts[1][0]).toUpperCase()
+          : parts[0].slice(0, 2).toUpperCase();
       }
-    });
-  });
-}
 
-/* =========================================================
-   AUTO-INIT
-   ========================================================= */
-loadDoctorData();
+      resolve(data);
+    } catch (e) {
+      console.error("doctorData load error:", e);
+      resolve(null);
+    }
+  });
+});

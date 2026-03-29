@@ -1,100 +1,80 @@
-<!-- ===============================
-     SETTINGS
-================================ -->
-<div class="settings-wrapper">
+<div class="section-wrap settings-wrap">
 
-  <div class="settings-header">
+  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
     <div>
-      <h1>⚙️ Settings</h1>
-      <p class="muted">Manage your professional and identity details</p>
+      <h1 class="page-title">Settings</h1>
+      <p class="page-sub">Your professional and account details</p>
     </div>
-    <button id="logoutBtn" class="logout-btn">Logout</button>
+    <button class="btn-danger" id="logoutBtnSettings">🚪 Logout</button>
   </div>
 
-  <!-- Personal Information -->
-  <div class="settings-card">
-    <h2 class="section-title">Personal Information</h2>
-    <div class="detail-row">
-      <span class="detail-label">Full Name</span>
-      <span class="detail-value" id="detailName">--</span>
-    </div>
-    <div class="detail-row">
-      <span class="detail-label">Father's Name</span>
-      <span class="detail-value" id="detailFatherName">--</span>
-    </div>
-    <div class="detail-row">
-      <span class="detail-label">Gender</span>
-      <span class="detail-value" id="detailGender">--</span>
-    </div>
-    <div class="detail-row">
-      <span class="detail-label">Date of Birth</span>
-      <span class="detail-value" id="detailDob">--</span>
-    </div>
-    <div class="detail-row">
-      <span class="detail-label">V-Med ID</span>
-      <span class="detail-value" id="detailVmed">--</span>
+  <!-- Appearance -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">Appearance</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--ink)">Theme</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:3px">Toggle between light and dark mode.</div>
+      </div>
+      <button id="settingsDarkBtn" style="
+        padding:9px 18px;
+        background:var(--surface-2,#f7f5f0);
+        border:1px solid var(--border);
+        border-radius:10px;
+        font-family:'Outfit',sans-serif;
+        font-size:14px;color:var(--ink);cursor:pointer;
+        transition:background .2s;
+      ">🌙 Switch to dark mode</button>
     </div>
   </div>
 
-  <!-- Professional Details -->
-  <div class="settings-card">
-    <h2 class="section-title">Professional Details</h2>
-    <div class="detail-row">
-      <span class="detail-label">Specializations</span>
-      <span class="detail-value" id="detailSpec">--</span>
-    </div>
-    <div class="detail-row">
-      <span class="detail-label">Practising Since</span>
-      <span class="detail-value" id="detailSince">--</span>
-    </div>
+  <!-- Personal -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">Personal information</div>
+    <div class="detail-row"><span class="detail-label">Full name</span>     <span class="detail-value" id="detailName">--</span></div>
+    <div class="detail-row"><span class="detail-label">Father's name</span> <span class="detail-value" id="detailFather">--</span></div>
+    <div class="detail-row"><span class="detail-label">Gender</span>        <span class="detail-value" id="detailGender">--</span></div>
+    <div class="detail-row"><span class="detail-label">Date of birth</span> <span class="detail-value" id="detailDob">--</span></div>
+  </div>
+
+  <!-- Professional -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">Professional details</div>
+    <div class="detail-row"><span class="detail-label">Specializations</span>  <span class="detail-value" id="detailSpec">--</span></div>
+    <div class="detail-row"><span class="detail-label">Qualification</span>    <span class="detail-value" id="detailQual">--</span></div>
+    <div class="detail-row"><span class="detail-label">Practising since</span> <span class="detail-value" id="detailSince">--</span></div>
   </div>
 
   <!-- Contact & IDs -->
-  <div class="settings-card">
-    <h2 class="section-title">Contact & Government IDs</h2>
-    <div class="detail-row">
-      <span class="detail-label">Email</span>
-      <span class="detail-value" id="detailEmail">--</span>
-    </div>
-    <div class="detail-row">
-      <span class="detail-label">Phone</span>
-      <span class="detail-value" id="detailPhone">--</span>
-    </div>
-    <div class="detail-row">
-      <span class="detail-label">Aadhaar</span>
-      <span class="detail-value masked" id="detailAadhaar">--</span>
-    </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">Contact &amp; government IDs</div>
+    <div class="detail-row"><span class="detail-label">Email</span>   <span class="detail-value" id="detailEmail">--</span></div>
+    <div class="detail-row"><span class="detail-label">Phone</span>   <span class="detail-value" id="detailPhone">--</span></div>
+    <div class="detail-row"><span class="detail-label">Aadhaar</span> <span class="detail-value masked" id="detailAadhaar">--</span></div>
+    <div class="detail-row"><span class="detail-label">ABHA</span>    <span class="detail-value" id="detailAbha">--</span></div>
   </div>
 
   <!-- Security -->
-  <div class="settings-card">
-    <h2 class="section-title">Security</h2>
-    <div class="security-row">
-      <div>
-        <h3>Password</h3>
-        <p class="muted small">Update your account password</p>
-      </div>
-      <button id="changePasswordBtn" class="primary-btn">Change Password</button>
+  <div class="card">
+    <div class="card-title">Security</div>
+    <div class="detail-row">
+      <span class="detail-label">Password</span>
+      <span class="detail-value" style="color:var(--muted)">••••••••</span>
+      <button class="btn-secondary btn-sm" id="changePassBtn">Change password</button>
     </div>
   </div>
-
 </div>
 
-<!-- Password Modal -->
-<div id="passwordModal" class="modal">
-  <div class="modal-content">
-    <h2>Change Password</h2>
-    <input type="password" id="currentPassword" placeholder="Current Password" />
-    <input type="password" id="newPassword" placeholder="New Password" />
-    <input type="password" id="confirmPassword" placeholder="Confirm New Password" />
+<!-- Password modal -->
+<div class="modal-overlay" id="passwordModal">
+  <div class="modal-box">
+    <h2>Change password</h2>
+    <input class="modal-input" type="password" id="currPass" placeholder="Current password"/>
+    <input class="modal-input" type="password" id="newPass"  placeholder="New password (min 8 chars)"/>
+    <input class="modal-input" type="password" id="confPass" placeholder="Confirm new password"/>
     <div class="modal-actions">
-      <button id="cancelPasswordBtn" class="secondary-btn">Cancel</button>
-      <button id="savePasswordBtn" class="primary-btn">Update</button>
+      <button class="btn-cancel"  id="cancelPassBtn">Cancel</button>
+      <button class="btn-confirm" id="savePassBtn">Update password</button>
     </div>
   </div>
 </div>
-
-<script type="module" src="../js/settings.js"></script>
-<script>
-  if (window.initDoctorSettings) window.initDoctorSettings();
-</script>

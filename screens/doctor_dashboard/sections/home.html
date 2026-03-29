@@ -1,29 +1,75 @@
-<!-- ===============================
-     HOME — Doctor Welcome
-================================ -->
-<div class="home-wrapper">
+<div class="section-wrap">
 
-  <!-- Greeting -->
-  <div class="home-greeting">
-    <h1 id="greetDoctor">Good Morning, Doctor 👋</h1>
-    <p class="muted">Here's your clinical overview for today</p>
+  <div class="welcome-banner">
+    <h2 id="greetText">Good morning, Doctor 👋</h2>
+    <p>Your clinical dashboard — manage patients, add consultations, and use the AI assistant.</p>
+    <div class="welcome-meta">
+      <span class="welcome-tag">🆔 <span id="homeVmedId">--</span></span>
+      <span class="welcome-tag">🩺 <span id="homeSpec">--</span></span>
+      <span class="welcome-tag">📅 Since <span id="homeSince">--</span></span>
+    </div>
   </div>
 
-  <!-- Logo watermark area -->
-  <div class="home-logo-area">
-    <img src="../../assets/images/logo.jpg" alt="" class="home-logo-big" />
-    <p class="home-logo-tagline">V-Med ID · Intelligent Healthcare</p>
+  <!-- Stats -->
+  <div class="grid-4" style="margin-bottom:24px">
+    <div class="stat-card">
+      <div class="stat-icon">👥</div>
+      <div class="stat-label">My Patients</div>
+      <div class="stat-value" id="homePatientCount">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📝</div>
+      <div class="stat-label">Add patient</div>
+      <div style="margin-top:8px">
+        <button class="btn-primary btn-sm" onclick="loadSection(document.querySelector('[data-page=add_patient]'),'add_patient')">Add Patient</button>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🏥</div>
+      <div class="stat-label">New consultation</div>
+      <div style="margin-top:8px">
+        <button class="btn-primary btn-sm" onclick="loadSection(document.querySelector('[data-page=consultation]'),'consultation')">New Consultation</button>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🤖</div>
+      <div class="stat-label">Clinical AI</div>
+      <div style="margin-top:8px">
+        <button class="btn-primary btn-sm" onclick="loadSection(document.querySelector('[data-page=ai]'),'ai')">AI Assistant</button>
+      </div>
+    </div>
   </div>
 
+  <!-- Today -->
+  <div class="card" style="margin-bottom:20px;background:var(--accent-light);border-color:rgba(26,74,138,0.15)">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--accent);margin-bottom:4px">Today</div>
+        <div id="homeTodayDate" style="font-size:18px;font-weight:600;color:var(--ink)">--</div>
+      </div>
+      <div style="font-size:32px">📆</div>
+    </div>
+  </div>
+
+  <!-- How to use -->
+  <div class="card">
+    <div class="card-title">How to use</div>
+    <div class="grid-3" style="gap:12px">
+      <div style="padding:16px;background:var(--surface-2,#f7f5f0);border-radius:10px;border:1px solid var(--border)">
+        <div style="font-size:24px;margin-bottom:8px">1️⃣</div>
+        <strong style="font-size:14px;color:var(--ink)">Add Patient</strong>
+        <p style="font-size:13px;color:var(--muted);margin-top:4px">Ask your patient for their V-Med ID and link their profile to yours.</p>
+      </div>
+      <div style="padding:16px;background:var(--surface-2,#f7f5f0);border-radius:10px;border:1px solid var(--border)">
+        <div style="font-size:24px;margin-bottom:8px">2️⃣</div>
+        <strong style="font-size:14px;color:var(--ink)">Add Consultation</strong>
+        <p style="font-size:13px;color:var(--muted);margin-top:4px">Record diagnosis, notes, and prescriptions directly to the patient's profile.</p>
+      </div>
+      <div style="padding:16px;background:var(--surface-2,#f7f5f0);border-radius:10px;border:1px solid var(--border)">
+        <div style="font-size:24px;margin-bottom:8px">3️⃣</div>
+        <strong style="font-size:14px;color:var(--ink)">AI Assistant</strong>
+        <p style="font-size:13px;color:var(--muted);margin-top:4px">Use the clinical AI for drug references, interactions, and symptom info.</p>
+      </div>
+    </div>
+  </div>
 </div>
-
-<script type="module">
-  const data = window.currentDoctorData;
-  const greet = document.getElementById("greetDoctor");
-  if (greet) {
-    const name = data?.identity?.fullName?.split(" ")[0] || "Doctor";
-    const hour = new Date().getHours();
-    const time = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
-    greet.textContent = `${time}, Dr. ${name} 👋`;
-  }
-</script>

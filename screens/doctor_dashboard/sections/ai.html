@@ -1,25 +1,68 @@
-<!-- ===============================
-     AI CLINICAL ASSISTANT
-================================ -->
-<div class="ai-header">
-  <h1>🤖 AI Clinical Assistant</h1>
-  <p class="muted">Ask clinical questions for general guidance. Does not replace medical judgment.</p>
-</div>
+<div class="section-wrap" style="padding-bottom:0;display:flex;flex-direction:column;height:calc(100vh - 32px)">
 
-<div id="aiChat" class="ai-chat">
-  <div class="ai-message ai">
-    <div class="bubble">
-      👋 Hello Doctor! I can assist with general clinical information, drug references, and health education. How can I help?
+  <div class="page-header" style="flex-shrink:0">
+    <h1 class="page-title">AI Clinical Assistant</h1>
+    <p class="page-sub">Powered by Gemini · Clinical reference only — does not replace medical judgment</p>
+  </div>
+
+  <div class="alert info" style="flex-shrink:0;margin-bottom:16px">
+    ℹ️ I'm aware of your specialization and patient count. Ask anything — drug interactions, dosage references, clinical terminology, or treatment guidelines.
+  </div>
+
+  <div class="ai-chat" id="aiChat" style="flex:1;min-height:200px">
+    <div class="ai-msg ai">
+      <div class="bubble">
+        👋 Hello, Doctor! I'm your <strong>AI Clinical Assistant</strong>, powered by Gemini.<br><br>
+        I can help with:
+        <ul style="margin:8px 0 8px 18px;padding:0">
+          <li>Drug references and interaction checks</li>
+          <li>Clinical terminology and definitions</li>
+          <li>Symptom and condition information</li>
+          <li>Treatment guidelines (general reference)</li>
+          <li>Dosage calculations and reminders</li>
+          <li>Health education content for patients</li>
+        </ul>
+        <em>I do not diagnose. Always apply clinical judgment. This is a reference tool only.</em>
+      </div>
     </div>
+  </div>
+
+  <!-- Quick prompts -->
+  <div style="flex-shrink:0;display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 8px">
+    <button class="ai-quick-btn" onclick="window._docAiQuick(this)">Drug interactions for Metformin</button>
+    <button class="ai-quick-btn" onclick="window._docAiQuick(this)">Normal BP range by age</button>
+    <button class="ai-quick-btn" onclick="window._docAiQuick(this)">Explain Type 2 diabetes to a patient</button>
+    <button class="ai-quick-btn" onclick="window._docAiQuick(this)">Signs of Vitamin D deficiency</button>
+  </div>
+
+  <div class="ai-input-row" style="flex-shrink:0;padding-bottom:16px">
+    <input type="text" id="aiInput" placeholder="Ask a clinical question…"/>
+    <button class="ai-send-btn" id="aiSendBtn">Send</button>
   </div>
 </div>
 
-<div class="ai-input-bar">
-  <input id="aiInput" type="text" placeholder="Ask a clinical question…" />
-  <button id="aiSendBtn">Send</button>
-</div>
+<style>
+.ai-quick-btn {
+  padding:6px 14px;
+  border:1px solid rgba(26,74,138,0.25);
+  background:rgba(26,74,138,0.04);
+  color:var(--accent);
+  border-radius:100px;
+  font-family:'Outfit',sans-serif;
+  font-size:12px; cursor:pointer;
+  transition:background .15s,border-color .15s;
+  white-space:nowrap;
+}
+.ai-quick-btn:hover {
+  background:rgba(26,74,138,0.1);
+  border-color:rgba(26,74,138,0.4);
+}
+</style>
 
 <script>
-  // Hook up AI after section loads
-  if (window.initDoctorAI) window.initDoctorAI();
+window._docAiQuick = function(btn) {
+  const input   = document.getElementById("aiInput");
+  const sendBtn = document.getElementById("aiSendBtn");
+  if (input && sendBtn) { input.value = btn.textContent.trim(); sendBtn.click(); }
+};
 </script>

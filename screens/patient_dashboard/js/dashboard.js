@@ -90,7 +90,18 @@ async function loadPage(pageName) {
 
     applyTheme(document.documentElement.classList.contains("dark"));
 
-    const data = await window.patientDataReady;
+    let data = await window.patientDataReady;
+    if (window.currentUserId) {
+      try {
+        const freshSnap = await getDoc(doc(db, "users", window.currentUserId));
+        if (freshSnap.exists()) {
+          data = freshSnap.data();
+          window.currentPatientData = data;
+        }
+      } catch (e) {
+        console.warn("Could not fetch fresh data", e);
+      }
+    }
 
     if (pageName === "home")        initHome(data);
     if (pageName === "history")     initHistory(data);

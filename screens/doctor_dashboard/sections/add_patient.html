@@ -1,78 +1,41 @@
-<!-- ===============================
-     ADD PATIENT
-================================ -->
-<div class="section-header">
-  <h1>➕ Add Patient</h1>
-  <p class="muted">Link a patient to your care using their V-Med ID</p>
+<div class="section-wrap">
+  <div class="page-header">
+    <h1 class="page-title">Add Patient</h1>
+    <p class="page-sub">Link a patient to your profile using their V-Med ID</p>
+  </div>
+
+  <div class="card" style="max-width:560px;margin-bottom:20px">
+    <div class="card-title">Search by V-Med ID</div>
+    <div class="alert info" style="margin-bottom:16px">
+      ℹ️ Ask your patient to share their V-Med ID from their Settings page.
+    </div>
+    <div id="addPatientMsg" style="display:none;margin-bottom:12px"></div>
+    <div class="form-group">
+      <label>Patient V-Med ID <span class="req">*</span></label>
+      <input type="text" id="searchVmedId"
+        placeholder="e.g. VMED-p-priya-2847"
+        style="font-family:monospace;font-size:15px;letter-spacing:.5px"/>
+    </div>
+    <button class="btn-primary" id="searchPatientBtn" style="width:100%">Search Patient</button>
+  </div>
+
+  <!-- Found patient preview -->
+  <div id="foundPatientCard" class="card" style="max-width:560px;display:none">
+    <div class="card-title">Patient found</div>
+    <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px">
+      <div class="patient-detail-avatar" style="background:var(--accent);flex-shrink:0">P</div>
+      <div>
+        <div style="font-size:18px;font-weight:600;color:var(--ink);margin-bottom:3px" id="foundName">--</div>
+        <div style="font-size:13px;color:var(--accent);font-weight:500" id="foundVmed">--</div>
+      </div>
+    </div>
+    <div class="grid-2" style="gap:12px;margin-bottom:20px">
+      <div><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Gender</span>       <div style="font-weight:500;font-size:14px;color:var(--ink);margin-top:3px" id="foundGender">--</div></div>
+      <div><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Date of birth</span><div style="font-weight:500;font-size:14px;color:var(--ink);margin-top:3px" id="foundDob">--</div></div>
+      <div><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Blood group</span>  <div style="font-weight:500;font-size:14px;color:var(--ink);margin-top:3px" id="foundBlood">--</div></div>
+    </div>
+    <button class="btn-primary" id="addPatientBtn" style="width:100%;padding:12px">
+      Confirm &amp; Add Patient
+    </button>
+  </div>
 </div>
-
-<div class="add-patient-card">
-  <div class="field-group">
-    <label>Patient V-Med ID <span class="required">*</span></label>
-    <input type="text" id="patientVmedInput" placeholder="e.g. VMED-p-name-1234" />
-  </div>
-
-  <div class="field-group">
-    <label>Reason for Visit <span class="required">*</span></label>
-    <input type="text" id="visitReason" placeholder="e.g. Routine checkup, Fever, Follow-up" />
-  </div>
-
-  <div class="field-group">
-    <label>Notes (optional)</label>
-    <textarea id="visitNotes" rows="3" placeholder="Any additional clinical notes..."></textarea>
-  </div>
-
-  <button class="primary-btn" id="addPatientBtn" onclick="handleAddPatient()">
-    🔍 Search & Add Patient
-  </button>
-
-  <div id="addPatientMsg" class="add-msg"></div>
-</div>
-
-<script type="module">
-  import { db } from "../../../../js/firebase.js";
-  import {
-    collection, query, where, getDocs
-  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-  window.handleAddPatient = async function () {
-    const vmedId  = document.getElementById("patientVmedInput").value.trim();
-    const reason  = document.getElementById("visitReason").value.trim();
-    const msg     = document.getElementById("addPatientMsg");
-
-    if (!vmedId || !reason) {
-      msg.textContent = "⚠️ Please fill in V-Med ID and reason for visit.";
-      msg.className = "add-msg error";
-      return;
-    }
-
-    msg.textContent = "Searching...";
-    msg.className = "add-msg info";
-
-    try {
-      const q = query(collection(db, "users"), where("vmedId", "==", vmedId));
-      const snap = await getDocs(q);
-
-      if (snap.empty) {
-        msg.textContent = "❌ No patient found with this V-Med ID.";
-        msg.className = "add-msg error";
-        return;
-      }
-
-      const patient = snap.docs[0].data();
-      if (patient.role !== "patient") {
-        msg.textContent = "❌ This V-Med ID does not belong to a patient.";
-        msg.className = "add-msg error";
-        return;
-      }
-
-      msg.textContent = `✅ Patient found: ${patient.identity?.fullName}. Feature to save visit coming soon.`;
-      msg.className = "add-msg success";
-
-    } catch (err) {
-      console.error(err);
-      msg.textContent = "❌ Error searching. Please try again.";
-      msg.className = "add-msg error";
-    }
-  };
-</script>

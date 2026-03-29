@@ -1,0 +1,73 @@
+<div class="section-wrap">
+  <div class="page-header">
+    <h1 class="page-title">Add Consultation</h1>
+    <p class="page-sub">Record a patient visit, diagnosis, and prescriptions</p>
+  </div>
+
+  <div id="consultMsg" style="display:none;max-width:700px"></div>
+
+  <div class="card" style="max-width:700px;margin-bottom:20px">
+    <div class="card-title">Visit details</div>
+
+    <div class="form-group">
+      <label>Select patient <span class="req">*</span></label>
+      <select id="consultPatient">
+        <option value="">— Select a patient —</option>
+      </select>
+      <div class="form-hint">Only patients linked to your profile appear here.</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Reason for visit <span class="req">*</span></label>
+        <input type="text" id="visitReason" placeholder="e.g. Routine checkup, Fever, Follow-up"/>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="text" id="visitDate" readonly
+          style="background:var(--surface-2,#f7f5f0);cursor:not-allowed;color:var(--muted)"/>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Diagnosis</label>
+      <input type="text" id="visitDiagnosis" placeholder="e.g. Viral fever, Hypertension Stage 1"/>
+    </div>
+
+    <div class="form-group">
+      <label>Clinical notes</label>
+      <textarea id="visitNotes" rows="3"
+        placeholder="Observations, instructions, follow-up notes…"></textarea>
+    </div>
+  </div>
+
+  <!-- Prescriptions -->
+  <div class="card" style="max-width:700px;margin-bottom:20px">
+    <div class="card-title">Prescriptions</div>
+    <div id="medsContainer">
+      <div class="med-row" id="med-row-1">
+        <div class="form-group"><label>Medicine name</label><input type="text" class="med-name" placeholder="e.g. Paracetamol 500mg"/></div>
+        <div class="form-group"><label>Dosage</label><input type="text" class="med-dosage" placeholder="e.g. 1 tablet"/></div>
+        <div class="form-group"><label>Frequency</label><input type="text" class="med-freq" placeholder="e.g. Twice daily"/></div>
+        <div class="form-group"><label>Duration</label><input type="text" class="med-duration" placeholder="e.g. 5 days"/></div>
+      </div>
+    </div>
+    <button class="add-med-btn" onclick="addMedRow()">+ Add another medicine</button>
+  </div>
+
+  <div style="max-width:700px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <button class="btn-primary" id="submitConsultBtn" style="padding:13px 32px;font-size:15px">
+      Save Consultation
+    </button>
+    <span style="font-size:13px;color:var(--muted)">
+      Immediately visible in the patient's dashboard.
+    </span>
+  </div>
+</div>
+
+<script>
+;(function() {
+  const dateEl = document.getElementById("visitDate");
+  if (dateEl) dateEl.value = new Date().toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" });
+})();
+</script>

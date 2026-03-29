@@ -1,72 +1,175 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>V-Med ID | Government Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <style>
-    body {
-      margin: 0;
-      font-family: "Segoe UI", sans-serif;
-      background: #f4f6f8;
-    }
-    header {
-      background: #5e35b1;
-      color: white;
-      padding: 16px;
-      font-size: 18px;
-      font-weight: 600;
-    }
-    main {
-      padding: 20px;
-    }
-    .card {
-      background: white;
-      padding: 16px;
-      border-radius: 10px;
-      margin-bottom: 16px;
-      box-shadow: 0 6px 14px rgba(0,0,0,0.08);
-    }
-    button {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      background: #e53935;
-      color: white;
-      cursor: pointer;
-      font-weight: 600;
-    }
-  </style>
+<meta charset="UTF-8"/>
+<title>V-Med ID | Government Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--ink:#0a1628;--paper:#f0ede6;--surface:#fff;--accent:#5b21b6;--muted:#6b7a8d;--border:rgba(10,22,40,0.08)}
+body{font-family:'Outfit',sans-serif;background:var(--paper);color:var(--ink);display:flex}
+.app-shell{display:flex;min-height:100vh;width:100%}
+.sidebar{width:240px;background:var(--ink);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-top{padding:20px 18px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.brand{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#fff;letter-spacing:.5px}
+.brand span{color:var(--accent)}
+.profile-cell{padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:10px}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff}
+.profile-info strong{display:block;font-size:13px;color:#f0f9ff;font-weight:500}
+.profile-info span{font-size:11px;color:rgba(255,255,255,0.4)}
+.nav{flex:1;padding:12px 10px}
+.nav-item{width:100%;display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;border:none;background:transparent;color:rgba(255,255,255,0.5);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;text-align:left;transition:.2s;margin-bottom:2px}
+.nav-item:hover{background:rgba(255,255,255,0.06);color:#fff}
+.nav-item.active{background:var(--accent);color:#fff}
+.logout-btn{display:flex;align-items:center;gap:10px;padding:14px 22px;border:none;background:none;color:rgba(255,255,255,0.3);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;border-top:1px solid rgba(255,255,255,0.06);transition:.2s}
+.logout-btn:hover{color:#ef4444}
+.main{flex:1;overflow-y:auto;background:var(--paper);padding:32px 36px}
+.page-title{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.page-sub{font-size:14px;color:var(--muted);margin-bottom:28px}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.stat-card{background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:20px}
+.stat-card .icon{font-size:28px;margin-bottom:8px}
+.stat-card .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.stat-card .value{font-family:'Playfair Display',serif;font-size:28px;color:var(--ink)}
+.card{background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:24px;margin-bottom:20px}
+.card-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.user-row{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}
+.user-row:last-child{border-bottom:none}
+.user-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.user-info{flex:1}
+.user-info strong{display:block;font-size:14px;font-weight:500;color:var(--ink)}
+.user-info span{font-size:12px;color:var(--muted)}
+.role-badge{padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600}
+.role-patient{background:rgba(26,107,74,0.1);color:#1a6b4a}
+.role-doctor{background:rgba(26,74,138,0.1);color:#1a4a8a}
+.loading-text{font-size:14px;color:var(--muted);text-align:center;padding:20px}
+</style>
+<script type="module">
+import { protectRoute } from "../../js/routeGuard.js";
+protectRoute("government");
+</script>
 </head>
-
 <body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="sidebar-top"><div class="brand">V<span>-</span>Med ID</div><div style="font-size:11px;color:rgba(255,255,255,.3);margin-top:4px">Government Portal</div></div>
+    <div class="profile-cell">
+      <div class="avatar">G</div>
+      <div class="profile-info"><strong id="govName">Loading...</strong><span id="govVmed">VMED-g-...</span></div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" onclick="showTab(this,'overview')">📊 Overview</button>
+      <button class="nav-item" onclick="showTab(this,'users')">👥 All Users</button>
+    </nav>
+    <button class="logout-btn" onclick="handleLogout()">🚪 Logout</button>
+  </aside>
 
-  <header>
-    Government Dashboard
-  </header>
-
-  <main>
-
-    <div class="card">
-      <h3>Authorized Access</h3>
-      <p>Government analytics & control panel.</p>
+  <main class="main">
+    <!-- OVERVIEW TAB -->
+    <div id="tab-overview">
+      <div class="page-title">Government Dashboard</div>
+      <p class="page-sub">Population health overview and system analytics</p>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="icon">👥</div><div class="label">Total Users</div><div class="value" id="statTotal">--</div></div>
+        <div class="stat-card"><div class="icon">🏥</div><div class="label">Patients</div><div class="value" id="statPatients">--</div></div>
+        <div class="stat-card"><div class="icon">👨‍⚕️</div><div class="label">Doctors</div><div class="value" id="statDoctors">--</div></div>
+        <div class="stat-card"><div class="icon">📅</div><div class="label">Registered Today</div><div class="value" id="statToday">--</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">System Status</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+          <div style="padding:16px;background:rgba(5,150,105,0.06);border-radius:10px;border:1px solid rgba(5,150,105,0.15)"><div style="font-size:20px;margin-bottom:6px">✅</div><strong style="font-size:14px;color:#059669">Firebase Auth</strong><p style="font-size:12px;color:var(--muted);margin-top:2px">Operational</p></div>
+          <div style="padding:16px;background:rgba(5,150,105,0.06);border-radius:10px;border:1px solid rgba(5,150,105,0.15)"><div style="font-size:20px;margin-bottom:6px">✅</div><strong style="font-size:14px;color:#059669">Firestore DB</strong><p style="font-size:12px;color:var(--muted);margin-top:2px">Operational</p></div>
+          <div style="padding:16px;background:rgba(217,119,6,0.06);border-radius:10px;border:1px solid rgba(217,119,6,0.15)"><div style="font-size:20px;margin-bottom:6px">⚙️</div><strong style="font-size:14px;color:#d97706">AI Backend</strong><p style="font-size:12px;color:var(--muted);margin-top:2px">Local / Deploy</p></div>
+        </div>
+      </div>
     </div>
 
-    <div class="card">
-      <h3>System Overview</h3>
-      <p>(Population data will appear here later)</p>
+    <!-- USERS TAB -->
+    <div id="tab-users" style="display:none">
+      <div class="page-title">All Registered Users</div>
+      <p class="page-sub">Complete list of patients and doctors registered on V-Med ID</p>
+      <div class="card">
+        <div class="card-title">User Registry</div>
+        <div id="userList"><div class="loading-text">Loading users...</div></div>
+      </div>
     </div>
-
-    <button id="logoutBtn">Logout</button>
-
   </main>
+</div>
 
-  <!-- ROUTE GUARD -->
-  <script type="module">
-    import { protectRoute } from "../../js/routeGuard.js";
-    protectRoute("government");
-  </script>
+<script type="module">
+import { auth, db } from "../../js/firebase.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+window.handleLogout = async () => { await signOut(auth); window.location.replace("../login/login.html"); };
+
+window.showTab = function(btn, tab) {
+  document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("tab-overview").style.display = tab === "overview" ? "block" : "none";
+  document.getElementById("tab-users").style.display = tab === "users" ? "block" : "none";
+  if (tab === "users") loadUsers();
+};
+
+// Load gov user info
+onAuthStateChanged(auth, async user => {
+  if (!user) return;
+  try {
+    const snap = await getDoc(doc(db, "users", user.uid));
+    if (snap.exists()) {
+      const d = snap.data();
+      document.getElementById("govName").textContent = d.identity?.fullName || "Government";
+      document.getElementById("govVmed").textContent = d.vmedId || "--";
+    }
+  } catch(e) {}
+});
+
+// Load stats
+async function loadStats() {
+  try {
+    const snap = await getDocs(collection(db, "users"));
+    const allUsers = snap.docs.map(d => d.data());
+    const patients = allUsers.filter(u => u.role === "patient");
+    const doctors = allUsers.filter(u => u.role === "doctor");
+    const today = new Date().toDateString();
+    const todayCount = allUsers.filter(u => {
+      if (!u.createdAt) return false;
+      return new Date(u.createdAt.seconds * 1000).toDateString() === today;
+    }).length;
+    document.getElementById("statTotal").textContent = allUsers.length;
+    document.getElementById("statPatients").textContent = patients.length;
+    document.getElementById("statDoctors").textContent = doctors.length;
+    document.getElementById("statToday").textContent = todayCount;
+    window._allUsers = allUsers;
+  } catch(e) { console.error(e); }
+}
+loadStats();
+
+window.loadUsers = async function() {
+  const list = document.getElementById("userList");
+  if (!list) return;
+  const allUsers = window._allUsers;
+  if (!allUsers) { list.innerHTML = `<div class="loading-text">Loading...</div>`; return; }
+  const filtered = allUsers.filter(u => u.role === "patient" || u.role === "doctor");
+  if (filtered.length === 0) { list.innerHTML = `<div class="loading-text">No users found</div>`; return; }
+  list.innerHTML = filtered.map(u => {
+    const name = u.identity?.fullName || "Unknown";
+    const initials = name.trim().split(" ").slice(0,2).map(w=>w[0]||"").join("").toUpperCase();
+    const bgColor = u.role === "patient" ? "#1a6b4a" : "#1a4a8a";
+    return `
+      <div class="user-row">
+        <div class="user-avatar" style="background:${bgColor}">${initials}</div>
+        <div class="user-info">
+          <strong>${name}</strong>
+          <span>${u.vmedId || "--"} · ${u.identity?.gender || "--"} · ${u.contact?.email || "--"}</span>
+        </div>
+        <span class="role-badge role-${u.role}">${u.role.charAt(0).toUpperCase()+u.role.slice(1)}</span>
+      </div>
+    `;
+  }).join("");
+};
+</script>
 </body>
 </html>
