@@ -127,7 +127,7 @@ ${langRule}`;
 
   const docs     = patient.documents || [];
   const docsText = docs.length > 0
-    ? docs.map(d => `  - ${d.title} (${d.type || "document"})`).join("\n")
+    ? docs.map(d => `  - ${d.title} (${d.type || "document"})${d.description ? ': ' + d.description : ''}`).join("\n")
     : "  No documents uploaded";
 
   // ✅ Plain text headers — no repeated unicode chars that trigger RECITATION

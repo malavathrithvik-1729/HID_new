@@ -1,0 +1,31 @@
+<div class="section-wrap">
+  <div class="page-header">
+    <h1 class="page-title">Medical History</h1>
+    <p class="page-sub">Your uploaded documents, reports, and scans</p>
+  </div>
+  
+  <div class="alert info">ℹ️ These are documents linked to your medical profile. Doctors can also add new documents here.</div>
+
+  <div class="card" style="margin-bottom: 24px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+      <div class="card-title" style="margin-bottom:0; border:none; padding:0;">Documents</div>
+      <div style="display:flex; gap: 8px;">
+        <select id="docFilter" style="padding: 6px 12px; font-size: 13px; max-width: 150px;">
+          <option value="All">All Types</option>
+          <option value="Report">Report</option>
+          <option value="Scan">Scan</option>
+          <option value="Prescription">Prescription</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+    </div>
+    
+    <div id="docList" class="grid-3" style="gap: 16px;"></div>
+    
+    <div id="docEmpty" class="empty-state" style="display:none; grid-column: 1 / -1;">
+      <div class="empty-icon">📂</div>
+      <h3>No documents found</h3>
+      <p>No documents match your current filter, or none have been added yet.</p>
+    </div>
+  </div>
+</div>

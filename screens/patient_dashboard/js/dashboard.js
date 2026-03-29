@@ -24,8 +24,8 @@ function toggleDark() {
   applyTheme(next);
 }
 
-;(function initTheme() {
-  const saved       = localStorage.getItem(DARK_KEY);
+; (function initTheme() {
+  const saved = localStorage.getItem(DARK_KEY);
   const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
   document.documentElement.classList.toggle("dark",
     saved !== null ? saved === "1" : prefersDark);
@@ -36,12 +36,12 @@ window.toggleDark = toggleDark;
 // ── SIDEBAR TRANSLATION ───────────────────────────────────────────
 function applyNavTranslations() {
   const map = {
-    "[data-page='home']":        t("nav.home"),
-    "[data-page='history']":     t("nav.history"),
+    "[data-page='home']": t("nav.home"),
+    "[data-page='documents']": t("nav.history"),
     "[data-page='medications']": t("nav.medications"),
-    "[data-page='visits']":      t("nav.visits"),
-    "[data-page='ai']":          t("nav.ai"),
-    "[data-page='settings']":    t("nav.settings"),
+    "[data-page='visits']": t("nav.visits"),
+    "[data-page='ai']": t("nav.ai"),
+    "[data-page='settings']": t("nav.settings"),
   };
   Object.entries(map).forEach(([sel, label]) => {
     const el = document.querySelector(`${sel} .nav-label`);
@@ -77,7 +77,7 @@ async function loadPage(pageName) {
     content.innerHTML = await res.text();
 
     content.className = "";
-    content.style     = "";
+    content.style = "";
     const mainEl = document.getElementById("main");
     if (mainEl) mainEl.scrollTop = 0;
 
@@ -103,12 +103,12 @@ async function loadPage(pageName) {
       }
     }
 
-    if (pageName === "home")        initHome(data);
-    if (pageName === "history")     initHistory(data);
+    if (pageName === "home") initHome(data);
+    if (pageName === "documents") initDocuments(data);
     if (pageName === "medications") initMedications(data);
-    if (pageName === "visits")      initVisits(data);
-    if (pageName === "ai")          initAIChat(data);
-    if (pageName === "settings")    initSettings(data);
+    if (pageName === "visits") initVisits(data);
+    if (pageName === "ai") initAIChat(data);
+    if (pageName === "settings") initSettings(data);
 
   } catch (e) {
     console.error("loadPage error:", e);
@@ -141,8 +141,8 @@ function initHome(data) {
   _currentData = data;
   const $ = id => document.getElementById(id);
 
-  const name  = data.identity?.fullName?.split(" ")[0] || "";
-  const hour  = new Date().getHours();
+  const name = data.identity?.fullName?.split(" ")[0] || "";
+  const hour = new Date().getHours();
   const greet = hour < 12
     ? t("home.greetMorning")
     : hour < 17
@@ -154,12 +154,12 @@ function initHome(data) {
   if (sub) sub.textContent = t("home.subtitle");
 
   const statLabels = document.querySelectorAll(".stat-label");
-  const labelKeys  = ["home.dob", "home.linkedDoctors", "home.totalVisits", "home.documents"];
+  const labelKeys = ["home.dob", "home.linkedDoctors", "home.totalVisits", "home.documents"];
   statLabels.forEach((el, i) => { if (labelKeys[i]) el.textContent = t(labelKeys[i]); });
 
-  if ($("homeVmedId"))     $("homeVmedId").textContent     = data.vmedId                 || "--";
+  if ($("homeVmedId")) $("homeVmedId").textContent = data.vmedId || "--";
   if ($("homeBloodGroup")) $("homeBloodGroup").textContent = data.patientData?.bloodGroup || "--";
-  if ($("homeGender"))     $("homeGender").textContent     = t(`gender.${data.identity?.gender}`) || data.identity?.gender || "--";
+  if ($("homeGender")) $("homeGender").textContent = t(`gender.${data.identity?.gender}`) || data.identity?.gender || "--";
 
   if ($("homeDob")) {
     const dob = data.identity?.dob;
@@ -172,21 +172,21 @@ function initHome(data) {
   }
 
   if ($("homeDoctorCount")) $("homeDoctorCount").textContent = (data.linkedDoctors || []).length;
-  if ($("homeVisitCount"))  $("homeVisitCount").textContent  = (data.visits        || []).length;
-  if ($("homeDocCount"))    $("homeDocCount").textContent    = (data.documents     || []).length;
+  if ($("homeVisitCount")) $("homeVisitCount").textContent = (data.visits || []).length;
+  if ($("homeDocCount")) $("homeDocCount").textContent = (data.documents || []).length;
 
   const setTxt = (id, key) => { const el = $(id); if (el) el.textContent = t(key); };
-  setTxt("homeQrEyebrow",    "home.emergencyQr");
-  setTxt("homeQrTitle",      "home.scanProfile");
-  setTxt("homeQrSub",        "home.qrSub");
-  setTxt("homeQrVmedLabel",  "home.vmedIdLabel");
-  setTxt("homeQrHint",       "home.qrHint");
+  setTxt("homeQrEyebrow", "home.emergencyQr");
+  setTxt("homeQrTitle", "home.scanProfile");
+  setTxt("homeQrSub", "home.qrSub");
+  setTxt("homeQrVmedLabel", "home.vmedIdLabel");
+  setTxt("homeQrHint", "home.qrHint");
 
   const fsBtn = $("showFullQrBtn");
   if (fsBtn) fsBtn.textContent = `🔍 ${t("home.fullScreenQr")}`;
 
-  if ($("homeLastVisitTitle"))    $("homeLastVisitTitle").textContent    = t("home.lastVisit");
-  if ($("homeCurrentMedsTitle"))  $("homeCurrentMedsTitle").textContent  = t("home.currentMeds");
+  if ($("homeLastVisitTitle")) $("homeLastVisitTitle").textContent = t("home.lastVisit");
+  if ($("homeCurrentMedsTitle")) $("homeCurrentMedsTitle").textContent = t("home.currentMeds");
 
   if ($("homeLastVisit")) {
     const visits = data.visits || [];
@@ -218,29 +218,29 @@ function initHome(data) {
   }
 
   const noticeTitle = document.querySelector(".health-notice-title");
-  const noticeText  = document.querySelector(".health-notice-text");
+  const noticeText = document.querySelector(".health-notice-text");
   if (noticeTitle) noticeTitle.textContent = t("home.healthNotice");
-  if (noticeText)  noticeText.textContent  = t("home.healthNoticeText");
+  if (noticeText) noticeText.textContent = t("home.healthNoticeText");
 
-  const vmedId   = data.vmedId || "UNKNOWN";
+  const vmedId = data.vmedId || "UNKNOWN";
   const fullName = data.identity?.fullName || "Patient";
-  const blood    = data.patientData?.bloodGroup || "";
-  const qrText   = `V-Med ID: ${vmedId} | Patient: ${fullName}` + (blood ? ` | Blood: ${blood}` : "");
+  const blood = data.patientData?.bloodGroup || "";
+  const qrText = `V-Med ID: ${vmedId} | Patient: ${fullName}` + (blood ? ` | Blood: ${blood}` : "");
 
-  const qrUrl         = s => `https://api.qrserver.com/v1/create-qr-code/?size=${s}x${s}&data=${encodeURIComponent(qrText)}&color=0a1628&bgcolor=ffffff&margin=4&format=png`;
+  const qrUrl = s => `https://api.qrserver.com/v1/create-qr-code/?size=${s}x${s}&data=${encodeURIComponent(qrText)}&color=0a1628&bgcolor=ffffff&margin=4&format=png`;
   const qrFallbackUrl = s => `https://chart.googleapis.com/chart?cht=qr&chs=${s}x${s}&chl=${encodeURIComponent(qrText)}&chco=0a1628`;
 
-  if ($("homeQrVmedId"))  $("homeQrVmedId").textContent  = vmedId;
+  if ($("homeQrVmedId")) $("homeQrVmedId").textContent = vmedId;
   if ($("qrModalVmedId")) $("qrModalVmedId").textContent = vmedId;
-  if ($("qrModalName"))   $("qrModalName").textContent   = fullName;
+  if ($("qrModalName")) $("qrModalName").textContent = fullName;
 
   const setModal = (id, key) => { const el = $(id); if (el) el.textContent = t(key); };
-  setModal("qrModalTitle",    "home.qrModalTitle");
+  setModal("qrModalTitle", "home.qrModalTitle");
   setModal("qrModalScanHint", "home.scanHint");
-  setModal("qrVisitHistory",  "home.visitHistory");
-  setModal("qrBloodGroup",    "home.bloodGroup");
-  setModal("qrMedications",   "medications.title");
-  setModal("qrAllergies",     "home.allergies");
+  setModal("qrVisitHistory", "home.visitHistory");
+  setModal("qrBloodGroup", "home.bloodGroup");
+  setModal("qrMedications", "medications.title");
+  setModal("qrAllergies", "home.allergies");
 
   const closeBtn2 = $("closeQrBtn");
   if (closeBtn2) closeBtn2.textContent = t("home.closeBtn");
@@ -248,8 +248,8 @@ function initHome(data) {
   const smallImg = $("homeQrImg");
   if (smallImg) {
     smallImg.src = qrUrl(150);
-    smallImg.onerror = function() {
-      this.onerror = function() {
+    smallImg.onerror = function () {
+      this.onerror = function () {
         this.style.display = "none";
         if (this.parentElement) this.parentElement.innerHTML = `<div style="font-size:10px;color:#0a1628;word-break:break-all;text-align:center;padding:4px;line-height:1.4">${vmedId}</div>`;
       };
@@ -257,12 +257,12 @@ function initHome(data) {
     };
   }
 
-  const modal  = $("qrFullModal");
+  const modal = $("qrFullModal");
   const bigImg = $("modalQrImg");
   $("showFullQrBtn")?.addEventListener("click", () => {
     if (bigImg && !bigImg.dataset.loaded) {
       bigImg.src = qrUrl(300);
-      bigImg.onerror = function() { this.src = qrFallbackUrl(300); };
+      bigImg.onerror = function () { this.src = qrFallbackUrl(300); };
       bigImg.dataset.loaded = "true";
     }
     if (modal) modal.style.display = "flex";
@@ -271,33 +271,92 @@ function initHome(data) {
   modal?.addEventListener("click", e => { if (e.target === modal) modal.style.display = "none"; });
 }
 
-// ── HISTORY ───────────────────────────────────────────────────────
-function initHistory(data) {
-  const docs  = data?.documents || [];
-  const list  = document.getElementById("historyList");
-  const empty = document.getElementById("historyEmpty");
+// ── DOCUMENTS ─────────────────────────────────────────────────────
+function initDocuments(data) {
+  const docs = data?.documents || [];
+  const list = document.getElementById("docList");
+  const empty = document.getElementById("docEmpty");
+  const filter = document.getElementById("docFilter");
   if (!list) return;
 
   const title = document.querySelector(".section-wrap .page-title");
-  if (title) title.textContent = t("history.title");
+  if (title) title.textContent = t("history.title") || "Medical History";
 
-  if (docs.length === 0) {
-    if (empty) { empty.style.display = "block"; empty.textContent = t("history.empty"); }
-    return;
+  function renderDocs() {
+    const fval = filter ? filter.value : "All";
+    const filtered = fval === "All" ? docs : docs.filter(d => d.type === fval);
+
+    if (filtered.length === 0) {
+      if (empty) empty.style.display = "block";
+      list.innerHTML = "";
+      return;
+    }
+    if (empty) empty.style.display = "none";
+    
+    list.innerHTML = [...filtered].reverse().map((d) => `
+      <div class="doc-item" style="display:flex; flex-direction:column; align-items:flex-start; gap:8px;">
+        <div style="display:flex; align-items:center; gap:12px; width:100%;">
+          <div class="doc-icon">📄</div>
+          <div class="doc-info" style="flex:1;">
+            <strong>${d.title || "Document"}</strong>
+            <span>${d.type || "Document"} &nbsp;•&nbsp; ${d.date || ""}</span>
+          </div>
+        </div>
+        ${d.description ? `<div style="font-size:13px; color:var(--muted); line-height:1.4; margin-top:4px;">${d.description}</div>` : ''}
+        <div style="display:flex; justify-content:space-between; width:100%; margin-top:8px;">
+          <a class="doc-link" href="${d.externalUrl}" target="_blank">${t("history.viewBtn") || "View"}</a>
+          <button class="doc-link" style="border-color:var(--danger); color:var(--danger); background:transparent; cursor:pointer;" onclick="window._deleteDoc('${d.id}')">Delete</button>
+        </div>
+      </div>`).join("");
   }
-  if (empty) empty.style.display = "none";
-  list.innerHTML = docs.map(d => `
-    <div class="doc-item">
-      <div class="doc-icon">📄</div>
-      <div class="doc-info"><strong>${d.title || "Document"}</strong><span>${d.type || "report"}</span></div>
-      <a class="doc-link" href="${d.externalUrl}" target="_blank">${t("history.viewBtn")}</a>
-    </div>`).join("");
+
+  if (filter) filter.addEventListener("change", renderDocs);
+  renderDocs();
+
+  window._deleteDoc = async (id) => {
+    if (!confirm("Are you sure you want to delete this document?")) return;
+    const docToDelete = docs.find(d => d.id === id);
+    if (!docToDelete) return;
+    
+    // We need a visual loading state here
+    const el = document.activeElement;
+    if (el && el.tagName === "BUTTON") {
+      el.textContent = "Deleting...";
+      el.disabled = true;
+    }
+    
+    try {
+      const uid = window.currentUserId;
+      if (!uid) throw new Error("Not logged in");
+      
+      // Remove from array based on exact match of the object in firestore
+      // Or simply overwrite the whole array
+      const newDocs = docs.filter(d => d.id !== id);
+      await updateDoc(doc(db, "users", uid), {
+        documents: newDocs
+      });
+      
+      // Keep local state in sync
+      data.documents = newDocs;
+      
+      // Wait for global data update if needed or just re-render
+      loadPage('documents');
+      
+    } catch (e) {
+      console.error("Delete document error:", e);
+      alert("Failed to delete document: " + e.message);
+      if (el && el.tagName === "BUTTON") {
+        el.textContent = "Delete";
+        el.disabled = false;
+      }
+    }
+  };
 }
 
 // ── MEDICATIONS ───────────────────────────────────────────────────
 function initMedications(data) {
-  const meds  = data?.medications || [];
-  const list  = document.getElementById("medList");
+  const meds = data?.medications || [];
+  const list = document.getElementById("medList");
   const empty = document.getElementById("medEmpty");
   if (!list) return;
 
@@ -314,7 +373,7 @@ function initMedications(data) {
         <div class="dose">${m.dosage || ""} ${m.duration ? "· " + m.duration : ""}</div>
         <div class="freq">${m.frequency || ""}</div>
         ${m.instructions ? `<div class="dose" style="margin-top:4px;font-style:italic">${m.instructions}</div>` : ""}
-        ${m.prescribedBy  ? `<div class="dose" style="margin-top:4px;color:var(--accent)">${t("medications.dr")} ${m.prescribedBy}</div>` : ""}
+        ${m.prescribedBy ? `<div class="dose" style="margin-top:4px;color:var(--accent)">${t("medications.dr")} ${m.prescribedBy}</div>` : ""}
       </div>
       <span class="stat-badge ${m.active !== false ? "badge-green" : "badge-yellow"}">
         ${m.active !== false ? t("medications.active") : t("medications.completed")}
@@ -325,8 +384,8 @@ function initMedications(data) {
 // ── VISITS ────────────────────────────────────────────────────────
 function initVisits(data) {
   const visits = data?.visits || [];
-  const list   = document.getElementById("visitList");
-  const empty  = document.getElementById("visitEmpty");
+  const list = document.getElementById("visitList");
+  const empty = document.getElementById("visitEmpty");
   if (!list) return;
 
   if (visits.length === 0) {
@@ -342,16 +401,16 @@ function initVisits(data) {
       </div>
       <div class="visit-doctor">👨‍⚕️ ${t("visits.dr")} ${v.doctorName || "Unknown"} ${v.doctorSpec ? "· " + v.doctorSpec : ""}</div>
       ${v.diagnosis ? `<div class="visit-detail"><strong>${t("visits.diagnosis")}:</strong> ${v.diagnosis}</div>` : ""}
-      ${v.notes     ? `<div class="visit-detail" style="margin-top:6px">${v.notes}</div>` : ""}
+      ${v.notes ? `<div class="visit-detail" style="margin-top:6px">${v.notes}</div>` : ""}
       ${v.prescriptions?.length
-        ? `<div class="visit-pills">${v.prescriptions.map(p => `<span class="visit-pill">💊 ${p}</span>`).join("")}</div>`
-        : ""}`).join("");
+      ? `<div class="visit-pills">${v.prescriptions.map(p => `<span class="visit-pill">💊 ${p}</span>`).join("")}</div>`
+      : ""}`).join("");
 }
 
 // ── AI CHAT ───────────────────────────────────────────────────────
 function initAIChat(data) {
-  const input   = document.getElementById("aiInput");
-  const chat    = document.getElementById("aiChat");
+  const input = document.getElementById("aiInput");
+  const chat = document.getElementById("aiChat");
   const sendBtn = document.getElementById("aiSendBtn");
   if (!input || !chat || !sendBtn) return;
 
@@ -366,7 +425,7 @@ function initAIChat(data) {
   if (input) input.placeholder = t("ai.placeholder");
   if (sendBtn) sendBtn.textContent = t("ai.send");
 
-  const qKeys = ["q1","q2","q3","q4","q5","q6"];
+  const qKeys = ["q1", "q2", "q3", "q4", "q5", "q6"];
   document.querySelectorAll(".quick-prompt-btn").forEach((btn, i) => {
     if (qKeys[i]) btn.textContent = t(`ai.${qKeys[i]}`);
   });
@@ -376,25 +435,25 @@ function initAIChat(data) {
 
   const ctxEl = document.getElementById("aiContextBadge");
   if (ctxEl && data?.identity?.fullName) {
-    ctxEl.textContent   = `${t("ai.personalised")} ${data.identity.fullName.split(" ")[0]}`;
+    ctxEl.textContent = `${t("ai.personalised")} ${data.identity.fullName.split(" ")[0]}`;
     ctxEl.style.display = "inline-block";
   }
 
   const patientPayload = data ? {
-    vmedId:        data.vmedId,
+    vmedId: data.vmedId,
     identity: {
-      fullName:    data.identity?.fullName,
-      gender:      data.identity?.gender,
-      dob:         data.identity?.dob,
-      address:     data.identity?.address,
+      fullName: data.identity?.fullName,
+      gender: data.identity?.gender,
+      dob: data.identity?.dob,
+      address: data.identity?.address,
     },
     patientData: {
-      bloodGroup:  data.patientData?.bloodGroup,
-      occupation:  data.patientData?.occupation,
+      bloodGroup: data.patientData?.bloodGroup,
+      occupation: data.patientData?.occupation,
     },
-    medications:   data.medications   || [],
-    visits:        data.visits        || [],
-    documents:     data.documents     || [],
+    medications: data.medications || [],
+    visits: data.visits || [],
+    documents: data.documents || [],
     linkedDoctors: data.linkedDoctors || [],
   } : null;
 
@@ -432,13 +491,13 @@ function initAIChat(data) {
     try {
       // ✅ FIX 1: added lang field so backend replies in selected language
       const res = await fetch(`${API_BASE}/api/ai/chat`, {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
           patient: patientPayload,
           history: chatHistory,
-          lang:    getCurrentLang(),   // "en" | "hi" | "te"
+          lang: getCurrentLang(),   // "en" | "hi" | "te"
         })
       });
 
@@ -466,7 +525,7 @@ function initAIChat(data) {
       }
 
       const reply = json.reply || "";
-      chatHistory.push({ role: "user",  text });
+      chatHistory.push({ role: "user", text });
       chatHistory.push({ role: "model", text: reply });
       if (chatHistory.length > 20) chatHistory.splice(0, 2);
 
@@ -518,8 +577,8 @@ function initAIChat(data) {
     const lang = getCurrentLang();
     const continueMsg =
       lang === "hi" ? "कृपया अपना पिछला उत्तर वहाँ से जारी रखें जहाँ आप रुके थे।" :
-      lang === "te" ? "దయచేసి మీరు ఆపిన చోటి నుండి కొనసాగించండి." :
-                      "Please continue your previous response from where you left off.";
+        lang === "te" ? "దయచేసి మీరు ఆపిన చోటి నుండి కొనసాగించండి." :
+          "Please continue your previous response from where you left off.";
     send(continueMsg);
   };
 
@@ -540,47 +599,47 @@ function initSettings(data) {
 
   const setText = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = t(key); };
   setText("settingsAppearanceTitle", "settings.appearance");
-  setText("settingsThemeLabel",      "settings.themeLabel");
-  setText("settingsThemeDesc",       "settings.themeDesc");
-  setText("settingsLightLabel",      "settings.lightTheme");
-  setText("settingsLightDesc",       "settings.lightThemeDesc");
-  setText("settingsDarkLabel",       "settings.darkTheme");
-  setText("settingsDarkDesc",        "settings.darkThemeDesc");
-  setText("settingsLangTitle",       "settings.language");
-  setText("settingsLangDesc",        "settings.languageDesc");
-  setText("settingsEcTitle",         "settings.emergency");
-  setText("settingsEcDesc",          "settings.emergencyDesc");
-  setText("addContactBtn",           "settings.addContact");
-  setText("settingsPersonalTitle",   "settings.personalInfo");
-  setText("settingsContactTitle",    "settings.contactDetails");
-  setText("settingsIdTitle",         "settings.identityDocs");
-  setText("settingsVmedTitle",       "settings.vmedIdCard");
-  setText("settingsVmedDesc",        "settings.vmedIdDesc");
-  setText("settingsSecTitle",        "settings.security");
-  setText("changePassBtn",           "settings.changePass");
-  setText("settingsAccTitle",        "settings.account");
-  setText("logoutBtnSettings",       "settings.logout");
+  setText("settingsThemeLabel", "settings.themeLabel");
+  setText("settingsThemeDesc", "settings.themeDesc");
+  setText("settingsLightLabel", "settings.lightTheme");
+  setText("settingsLightDesc", "settings.lightThemeDesc");
+  setText("settingsDarkLabel", "settings.darkTheme");
+  setText("settingsDarkDesc", "settings.darkThemeDesc");
+  setText("settingsLangTitle", "settings.language");
+  setText("settingsLangDesc", "settings.languageDesc");
+  setText("settingsEcTitle", "settings.emergency");
+  setText("settingsEcDesc", "settings.emergencyDesc");
+  setText("addContactBtn", "settings.addContact");
+  setText("settingsPersonalTitle", "settings.personalInfo");
+  setText("settingsContactTitle", "settings.contactDetails");
+  setText("settingsIdTitle", "settings.identityDocs");
+  setText("settingsVmedTitle", "settings.vmedIdCard");
+  setText("settingsVmedDesc", "settings.vmedIdDesc");
+  setText("settingsSecTitle", "settings.security");
+  setText("changePassBtn", "settings.changePass");
+  setText("settingsAccTitle", "settings.account");
+  setText("logoutBtnSettings", "settings.logout");
 
   const labels = {
-    "lbl_fullName":"settings.fullName","lbl_father":"settings.fatherName",
-    "lbl_gender":"settings.gender","lbl_dob":"settings.dob",
-    "lbl_blood":"settings.bloodGroup","lbl_occ":"settings.occupation",
-    "lbl_address":"settings.address","lbl_email":"settings.email",
-    "lbl_phone":"settings.phone","lbl_aadhaar":"settings.aadhaar","lbl_abha":"settings.abha",
+    "lbl_fullName": "settings.fullName", "lbl_father": "settings.fatherName",
+    "lbl_gender": "settings.gender", "lbl_dob": "settings.dob",
+    "lbl_blood": "settings.bloodGroup", "lbl_occ": "settings.occupation",
+    "lbl_address": "settings.address", "lbl_email": "settings.email",
+    "lbl_phone": "settings.phone", "lbl_aadhaar": "settings.aadhaar", "lbl_abha": "settings.abha",
   };
   Object.entries(labels).forEach(([id, key]) => setText(id, key));
 
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || "--"; };
-  set("detailName",       data.identity?.fullName);
-  set("detailFather",     data.identity?.fatherName);
-  set("detailGender",     t(`gender.${data.identity?.gender}`) || data.identity?.gender);
-  set("detailDob",        data.identity?.dob);
-  set("detailBlood",      data.patientData?.bloodGroup);
+  set("detailName", data.identity?.fullName);
+  set("detailFather", data.identity?.fatherName);
+  set("detailGender", t(`gender.${data.identity?.gender}`) || data.identity?.gender);
+  set("detailDob", data.identity?.dob);
+  set("detailBlood", data.patientData?.bloodGroup);
   set("detailOccupation", data.patientData?.occupation);
-  set("detailAddress",    data.identity?.address);
-  set("detailEmail",      data.contact?.email);
-  set("detailPhone",      data.contact?.phone);
-  set("detailAbha",       data.identity?.abha);
+  set("detailAddress", data.identity?.address);
+  set("detailEmail", data.contact?.email);
+  set("detailPhone", data.contact?.phone);
+  set("detailAbha", data.identity?.abha);
 
   const aadhaar = data.identity?.aadhaar;
   set("detailAadhaar", aadhaar ? "XXXX-XXXX-" + aadhaar.slice(-4) : "--");
@@ -606,12 +665,12 @@ function initSettings(data) {
 
   setText("passModalTitle", "settings.changePassTitle");
   const currPass = document.getElementById("currPass");
-  const newPass  = document.getElementById("newPass");
+  const newPass = document.getElementById("newPass");
   const confPass = document.getElementById("confPass");
   if (currPass) currPass.placeholder = t("settings.currPass");
-  if (newPass)  newPass.placeholder  = t("settings.newPass");
+  if (newPass) newPass.placeholder = t("settings.newPass");
   if (confPass) confPass.placeholder = t("settings.confPass");
-  setText("savePassBtn",   "settings.save");
+  setText("savePassBtn", "settings.save");
   setText("cancelPassBtn", "settings.cancel");
 
   document.getElementById("changePassBtn")?.addEventListener("click", () => {
@@ -626,22 +685,22 @@ function initSettings(data) {
   document.getElementById("logoutBtnSettings")?.addEventListener("click", handleLogout);
 
   // ── Emergency Contacts ────────────────────────────────────────
-  const uid     = auth.currentUser?.uid;
+  const uid = auth.currentUser?.uid;
   const userRef = uid ? doc(db, "users", uid) : null;
-  const MAX     = 3;
-  let contacts  = (data.emergencyContacts || []).map(c => ({ ...c }));
+  const MAX = 3;
+  let contacts = (data.emergencyContacts || []).map(c => ({ ...c }));
 
   function renderContacts() {
-    const list   = document.getElementById("ecList");
-    const empty  = document.getElementById("ecEmpty");
+    const list = document.getElementById("ecList");
+    const empty = document.getElementById("ecEmpty");
     const addBtn = document.getElementById("addContactBtn");
     if (!list) return;
     if (empty) {
       empty.style.display = contacts.length === 0 ? "block" : "none";
       const emptyTitle = empty.querySelector(".ec-empty-title");
-      const emptyDesc  = empty.querySelector(".ec-empty-desc");
+      const emptyDesc = empty.querySelector(".ec-empty-desc");
       if (emptyTitle) emptyTitle.textContent = t("settings.noContacts");
-      if (emptyDesc)  emptyDesc.textContent  = t("settings.noContactsDesc");
+      if (emptyDesc) emptyDesc.textContent = t("settings.noContactsDesc");
     }
     if (addBtn) {
       addBtn.disabled = contacts.length >= MAX;
@@ -664,32 +723,32 @@ function initSettings(data) {
   }
 
   function openModal(editIndex = -1) {
-    const modal   = document.getElementById("ecModal");
-    const title   = document.getElementById("ecModalTitle");
+    const modal = document.getElementById("ecModal");
+    const title = document.getElementById("ecModalTitle");
     const saveBtn = document.getElementById("ecSaveBtn");
-    const errEl   = document.getElementById("ecError");
+    const errEl = document.getElementById("ecError");
     if (!modal) return;
 
     if (title) title.textContent = editIndex >= 0 ? t("settings.modalEdit") : t("settings.modalAdd");
 
     const setLabel = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = t(key); };
-    setLabel("ecNameLabel","settings.nameLabel");
-    setLabel("ecPhoneLabel","settings.phoneLabel");
-    setLabel("ecRelationLabel","settings.relationLabel");
-    setLabel("ecAltPhoneLabel","settings.altPhoneLabel");
-    setLabel("ecOptionalLabel","settings.optional");
+    setLabel("ecNameLabel", "settings.nameLabel");
+    setLabel("ecPhoneLabel", "settings.phoneLabel");
+    setLabel("ecRelationLabel", "settings.relationLabel");
+    setLabel("ecAltPhoneLabel", "settings.altPhoneLabel");
+    setLabel("ecOptionalLabel", "settings.optional");
 
-    const ecName     = document.getElementById("ecName");
-    const ecPhone    = document.getElementById("ecPhone");
+    const ecName = document.getElementById("ecName");
+    const ecPhone = document.getElementById("ecPhone");
     const ecAltPhone = document.getElementById("ecAltPhone");
-    if (ecName)     ecName.placeholder     = t("settings.nameLabel");
-    if (ecPhone)    ecPhone.placeholder    = "e.g. 9876543210";
+    if (ecName) ecName.placeholder = t("settings.nameLabel");
+    if (ecPhone) ecPhone.placeholder = "e.g. 9876543210";
     if (ecAltPhone) ecAltPhone.placeholder = "e.g. 9876543211";
 
     const relSelect = document.getElementById("ecRelation");
     if (relSelect) {
       const relations = t("settings.relations");
-      const relEn = ["Father","Mother","Spouse","Son","Daughter","Brother","Sister","Friend","Guardian","Other"];
+      const relEn = ["Father", "Mother", "Spouse", "Son", "Daughter", "Brother", "Sister", "Friend", "Guardian", "Other"];
       relSelect.innerHTML = `<option value="">${t("settings.selectRelation")}</option>` +
         relEn.map((val, i) => `<option value="${val}">${Array.isArray(relations) ? relations[i] : val}</option>`).join("");
     }
@@ -698,17 +757,17 @@ function initSettings(data) {
     if (newSaveBtn) newSaveBtn.textContent = t("settings.saveContact");
     modal.querySelectorAll(".ec-modal-cancel").forEach(b => b.textContent = t("settings.cancel"));
 
-    if (ecName)     ecName.value     = "";
-    if (ecPhone)    ecPhone.value    = "";
-    if (relSelect)  relSelect.value  = "";
+    if (ecName) ecName.value = "";
+    if (ecPhone) ecPhone.value = "";
+    if (relSelect) relSelect.value = "";
     if (ecAltPhone) ecAltPhone.value = "";
     if (errEl) { errEl.style.display = "none"; errEl.textContent = ""; }
 
     if (editIndex >= 0 && contacts[editIndex]) {
       const c = contacts[editIndex];
-      if (ecName)     ecName.value     = c.name     || "";
-      if (ecPhone)    ecPhone.value    = c.phone    || "";
-      if (relSelect)  relSelect.value  = c.relation || "";
+      if (ecName) ecName.value = c.name || "";
+      if (ecPhone) ecPhone.value = c.phone || "";
+      if (relSelect) relSelect.value = c.relation || "";
       if (ecAltPhone) ecAltPhone.value = c.altPhone || "";
     }
 
@@ -719,29 +778,29 @@ function initSettings(data) {
     saveBtn.parentNode.replaceChild(freshSaveBtn, saveBtn);
 
     freshSaveBtn.addEventListener("click", async () => {
-      const name     = document.getElementById("ecName")?.value.trim()     || "";
-      const phone    = document.getElementById("ecPhone")?.value.trim()    || "";
-      const relation = document.getElementById("ecRelation")?.value        || "";
+      const name = document.getElementById("ecName")?.value.trim() || "";
+      const phone = document.getElementById("ecPhone")?.value.trim() || "";
+      const relation = document.getElementById("ecRelation")?.value || "";
       const altPhone = document.getElementById("ecAltPhone")?.value.trim() || "";
-      const errEl2   = document.getElementById("ecError");
-      const showErr  = msg => { if (errEl2) { errEl2.textContent = msg; errEl2.style.display = "block"; } };
+      const errEl2 = document.getElementById("ecError");
+      const showErr = msg => { if (errEl2) { errEl2.textContent = msg; errEl2.style.display = "block"; } };
 
-      if (!name)     { showErr(t("settings.nameLabel")     + " " + t("settings.required")); return; }
-      if (!phone)    { showErr(t("settings.phoneLabel")    + " " + t("settings.required")); return; }
+      if (!name) { showErr(t("settings.nameLabel") + " " + t("settings.required")); return; }
+      if (!phone) { showErr(t("settings.phoneLabel") + " " + t("settings.required")); return; }
       if (!/^\d{10,15}$/.test(phone.replace(/[\s\-\+]/g, ""))) { showErr("Phone must be 10–15 digits."); return; }
       if (!relation) { showErr(t("settings.relationLabel") + " " + t("settings.required")); return; }
       if (altPhone && !/^\d{10,15}$/.test(altPhone.replace(/[\s\-\+]/g, ""))) { showErr("Alternate phone must be 10–15 digits."); return; }
       if (errEl2) errEl2.style.display = "none";
 
       const contact = {
-        id:       editIndex >= 0 ? contacts[editIndex].id : `ec_${Date.now()}`,
+        id: editIndex >= 0 ? contacts[editIndex].id : `ec_${Date.now()}`,
         name, phone, relation,
-        altPhone:  altPhone || "",
-        addedAt:   editIndex >= 0 ? (contacts[editIndex].addedAt || new Date().toISOString()) : new Date().toISOString(),
+        altPhone: altPhone || "",
+        addedAt: editIndex >= 0 ? (contacts[editIndex].addedAt || new Date().toISOString()) : new Date().toISOString(),
       };
 
-      freshSaveBtn.disabled    = true;
-      freshSaveBtn.innerHTML   = `<span class="ec-spinner"></span> ${t("settings.saving")}`;
+      freshSaveBtn.disabled = true;
+      freshSaveBtn.innerHTML = `<span class="ec-spinner"></span> ${t("settings.saving")}`;
 
       try {
         if (!userRef) throw new Error("Not logged in");
@@ -757,7 +816,7 @@ function initSettings(data) {
         console.error("EC save:", err);
         showErr("Failed to save. Please try again.");
       } finally {
-        freshSaveBtn.disabled    = false;
+        freshSaveBtn.disabled = false;
         freshSaveBtn.textContent = t("settings.saveContact");
       }
     });
@@ -792,10 +851,10 @@ function initSettings(data) {
     setTimeout(() => toast.remove(), 2500);
   }
 
-  window._ecEdit   = (i) => openModal(i);
+  window._ecEdit = (i) => openModal(i);
   window._ecDelete = (i) => deleteContact(i);
   document.getElementById("addContactBtn")?.addEventListener("click", () => openModal(-1));
-  document.getElementById("ecModal")?.addEventListener("click", function(e) {
+  document.getElementById("ecModal")?.addEventListener("click", function (e) {
     if (e.target === this) this.style.display = "none";
   });
 
@@ -809,8 +868,8 @@ async function changePassword() {
   const curr = document.getElementById("currPass").value;
   const newp = document.getElementById("newPass").value;
   const conf = document.getElementById("confPass").value;
-  if (newp !== conf)   { alert(t("settings.passMismatch")); return; }
-  if (newp.length < 8) { alert(t("settings.passShort"));    return; }
+  if (newp !== conf) { alert(t("settings.passMismatch")); return; }
+  if (newp.length < 8) { alert(t("settings.passShort")); return; }
   try {
     const user = auth.currentUser;
     await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, curr));
@@ -823,20 +882,20 @@ async function changePassword() {
 
 // ── UTILS ─────────────────────────────────────────────────────────
 function escHtml(s) {
-  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function parseMd(t) {
   if (!t) return "";
   return t
     .replace(/^#### (.+)$/gm, "<h4>$1</h4>")
-    .replace(/^### (.+)$/gm,  "<h3>$1</h3>")
-    .replace(/^## (.+)$/gm,   "<h3>$1</h3>")
+    .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+    .replace(/^## (.+)$/gm, "<h3>$1</h3>")
     .replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>")
-    .replace(/\*\*(.+?)\*\*/g,     "<strong>$1</strong>")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/^[ \t]{2,}[\*\-] (.+)$/gm, "<li style='margin-left:20px'>$1</li>")
     .replace(/^[\*\-] (.+)$/gm, "<li>$1</li>")
-    .replace(/^\d+\. (.+)$/gm,  "<li>$1</li>")
+    .replace(/^\d+\. (.+)$/gm, "<li>$1</li>")
     .replace(/(<li[\s\S]*?<\/li>\n?)+/g, m => `<ul style="margin:6px 0 6px 18px;padding:0">${m}</ul>`)
     .replace(/\n{2,}/g, "<br><br>")
     .replace(/\n/g, " ")
@@ -844,10 +903,10 @@ function parseMd(t) {
 }
 
 // ── GLOBALS ───────────────────────────────────────────────────────
-window.loadPage      = loadPage;
-window.loadSection   = loadSection;
+window.loadPage = loadPage;
+window.loadSection = loadSection;
 window.toggleSidebar = toggleSidebar;
-window.handleLogout  = handleLogout;
+window.handleLogout = handleLogout;
 
 window._setLang = async (code) => {
   await setLang(code);

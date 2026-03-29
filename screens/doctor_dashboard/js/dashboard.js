@@ -65,6 +65,7 @@ async function loadPage(pageName) {
     if (pageName === "patients")     initPatients(data);
     if (pageName === "add_patient")  initAddPatient(data);
     if (pageName === "consultation") initConsultation(data);
+    if (pageName === "add_document") initAddDocument(data);
     if (pageName === "history")      initHistory(data);
     if (pageName === "ai")           initAIChat(data);
     if (pageName === "settings")     initSettings(data);
@@ -531,6 +532,102 @@ async function initConsultation(data) {
     } finally {
       submitBtn.disabled    = false;
       submitBtn.textContent = "Save Consultation";
+    }
+  });
+}
+
+// ── ADD DOCUMENT ──────────────────────────────────────────────
+async function initAddDocument(data) {
+  const linkedPatients = data?.linkedPatients || [];
+  const patientSelect = document.getElementById("docPatientSelect");
+  const msgEl = document.getElementById("addDocMsg");
+  const submitBtn = document.getElementById("submitDocBtn");
+
+  function showMsg(type, text) {
+    if (!msgEl) return;
+    msgEl.className = `alert ${type}`;
+    msgEl.textContent = text;
+    msgEl.style.display = "block";
+    msgEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  // Populate patient dropdown
+  if (patientSelect) {
+    patientSelect.innerHTML = `<option value="">— Select a patient —</option>`;
+    if (linkedPatients.length === 0) {
+      const opt = document.createElement("option");
+      opt.disabled = true;
+      opt.textContent = "No patients linked yet";
+      patientSelect.appendChild(opt);
+    } else {
+      const snaps = await Promise.all(
+        linkedPatients.map(pid => getDoc(doc(db, "users", pid)).catch(() => null))
+      );
+      snaps.forEach(snap => {
+        if (!snap || !snap.exists()) return;
+        const d = snap.data();
+        const opt = document.createElement("option");
+        opt.value = snap.id;
+        opt.textContent = `${d.identity?.fullName || "Unknown"} — ${d.vmedId || ""}`;
+        patientSelect.appendChild(opt);
+      });
+    }
+  }
+
+  submitBtn?.addEventListener("click", async () => {
+    const patientId = patientSelect?.value;
+    const title = document.getElementById("docTitle")?.value.trim();
+    const type = document.getElementById("docType")?.value;
+    const url = document.getElementById("docUrl")?.value.trim();
+    const description = document.getElementById("docDescription")?.value.trim();
+
+    const doctorId = window.currentDoctorId;
+    const doctorData = window.currentDoctorData;
+
+    if (!doctorId) {
+      showMsg("error", "Doctor session not loaded. Please refresh.");
+      return;
+    }
+    if (!patientId) { showMsg("error", "Please select a patient."); return; }
+    if (!title) { showMsg("error", "Please enter a document title."); return; }
+    if (!type) { showMsg("error", "Please select a document type."); return; }
+    if (!url) { showMsg("error", "Please provide a valid document URL."); return; }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Saving...";
+
+    const docRecord = {
+      id: "doc_" + Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      title,
+      type,
+      externalUrl: url,
+      description: description || "",
+      addedBy: doctorData?.identity?.fullName || "Doctor",
+      date: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+      addedAt: new Date().toISOString()
+    };
+
+    try {
+      const patientRef = doc(db, "users", patientId);
+      await updateDoc(patientRef, { documents: arrayUnion(docRecord) });
+      showMsg("success", "Document saved successfully to the patient's profile.");
+
+      // Reset form
+      if (patientSelect) patientSelect.value = "";
+      document.getElementById("docTitle").value = "";
+      document.getElementById("docType").value = "";
+      document.getElementById("docUrl").value = "";
+      document.getElementById("docDescription").value = "";
+    } catch (e) {
+      console.error("Add document error:", e);
+      if (e.code === "permission-denied") {
+        showMsg("error", "Permission denied. Ensure your Firestore rules allow 'documents' updates.");
+      } else {
+        showMsg("error", "Failed to save: " + e.message);
+      }
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Save Document to Patient Profile";
     }
   });
 }

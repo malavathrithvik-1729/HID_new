@@ -1,0 +1,49 @@
+<div class="section-wrap" style="max-width: 700px;">
+  <div class="page-header">
+    <h1 class="page-title">Add Document</h1>
+    <p class="page-sub">Upload a medical report, scan, or prescription for a patient</p>
+  </div>
+
+  <div id="addDocMsg" class="alert" style="display:none;"></div>
+
+  <div class="card">
+    <div class="form-group">
+      <label class="req">Select Patient</label>
+      <select id="docPatientSelect">
+        <option value="">— Loading patients... —</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="req">Document Title</label>
+      <input type="text" id="docTitle" placeholder="e.g., Complete Blood Count (CBC) Report" />
+    </div>
+
+    <div class="form-group">
+      <label class="req">Document Type</label>
+      <select id="docType">
+        <option value="">— Select type —</option>
+        <option value="Report">Report</option>
+        <option value="Scan">Scan</option>
+        <option value="Prescription">Prescription</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="req">Google Drive URL (or External Link)</label>
+      <input type="url" id="docUrl" placeholder="https://drive.google.com/file/d/..." />
+      <div class="form-hint">Ensure the link visibility is set to "Anyone with the link can view".</div>
+    </div>
+
+    <div class="form-group">
+      <label>Description / Summary (Optional but recommended for AI context)</label>
+      <textarea id="docDescription" rows="4" placeholder="Briefly describe the key findings or summary of this document..."></textarea>
+      <div class="form-hint">The AI assistant will use this description to answer questions about the document.</div>
+    </div>
+
+    <div style="margin-top: 24px;">
+      <button id="submitDocBtn" class="btn-primary" style="width: 100%;">Save Document to Patient Profile</button>
+    </div>
+  </div>
+</div>
