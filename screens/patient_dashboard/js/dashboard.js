@@ -2,11 +2,11 @@ import { auth } from "../../../js/firebase.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { db } from "../../../js/firebase.js";
 import {
-  doc, updateDoc, getDoc
+  doc, updateDoc, getDoc, arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { t, initI18n, setLang, getCurrentLang, LANGUAGES } from "./i18n.js";
 
-const API_BASE = "http://localhost:3000";
+const API_BASE = "http://127.0.0.1:3000";
 
 // ── DARK MODE ─────────────────────────────────────────────────────
 const DARK_KEY = "vmed_dark_mode";
@@ -41,6 +41,9 @@ function applyNavTranslations() {
     "[data-page='medications']": t("nav.medications"),
     "[data-page='visits']": t("nav.visits"),
     "[data-page='ai']": t("nav.ai"),
+    "[data-page='sos']": t("nav.sos"),
+    "[data-page='blood_donor']": t("nav.blood_donor"),
+    "[data-page='family']": t("nav.family"),
     "[data-page='settings']": t("nav.settings"),
   };
   Object.entries(map).forEach(([sel, label]) => {
@@ -90,16 +93,36 @@ async function loadPage(pageName) {
 
     applyTheme(document.documentElement.classList.contains("dark"));
 
-    let data = await window.patientDataReady;
+    let data = window.currentPatientData;
+    let isOffline = false;
+
     if (window.currentUserId) {
       try {
         const freshSnap = await getDoc(doc(db, "users", window.currentUserId));
         if (freshSnap.exists()) {
           data = freshSnap.data();
           window.currentPatientData = data;
+          // Save to offline cache
+          localStorage.setItem("vmed_offline_data", JSON.stringify(data));
+          localStorage.setItem("vmed_last_sync", new Date().toISOString());
         }
       } catch (e) {
-        console.warn("Could not fetch fresh data", e);
+        console.warn("Network error, attempting to load from offline cache...", e);
+        const cached = localStorage.getItem("vmed_offline_data");
+        if (cached) {
+          data = JSON.parse(cached);
+          isOffline = true;
+        }
+      }
+    }
+
+    // Show offline mode banner
+    const offlineBanner = document.getElementById("offlineBanner");
+    if (offlineBanner) {
+      offlineBanner.style.display = isOffline ? "flex" : "none";
+      if (isOffline) {
+        const syncTime = localStorage.getItem("vmed_last_sync");
+        document.getElementById("offlineSyncTime").textContent = syncTime ? new Date(syncTime).toLocaleString() : "Unknown";
       }
     }
 
@@ -109,6 +132,11 @@ async function loadPage(pageName) {
     if (pageName === "visits") initVisits(data);
     if (pageName === "ai") initAIChat(data);
     if (pageName === "settings") initSettings(data);
+    if (pageName === "vitals") initVitals(data);
+    if (pageName === "sos") initSOS(data);
+    if (pageName === "blood_donor") initBloodDonor(data);
+    if (pageName === "family") initFamily(data);
+    if (pageName === "info") initInfo(data);
 
   } catch (e) {
     console.error("loadPage error:", e);
@@ -159,13 +187,14 @@ function initHome(data) {
 
   if ($("homeVmedId")) $("homeVmedId").textContent = data.vmedId || "--";
   if ($("homeBloodGroup")) $("homeBloodGroup").textContent = data.patientData?.bloodGroup || "--";
+  if ($("homeBloodGroupStat")) $("homeBloodGroupStat").textContent = data.patientData?.bloodGroup || "--";
   if ($("homeGender")) $("homeGender").textContent = t(`gender.${data.identity?.gender}`) || data.identity?.gender || "--";
 
   if ($("homeDob")) {
     const dob = data.identity?.dob;
     if (dob) {
       const age = new Date().getFullYear() - new Date(dob).getFullYear();
-      $("homeDob").textContent = `${dob}  (${age} yrs)`;
+      $("homeDob").textContent = dob;
     } else {
       $("homeDob").textContent = "--";
     }
@@ -175,25 +204,60 @@ function initHome(data) {
   if ($("homeVisitCount")) $("homeVisitCount").textContent = (data.visits || []).length;
   if ($("homeDocCount")) $("homeDocCount").textContent = (data.documents || []).length;
 
-  const setTxt = (id, key) => { const el = $(id); if (el) el.textContent = t(key); };
-  setTxt("homeQrEyebrow", "home.emergencyQr");
-  setTxt("homeQrTitle", "home.scanProfile");
-  setTxt("homeQrSub", "home.qrSub");
-  setTxt("homeQrVmedLabel", "home.vmedIdLabel");
-  setTxt("homeQrHint", "home.qrHint");
+  // --- HEALTH SCORE CALCULATION ---
+  function calculateScore(d) {
+      let score = 0;
+      // 1. Completeness (400)
+      const idF = ['fullName', 'gender', 'dob', 'phoneNumber', 'abhaNumber', 'address'];
+      const idPts = idF.reduce((acc, f) => acc + (d.identity?.[f] ? 66 : 0), 0);
+      const pPts = (d.patientData?.bloodGroup ? 50 : 0) + (d.patientData?.occupation ? 50 : 0);
+      const comp = Math.min(400, idPts + pPts);
+      // 2. Activity (300)
+      const act = ((d.medications?.length || 0) > 0 ? 100 : 0) +
+                  ((d.visits?.length || 0) > 0 ? 100 : 0) +
+                  ((d.documents?.length || 0) > 0 ? 100 : 0);
+      // 3. Integrity (300)
+      const totalClin = (d.documents?.length || 0) + (d.vitalsHistory?.length || 0);
+      const verClin = (d.documents || []).filter(doc => doc.verified).length + 
+                      (d.vitalsHistory || []).filter(v => v.verified).length;
+      let integ = totalClin > 0 ? Math.round((verClin / totalClin) * 300) : 150;
+      
+      const total = Math.round(comp + act + integ);
+      return { total, compPct: Math.round(comp/4), actPct: Math.round(act/3) };
+  }
 
-  const fsBtn = $("showFullQrBtn");
-  if (fsBtn) fsBtn.textContent = `🔍 ${t("home.fullScreenQr")}`;
+  const s = calculateScore(data);
+  if ($("homeHealthScore")) {
+      $("homeHealthScore").textContent = s.total;
+      const prog = $("scoreProgress");
+      if (prog) {
+          const circumference = 377;
+          prog.style.strokeDashoffset = circumference - (s.total / 1000) * circumference;
+      }
+      if ($("barComp")) $("barComp").style.width = s.compPct + "%";
+      if ($("barAct"))  $("barAct").style.width = s.actPct + "%";
+      if ($("scoreComp")) $("scoreComp").textContent = s.compPct + "%";
+      if ($("scoreAct"))  $("scoreAct").textContent = s.actPct + "%";
+      
+      const statusEl = $("scoreStatus");
+      if (statusEl) {
+          if (s.total > 800) { statusEl.textContent = t("home.scoreExcellent") || "Excellent"; statusEl.style.color = "#16a34a"; }
+          else if (s.total > 600) { statusEl.textContent = t("home.scoreGood") || "Good"; statusEl.style.color = "var(--accent)"; }
+          else { statusEl.textContent = t("home.scorePending") || "Improving"; statusEl.style.color = "#b45309"; }
+      }
 
-  if ($("homeLastVisitTitle")) $("homeLastVisitTitle").textContent = t("home.lastVisit");
-  if ($("homeCurrentMedsTitle")) $("homeCurrentMedsTitle").textContent = t("home.currentMeds");
+      // Sync if needed
+      if (!data.healthScore || Math.abs(data.healthScore.total - s.total) > 5) {
+          updateDoc(doc(db, "users", auth.currentUser.uid), { healthScore: { total: s.total, lastCalculated: new Date().toLocaleDateString('en-GB') } }).catch(() => {});
+      }
+  }
 
   if ($("homeLastVisit")) {
     const visits = data.visits || [];
     if (visits.length > 0) {
       const last = visits[visits.length - 1];
       $("homeLastVisit").innerHTML = `
-        <div style="font-size:15px;font-weight:600;color:var(--ink)">${last.reason || "Consultation"}</div>
+        <div style="font-size:15px;font-weight:600;color:var(--ink)">${escHtml(last.reason || "Consultation")}</div>
         <div style="font-size:13px;color:var(--muted);margin-top:4px">${last.date || ""} &nbsp;·&nbsp; ${t("visits.dr")} ${last.doctorName || ""}</div>`;
     } else {
       $("homeLastVisit").innerHTML = `<span style="font-size:14px;color:var(--muted)">${t("home.noVisits")}</span>`;
@@ -201,15 +265,14 @@ function initHome(data) {
   }
 
   if ($("homeMedList")) {
-    const meds = data.medications || [];
+    const meds = (data.medications || []).filter(m => m.active !== false);
     if (meds.length > 0) {
       $("homeMedList").innerHTML = meds.slice(0, 3).map(m => `
-        <div class="med-card">
-          <div class="med-icon">💊</div>
+        <div class="med-card" style="padding:10px; margin-bottom:8px;">
+          <div class="med-icon" style="width:32px;height:32px;font-size:16px;">💊</div>
           <div class="med-info">
-            <strong>${m.name}</strong>
-            <div class="dose">${m.dosage || ""} ${m.duration ? "· " + m.duration : ""}</div>
-            <div class="freq">${m.frequency || ""}</div>
+            <strong style="font-size:13px;">${m.name}</strong>
+            <div class="freq" style="font-size:11px;">${m.frequency || ""} · ${m.timing || ""}</div>
           </div>
         </div>`).join("");
     } else {
@@ -269,7 +332,61 @@ function initHome(data) {
   });
   $("closeQrBtn")?.addEventListener("click", () => { if (modal) modal.style.display = "none"; });
   modal?.addEventListener("click", e => { if (e.target === modal) modal.style.display = "none"; });
+
+  // ── HEALTH TIPS (Priority 8) ──────────────────────────────
+  loadHealthTips(data);
 }
+
+async function loadHealthTips(data) {
+  const container = document.getElementById("healthTipContent");
+  const loading = document.getElementById("healthTipLoading");
+  const sourceLabel = document.getElementById("healthTipSource");
+  if (!container || !loading) return;
+
+  try {
+    const bg = encodeURIComponent(data.patientData?.bloodGroup || "");
+    // Extract a few symptoms/diagnoses from recent visits for context
+    const conditions = (data.visits || [])
+      .slice(0, 3)
+      .map(v => v.diagnosis)
+      .filter(d => d)
+      .join(", ");
+    const cond = encodeURIComponent(conditions || "");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout for AI response
+
+    const resp = await fetch(`${API_BASE}/api/health-tips?bloodGroup=${bg}&conditions=${cond}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (!resp.ok) throw new Error("Tips fetch failed");
+    
+    const result = await resp.json();
+    
+    loading.style.display = "none";
+    container.innerHTML = `
+      <div style="margin-bottom: 12px;">${result.tip}</div>
+      <div style="font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 8px;">
+        <strong>Related Articles:</strong>
+        <ul style="margin: 4px 0 0 16px; padding: 0;">
+          ${result.articles.map(a => `<li><a href="${a.link}" target="_blank" style="color:var(--primary); text-decoration:none;">${a.title}</a></li>`).join("")}
+        </ul>
+      </div>
+    `;
+    container.style.display = "block";
+    if (sourceLabel) {
+      sourceLabel.textContent = result.source;
+      sourceLabel.style.display = "inline-block";
+    }
+
+  } catch (e) {
+    console.warn("Health tips load error:", e);
+    loading.textContent = "Unable to load personalized tips at this moment. Stay healthy!";
+  }
+}
+
 
 // ── DOCUMENTS ─────────────────────────────────────────────────────
 function initDocuments(data) {
@@ -282,6 +399,16 @@ function initDocuments(data) {
   const title = document.querySelector(".section-wrap .page-title");
   if (title) title.textContent = t("history.title") || "Medical History";
 
+  window.deleteUserDoc = async (docId, title) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) return;
+    try {
+      const updated = (data.documents || []).filter(d => (d.id || d.title) !== docId);
+      await updateDoc(doc(db, "users", auth.currentUser.uid), { documents: updated });
+      loadPage("documents");
+      showToast("Document deleted successfully");
+    } catch (e) { alert("Error deleting document: " + e.message); }
+  };
+
   function renderDocs() {
     const fval = filter ? filter.value : "All";
     const filtered = fval === "All" ? docs : docs.filter(d => d.type === fval);
@@ -293,65 +420,50 @@ function initDocuments(data) {
     }
     if (empty) empty.style.display = "none";
     
-    list.innerHTML = [...filtered].reverse().map((d) => `
-      <div class="doc-item" style="display:flex; flex-direction:column; align-items:flex-start; gap:8px;">
-        <div style="display:flex; align-items:center; gap:12px; width:100%;">
-          <div class="doc-icon">📄</div>
-          <div class="doc-info" style="flex:1;">
-            <strong>${d.title || "Document"}</strong>
-            <span>${d.type || "Document"} &nbsp;•&nbsp; ${d.date || ""}</span>
+    list.innerHTML = [...filtered].reverse().map((d) => {
+      const isVerified = d.verified === true;
+      const uploader = d.addedBy || "Self";
+      const docId = d.id || d.title;
+      
+      return `
+      <div class="history-card" style="display:flex; flex-direction:column; gap:12px; border-left: 4px solid ${isVerified ? "var(--accent)" : "var(--border)"}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div class="doc-icon" style="font-size:20px">${isVerified ? "🛡️" : "📄"}</div>
+            <div>
+              <strong style="font-size:15px; color:var(--ink)">${escHtml(d.title)}</strong>
+              ${isVerified ? `<span class="patient-tag tag-active" style="font-size:10px; margin-left:8px; padding: 2px 8px;">Verified</span>` : ""}
+              <div style="font-size:12px; color:var(--muted); margin-top:2px;">
+                ${d.type || "Other"} &nbsp;·&nbsp; ${d.date || "Unknown date"}
+              </div>
+            </div>
+          </div>
+          <div style="text-align:right">
+             <div style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px">Source</div>
+             <div style="font-size:12px; font-weight:600; color:var(--ink)">${escHtml(uploader)}</div>
           </div>
         </div>
-        ${d.description ? `<div style="font-size:13px; color:var(--muted); line-height:1.4; margin-top:4px;">${d.description}</div>` : ''}
-        <div style="display:flex; justify-content:space-between; width:100%; margin-top:8px;">
-          <a class="doc-link" href="${d.externalUrl}" target="_blank">${t("history.viewBtn") || "View"}</a>
-          <button class="doc-link" style="border-color:var(--danger); color:var(--danger); background:transparent; cursor:pointer;" onclick="window._deleteDoc('${d.id}')">Delete</button>
+        
+        ${d.description ? `<p style="font-size:13px; color:var(--muted); line-height:1.5; background:var(--surface-2); padding:10px; border-radius:8px; border:1px solid var(--border)">${escHtml(d.description)}</p>` : ""}
+        
+        <div style="display:flex; gap:10px; margin-top:4px; align-items:center;">
+          <a href="${d.externalUrl}" target="_blank" class="btn-primary" style="font-size:12px; padding:8px 20px; text-decoration:none; display:flex; align-items:center; gap:6px; background:var(--accent); border:none; border-radius:8px; color:#fff; font-weight:600; transition:opacity 0.2s;">
+            👁️ View Clinical Record
+          </a>
+          ${isVerified ? `
+            <div style="font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px; margin-left:auto; opacity:0.6;">
+              🔒 CLINICAL DATA LOCKED
+            </div>
+          ` : ""}
         </div>
-      </div>`).join("");
+      </div>`;
+    }).join("");
   }
 
   if (filter) filter.addEventListener("change", renderDocs);
   renderDocs();
-
-  window._deleteDoc = async (id) => {
-    if (!confirm("Are you sure you want to delete this document?")) return;
-    const docToDelete = docs.find(d => d.id === id);
-    if (!docToDelete) return;
-    
-    // We need a visual loading state here
-    const el = document.activeElement;
-    if (el && el.tagName === "BUTTON") {
-      el.textContent = "Deleting...";
-      el.disabled = true;
-    }
-    
-    try {
-      const uid = window.currentUserId;
-      if (!uid) throw new Error("Not logged in");
-      
-      // Remove from array based on exact match of the object in firestore
-      // Or simply overwrite the whole array
-      const newDocs = docs.filter(d => d.id !== id);
-      await updateDoc(doc(db, "users", uid), {
-        documents: newDocs
-      });
-      
-      // Keep local state in sync
-      data.documents = newDocs;
-      
-      // Wait for global data update if needed or just re-render
-      loadPage('documents');
-      
-    } catch (e) {
-      console.error("Delete document error:", e);
-      alert("Failed to delete document: " + e.message);
-      if (el && el.tagName === "BUTTON") {
-        el.textContent = "Delete";
-        el.disabled = false;
-      }
-    }
-  };
 }
+
 
 // ── MEDICATIONS ───────────────────────────────────────────────────
 function initMedications(data) {
@@ -365,20 +477,29 @@ function initMedications(data) {
     return;
   }
   if (empty) empty.style.display = "none";
-  list.innerHTML = meds.map(m => `
-    <div class="med-card">
-      <div class="med-icon">💊</div>
-      <div class="med-info">
-        <strong>${m.name}</strong>
-        <div class="dose">${m.dosage || ""} ${m.duration ? "· " + m.duration : ""}</div>
-        <div class="freq">${m.frequency || ""}</div>
-        ${m.instructions ? `<div class="dose" style="margin-top:4px;font-style:italic">${m.instructions}</div>` : ""}
-        ${m.prescribedBy ? `<div class="dose" style="margin-top:4px;color:var(--accent)">${t("medications.dr")} ${m.prescribedBy}</div>` : ""}
+  list.innerHTML = meds.map(m => {
+    const isActive = m.active !== false;
+    return `
+    <div class="med-card" style="display:flex; align-items:center; gap:16px; padding:20px; background:var(--surface); border:1px solid var(--border); border-radius:14px; margin-bottom:12px; position:relative;">
+      <div class="med-icon" style="width:50px; height:50px; border-radius:12px; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:24px;">💊</div>
+      <div class="med-info" style="flex:1;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+           <strong style="font-size:16px; color:var(--ink);">${escHtml(m.name)}</strong>
+           <span class="stat-badge ${isActive ? "badge-green" : "badge-yellow"}" style="font-size:10px; padding:4px 10px; border-radius:100px;">
+             ${isActive ? t("medications.active") : t("medications.completed")}
+           </span>
+        </div>
+        <div style="font-size:13px; color:var(--muted); margin-bottom:8px;">${m.dosage || ""} &nbsp;·&nbsp; ${m.duration || "Course not set"}</div>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+           <span style="font-size:12px; color:var(--ink); font-weight:600; display:flex; align-items:center; gap:4px;">🕒 ${m.frequency || ""}</span>
+           ${m.timing ? `<span style="background:var(--accent-light); padding:3px 10px; border-radius:6px; font-size:11px; color:var(--accent); font-weight:600;">🍽️ ${m.timing}</span>` : ""}
+           ${m.endDate ? `<span style="background:var(--surface-2); padding:3px 10px; border-radius:6px; font-size:11px; color:var(--muted); border:1px solid var(--border); margin-left:auto;">📅 Ends: ${m.endDate}</span>` : ""}
+        </div>
+        ${m.instructions ? `<div style="margin-top:10px; font-size:12px; font-style:italic; border-top:1px solid var(--border); padding-top:8px; color:var(--muted);">${escHtml(m.instructions)}</div>` : ""}
+        ${m.prescribedBy ? `<div style="margin-top:10px; font-size:11px; color:var(--accent); font-weight:600;">👨‍⚕️ Prescribed by: Dr. ${escHtml(m.prescribedBy)}</div>` : ""}
       </div>
-      <span class="stat-badge ${m.active !== false ? "badge-green" : "badge-yellow"}">
-        ${m.active !== false ? t("medications.active") : t("medications.completed")}
-      </span>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 }
 
 // ── VISITS ────────────────────────────────────────────────────────
@@ -439,6 +560,23 @@ function initAIChat(data) {
     ctxEl.style.display = "inline-block";
   }
 
+  // ── Mode Switch ──────────
+  let aiMode = "assistant"; // "assistant" or "symptom"
+  const assistantBtn = document.getElementById("modeAssistant");
+  const symptomBtn = document.getElementById("modeSymptom");
+  if (assistantBtn && symptomBtn) {
+    assistantBtn.onclick = () => {
+      aiMode = "assistant";
+      assistantBtn.classList.add("active"); symptomBtn.classList.remove("active");
+      chat.insertAdjacentHTML("beforeend", `<div class="alert info" style="margin:10px 0">Switched to <strong>AI Health Assistant</strong> mode. Ask about your records or health tips.</div>`);
+    };
+    symptomBtn.onclick = () => {
+      aiMode = "symptom";
+      symptomBtn.classList.add("active"); assistantBtn.classList.remove("active");
+      chat.insertAdjacentHTML("beforeend", `<div class="alert danger" style="margin:10px 0"><strong>Symptom Checker Mode Active.</strong> Describe what you're feeling. <br><small>Disclaimer: This is NOT a medical diagnosis.</small></div>`);
+    };
+  }
+
   const patientPayload = data ? {
     vmedId: data.vmedId,
     identity: {
@@ -457,6 +595,35 @@ function initAIChat(data) {
     linkedDoctors: data.linkedDoctors || [],
   } : null;
 
+  // ── RENDER REPORT DROPDOWN ──────────
+  const checklist = document.getElementById("aiReportChecklist");
+  const countEl = document.getElementById("selectedCount");
+  const docs = data?.documents || [];
+
+  function updateCount() {
+    const checked = document.querySelectorAll(".ai-doc-cb:checked").length;
+    if (countEl) {
+      countEl.textContent = checked === 0 
+        ? "No Reports Selected" 
+        : checked === docs.length 
+          ? "All Reports (Default)" 
+          : `${checked} Report${checked > 1 ? "s" : ""} Selected`;
+    }
+  }
+
+  if (checklist && docs.length > 0) {
+    checklist.innerHTML = docs.map((d, i) => `
+      <div class="dropdown-item" onclick="var cb=this.querySelector('input'); cb.checked=!cb.checked; cb.dispatchEvent(new Event('change', {bubbles:true}));">
+        <input type="checkbox" class="ai-doc-cb" value="${i}" checked onclick="event.stopPropagation()">
+        <span>${d.title}</span>
+      </div>`).join("");
+    
+    checklist.addEventListener("change", (e) => {
+        if (e.target.classList.contains("ai-doc-cb")) updateCount();
+    });
+    updateCount();
+  }
+
   const chatHistory = [];
 
   function addContinueBtn() {
@@ -474,6 +641,22 @@ function initAIChat(data) {
     const text = overrideMsg || input.value.trim();
     if (!text) return;
 
+    // Hide quick prompts if this was the first interaction or a prompt was clicked
+    const promptWrapper = document.getElementById("quickPromptsWrapper");
+    if (promptWrapper) promptWrapper.style.display = "none";
+
+    // Filter documents based on selection
+    const selectedIndices = Array.from(document.querySelectorAll(".ai-doc-cb"))
+      .filter(cb => cb.checked)
+      .map(cb => parseInt(cb.value));
+    
+    const filteredDocs = data?.documents?.filter((_, i) => selectedIndices.includes(i)) || [];
+
+    const patientPayloadFiltered = {
+      ...patientPayload,
+      documents: filteredDocs
+    };
+
     document.getElementById("aiContinueBtn")?.remove();
     if (!overrideMsg) {
       chat.insertAdjacentHTML("beforeend",
@@ -489,15 +672,15 @@ function initAIChat(data) {
     chat.scrollTop = chat.scrollHeight;
 
     try {
-      // ✅ FIX 1: added lang field so backend replies in selected language
       const res = await fetch(`${API_BASE}/api/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
-          patient: patientPayload,
+          patient: patientPayloadFiltered,
           history: chatHistory,
-          lang: getCurrentLang(),   // "en" | "hi" | "te"
+          lang: getCurrentLang(),
+          mode: aiMode, // Send mode to backend
         })
       });
 
@@ -683,6 +866,7 @@ function initSettings(data) {
   });
   document.getElementById("savePassBtn")?.addEventListener("click", changePassword);
   document.getElementById("logoutBtnSettings")?.addEventListener("click", handleLogout);
+  document.getElementById("btnExportPDF")?.addEventListener("click", () => exportHealthProfile(data));
 
   // ── Emergency Contacts ────────────────────────────────────────
   const uid = auth.currentUser?.uid;
@@ -878,6 +1062,503 @@ async function changePassword() {
     const m = document.getElementById("passwordModal");
     if (m) { m.classList.remove("open"); m.style.display = "none"; }
   } catch (e) { alert(e.message); }
+}
+
+// ── VITALS ────────────────────────────────────────────────────────
+function initVitals(data) {
+  const history = data?.vitalsHistory || [];
+  const latest = history.length > 0 ? history[history.length - 1] : null;
+
+  // Latest Reading Cards
+  if (latest) {
+    const bpEl = document.getElementById("vitBP");
+    if (bpEl) bpEl.textContent = latest.bp || "--/--";
+    const sugEl = document.getElementById("vitSugar");
+    if (sugEl) sugEl.textContent = (latest.sugar || "--") + " mg/dL";
+    const pulEl = document.getElementById("vitPulse");
+    if (pulEl) pulEl.textContent = (latest.pulse || "--") + " bpm";
+
+    // Simple status flags (can be expanded)
+    const sBp = document.getElementById("statusBP");
+    if (sBp && latest.bp) {
+      const [sys, dia] = latest.bp.split("/").map(Number);
+      if (sys > 140 || dia > 90) { sBp.textContent = "High"; sBp.style.display = "inline-block"; sBp.className = "patient-tag tag-warning"; }
+      else if (sys < 90 || dia < 60) { sBp.textContent = "Low"; sBp.style.display = "inline-block"; sBp.className = "patient-tag tag-warning"; }
+      else { sBp.textContent = "Normal"; sBp.style.display = "inline-block"; sBp.className = "patient-tag tag-active"; }
+    }
+  }
+
+  // Render History Table (Latest 10)
+  const tableBody = document.getElementById("vitalsTableBody");
+  const empty = document.getElementById("vitalsEmpty");
+  if (tableBody) {
+    if (history.length === 0) {
+      if (empty) empty.style.display = "block";
+      tableBody.innerHTML = "";
+    } else {
+      if (empty) empty.style.display = "none";
+      tableBody.innerHTML = [...history].reverse().slice(0, 10).map(v => `
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding: 12px 20px;">
+            <div style="font-weight:500;">${v.date || "N/A"}</div>
+            <div style="font-size:10px; color:var(--muted)">${v.time || ""}</div>
+          </td>
+          <td>${v.bp || "--"}</td>
+          <td>${v.sugar || "--"}</td>
+          <td>${v.pulse || "--"}</td>
+          <td>${v.temp || "--"}°C</td>
+          <td>${v.weight || "--"}kg</td>
+          <td>
+            <span class="patient-tag ${v.verified ? "tag-active" : ""}" style="font-size:10px">
+              ${v.verified ? "🛡️ Verified" : "Self-logged"}
+            </span>
+          </td>
+        </tr>
+      `).join("");
+    }
+  }
+
+  // Render Charts
+  renderVitalsCharts(history);
+
+  // Save Logic
+  const saveBtn = document.getElementById("btnSaveVitals");
+  if (saveBtn) {
+    saveBtn.onclick = async () => {
+      const bp = document.getElementById("inBP").value;
+      const sugar = document.getElementById("inSugar").value;
+      const pulse = document.getElementById("inPulse").value;
+      const temp = document.getElementById("inTemp").value;
+      const weight = document.getElementById("inWeight").value;
+      const notes = document.getElementById("inVitNotes").value;
+
+      if (!bp && !sugar && !pulse) {
+        alert("Please enter at least one vital reading.");
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving...";
+
+      try {
+        const newEntry = {
+          date: new Date().toLocaleDateString('en-GB'),
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          bp, sugar, pulse, temp, weight, notes,
+          verified: false,
+          recordedBy: "Self"
+        };
+
+        await updateDoc(doc(db, "users", auth.currentUser.uid), {
+          vitalsHistory: arrayUnion(newEntry)
+        });
+
+        // Update local session data so we don't have to re-fetch everything
+        if (window.currentPatientData) {
+            if (!window.currentPatientData.vitalsHistory) window.currentPatientData.vitalsHistory = [];
+            window.currentPatientData.vitalsHistory.push(newEntry);
+        }
+
+        alert("Vitals logged successfully!");
+        loadPage("vitals"); // Reload view
+      } catch (e) {
+        alert("Error saving vitals: " + e.message);
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Log Vitals";
+      }
+    };
+  }
+
+  // ── AI Forecast ──
+  const forecastContent = document.getElementById("aiVitalsForecastContent");
+  const refreshBtn = document.getElementById("refreshForecastBtn");
+  
+  async function updateForecast() {
+    if (!forecastContent) return;
+    forecastContent.innerHTML = `<div style="display:flex; align-items:center; gap:12px; padding:20px; color:var(--muted);"><div class="spinner-small" style="width:16px;height:16px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></div><span>Analyzing patterns...</span></div>`;
+    
+    try {
+      const resp = await fetch(`${API_BASE}/api/vitals/forecast`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          history: history.slice(-5), 
+          patient: { dob: data.identity?.dob, bloodGroup: data.patientData?.bloodGroup } 
+        })
+      });
+      const res = await resp.json();
+      forecastContent.innerHTML = `<div style="background:rgba(255,255,255,0.4); padding:16px; border-radius:12px; border:1px solid rgba(0,0,0,0.05); font-size:14px; line-height:1.6;">${parseMd(res.forecast)}</div>`;
+    } catch (e) {
+       forecastContent.innerHTML = `<div class="alert info" style="margin:0; font-size:12px;">📊 Initializing predictive model. Accurate forecasting requires at least 3 distinct daily logs. Continue monitoring your vitals.</div>`;
+    }
+  }
+
+  if (refreshBtn) refreshBtn.onclick = updateForecast;
+  if (history.length > 0) updateForecast();
+}
+
+function renderVitalsCharts(history) {
+  const chartBP = document.getElementById("chartBP");
+  const chartSugar = document.getElementById("chartSugar");
+  if (!chartBP || !chartSugar) return;
+  if (typeof Chart === 'undefined') return;
+
+  const labels = history.slice(-7).map(v => v.date);
+  const sysData = history.slice(-7).map(v => v.bp ? parseInt(v.bp.split("/")[0]) : null);
+  const diaData = history.slice(-7).map(v => v.bp ? parseInt(v.bp.split("/")[1]) : null);
+  const pulseData = history.slice(-7).map(v => parseInt(v.pulse) || null);
+  const sugarData = history.slice(-7).map(v => parseInt(v.sugar) || null);
+
+  new Chart(chartBP, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Systolic', data: sysData, borderColor: '#1a6b4a', tension: 0.3, fill: false },
+        { label: 'Diastolic', data: diaData, borderColor: '#b45309', tension: 0.3, fill: false },
+        { label: 'Pulse', data: pulseData, borderColor: '#1a4a8a', tension: 0.3, fill: false, borderDash: [5, 5] }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } } }
+  });
+
+  new Chart(chartSugar, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label: 'Blood Sugar (mg/dL)', data: sugarData, backgroundColor: 'rgba(26,107,74,0.5)', borderColor: '#1a6b4a', borderWidth: 1 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+  });
+}
+
+// ── PDF EXPORT ──────────────────────────────────────────────────
+async function exportHealthProfile(data) {
+  if (!data) return;
+  const { jsPDF } = window.jspdf;
+  const docPDF = new jsPDF();
+  const vId = data.vmedId || "VMED-XXXX";
+  
+  // Helper for Section Headers
+  const addHeader = (title, y) => {
+    docPDF.setFontSize(18);
+    docPDF.setTextColor(26, 107, 74); // --accent
+    docPDF.text(title, 14, y);
+    docPDF.setDrawColor(26, 107, 74);
+    docPDF.line(14, y + 2, 196, y + 2);
+    docPDF.setTextColor(0, 0, 0);
+    return y + 12;
+  };
+
+  // --- PAGE 1: COVER & IDENTITY ---
+  docPDF.setFillColor(26, 107, 74);
+  docPDF.rect(0, 0, 210, 40, 'F');
+  docPDF.setTextColor(255, 255, 255);
+  docPDF.setFontSize(24);
+  docPDF.text("V-MED ID", 14, 25);
+  docPDF.setFontSize(12);
+  docPDF.text("Virtual Medical Identity & Clinical Record", 14, 32);
+
+  docPDF.setTextColor(0, 0, 0);
+  let currY = 55;
+  docPDF.setFontSize(20);
+  docPDF.text(data.identity?.fullName || "Patient Profile", 14, currY);
+  currY += 10;
+  docPDF.setFontSize(12);
+  docPDF.text(`V-MED ID: ${vId}`, 14, currY);
+  currY += 20;
+
+  // Identity Table
+  const idRows = [
+    ["Gender", t(`gender.${data.identity?.gender}`) || data.identity?.gender || "--"],
+    ["Date of Birth", data.identity?.dob || "--"],
+    ["Blood Group", data.patientData?.bloodGroup || "--"],
+    ["Phone", data.contact?.phone || "--"],
+    ["Email", data.contact?.email || "--"],
+    ["ABHA Number", data.identity?.abha || "--"],
+    ["Address", data.identity?.address || "--"]
+  ];
+  docPDF.autoTable({
+    startY: currY,
+    head: [["Field", "Information"]],
+    body: idRows,
+    theme: 'striped',
+    headStyles: { fillColor: [26, 107, 74] }
+  });
+  currY = docPDF.lastAutoTable.finalY + 15;
+
+  // Emergency Contacts
+  if (data.emergencyContacts?.length) {
+    docPDF.setFontSize(14);
+    docPDF.text("Emergency Contacts", 14, currY);
+    currY += 5;
+    const ecRows = data.emergencyContacts.map(c => [c.name, c.relation, c.phone]);
+    docPDF.autoTable({
+      startY: currY,
+      head: [["Name", "Relation", "Phone"]],
+      body: ecRows,
+      theme: 'grid'
+    });
+    currY = docPDF.lastAutoTable.finalY + 15;
+  }
+
+  // --- PAGE 2: MEDICATIONS & VITALS ---
+  docPDF.addPage();
+  currY = 20;
+  currY = addHeader("Current Medications", currY);
+  const meds = data.medications || [];
+  if (meds.length) {
+    const medRows = meds.map(m => [m.name, m.dosage, m.frequency, m.timing, m.active !== false ? "Active" : "Completed"]);
+    docPDF.autoTable({
+      startY: currY,
+      head: [["Medicine", "Dose", "Frequency", "Timing", "Status"]],
+      body: medRows,
+      theme: 'striped'
+    });
+    currY = docPDF.lastAutoTable.finalY + 15;
+  } else {
+    docPDF.text("No active medications listed.", 14, currY);
+    currY += 15;
+  }
+
+  currY = addHeader("Latest Vital Readings", currY);
+  const vitals = data.vitalsHistory || [];
+  if (vitals.length) {
+    const lastV = vitals[vitals.length - 1];
+    const vitRows = [
+      ["Blood Pressure", lastV.bp || "--", lastV.date],
+      ["Blood Sugar", (lastV.sugar || "--") + " mg/dL", lastV.date],
+      ["Pulse Rate", (lastV.pulse || "--") + " bpm", lastV.date],
+      ["Temperature", (lastV.temp || "--") + " °C", lastV.date],
+      ["Body Weight", (lastV.weight || "--") + " kg", lastV.date]
+    ];
+    docPDF.autoTable({
+      startY: currY,
+      head: [["Metric", "Value", "Date Recorded"]],
+      body: vitRows,
+      theme: 'grid'
+    });
+    currY = docPDF.lastAutoTable.finalY + 15;
+  }
+
+  // --- PAGE 3: VISIT HISTORY ---
+  docPDF.addPage();
+  currY = 20;
+  currY = addHeader("Clinical Visit History", currY);
+  const visits = data.visits || [];
+  if (visits.length) {
+    const visitRows = [...visits].reverse().map(v => [v.date, v.reason, v.doctorName || "Dr. Unspecified", v.diagnosis || "N/A"]);
+    docPDF.autoTable({
+      startY: currY,
+      head: [["Date", "Reason", "Doctor", "Diagnosis"]],
+      body: visitRows,
+      theme: 'striped',
+      styles: { fontSize: 9 }
+    });
+  }
+
+  // Footer on all pages (simplified for demo)
+  const pageCount = docPDF.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    docPDF.setPage(i);
+    docPDF.setFontSize(8);
+    docPDF.setTextColor(150);
+    docPDF.text(`Generated by V-Med ID on ${new Date().toLocaleString()} · Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
+  }
+
+  docPDF.save(`VMed_Record_${vId}.pdf`);
+}
+
+// ── EMERGENCY SOS ────────────────────────────────────────────────
+function initSOS(data) {
+  if (!data) return;
+  const $ = id => document.getElementById(id);
+  const btn = $("mainSosBtn");
+  const list = $("sosContactsList");
+  let timer = null;
+
+  // Render contacts
+  const contacts = data.emergencyContacts || [];
+  if (contacts.length === 0) {
+    list.innerHTML = `<div style="text-align:center; color:var(--muted); padding:20px;">No emergency contacts. Add them in Settings.</div>`;
+  } else {
+    list.innerHTML = contacts.map(c => `
+      <div class="sos-contact-item">
+        <div style="background:var(--accent-light); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--accent); font-weight:700;">${c.name[0]}</div>
+        <div class="doc-info" style="flex:1;"><strong>${escHtml(c.name)}</strong><span>${c.relation || "Family"}</span></div>
+        <a href="tel:${c.phone}" class="sos-call-btn">📞</a>
+      </div>`).join("");
+  }
+
+  // SOS Activation Logic
+  if (btn) {
+    let startTime;
+    const start = () => {
+      startTime = Date.now();
+      timer = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        if (elapsed >= 3000) {
+          clearInterval(timer);
+          triggerSOS();
+        }
+      }, 50);
+      btn.style.background = "#fee2e2";
+      $("sosStatus").textContent = "Activating in 3s...";
+    };
+    const end = () => {
+      clearInterval(timer);
+      if ($("sosStatus").textContent !== "ALERT ACTIVE!") {
+          $("sosStatus").textContent = "Secure & Ready";
+          btn.style.background = "#fff";
+      }
+    };
+    btn.onmousedown = start; btn.onmouseup = end; btn.onmouseleave = end;
+    btn.ontouchstart = start; btn.ontouchend = end;
+  }
+
+  async function triggerSOS() {
+    $("sosStatus").textContent = "ALERT ACTIVE!";
+    $("sosStatus").style.color = "#fff";
+    $("sosStatus").style.fontWeight = "bold";
+    btn.style.transform = "scale(0.9)";
+    btn.style.background = "#ef4444";
+    btn.style.color = "#fff";
+    btn.textContent = "ALRT";
+
+    const pos = await new Promise(res => navigator.geolocation.getCurrentPosition(res, () => res(null)));
+    const locStr = pos ? `${pos.coords.latitude}, ${pos.coords.longitude}` : "Location not available";
+
+    alert("SOS ALERT SENT! Notifications have been sent to your emergency contacts and local medical centers.");
+    console.log("SOS Alert Triggered", { vmedId: data.vmedId, location: locStr });
+    
+    // Simulate API call to backend
+    fetch(`${API_BASE}/api/sos/trigger`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vmedId: data.vmedId, location: locStr, contacts: contacts.map(c=>c.phone) })
+    }).catch(e => console.error("SOS notify fail", e));
+  }
+
+  // AI First-Aid Guide
+  const aiIn = $("sosAiInput");
+  const aiSend = $("sosAiSend");
+  if (aiIn && aiSend) {
+      aiSend.onclick = async () => {
+          const q = aiIn.value.trim();
+          if (!q) return;
+          $("sosAiGuide").innerHTML = `<div style="text-align:center; padding:20px; color:var(--muted);">AI Thinking (Emergency Mode)...</div>`;
+          try {
+              const res = await fetch(`${API_BASE}/api/ai/emergency-aid`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ query: q, patient: { bloodGroup: data.patientData?.bloodGroup, medications: data.medications } })
+              });
+              const json = await res.json();
+              $("sosAiGuide").innerHTML = `<div style="background:#fff; border:1px solid var(--border); padding:16px; border-radius:12px; font-size:14px; line-height:1.6;">${parseMd(json.reply)}</div><div class="alert danger" style="margin-top:12px; font-size:11px;">⚠️ Help is arriving. Re-describe if symptoms change.</div>`;
+          } catch(e) {
+              $("sosAiGuide").textContent = "Unable to reach AI server. Please follow standard first aid measures.";
+          }
+      };
+  }
+}
+
+// ── BLOOD DONOR ─────────────────────────────────────────────────
+function initBloodDonor(data) {
+  if (!data) return;
+  const $ = id => document.getElementById(id);
+  const searchBtn = $("searchDonorBtn");
+  const searchGrp = $("bloodSearchGroup");
+  const list = $("donorList");
+  const toggle = $("donorToggle");
+
+  // Availability Toggle
+  if (toggle) {
+    toggle.checked = data.isDonor === true;
+    toggle.onchange = async () => {
+      const active = toggle.checked;
+      await updateDoc(doc(db, "users", auth.currentUser.uid), { isDonor: active });
+      $("donorToggleLabel").textContent = active ? "You are an active donor! 🟢" : "Available to help?";
+    };
+  }
+
+  // Search logic
+  if (searchBtn) {
+    searchBtn.onclick = async () => {
+      const grp = searchGrp.value;
+      list.innerHTML = `<div style="text-align:center; padding:20px;">Searching for ${grp || "all"} donors...</div>`;
+      try {
+        // Real Firestore query would go here, simulated for now
+        const resp = await fetch(`${API_BASE}/api/donors/search?group=${encodeURIComponent(grp)}`);
+        const donors = await resp.json();
+        if (donors.length === 0) {
+          list.innerHTML = `<div style="text-align:center; padding:20px; color:var(--muted);">No donors found with this group nearby.</div>`;
+        } else {
+          list.innerHTML = donors.map(d => `
+            <div class="donor-card">
+              <div class="blood-bg">${d.bloodGroup}</div>
+              <div class="donor-info"><strong>${escHtml(d.name)}</strong><span>${d.distance} km away</span></div>
+              <button class="donor-contact" onclick="alert('Contacting donor...')">Contact</button>
+            </div>`).join("");
+        }
+      } catch(e) {
+        list.innerHTML = `<div style="text-align:center; color:var(--danger); padding:20px;">Search failed. Please try again.</div>`;
+      }
+    };
+  }
+}
+
+// ── FAMILY LINK ──────────────────────────────────────────────────
+function initFamily(data) {
+  if (!data) return;
+  const $ = id => document.getElementById(id);
+  const list = $("familyList");
+  const addBtn = $("addFamilyBtn");
+  const modal = $("addFamilyModal");
+
+  window.closeFamilyModal = () => { if (modal) modal.classList.remove("open"); };
+
+  if (addBtn) {
+    addBtn.onclick = () => modal.classList.add("open");
+  }
+
+  // Render existing
+  const family = data.familyMembers || [];
+  if (family.length > 0) {
+    list.innerHTML = family.map(f => `
+      <div class="family-card">
+        <div class="family-avatar">${f.name[0]}</div>
+        <div class="family-info"><strong>${escHtml(f.name)}</strong><span>${f.relation} &nbsp;·&nbsp; ${f.vmedId}</span></div>
+        <button class="family-view-btn" onclick="alert('Switching to dependent profile...')">View</button>
+      </div>`).join("");
+  }
+
+  const sendBtn = $("sendFamilyRequestBtn");
+  if (sendBtn) {
+    sendBtn.onclick = async () => {
+      const id = $("familyIdentifier").value.trim();
+      const rel = $("familyRelation").value;
+      if (!id) return;
+      sendBtn.disabled = true; sendBtn.textContent = "Sending...";
+      try {
+        await fetch(`${API_BASE}/api/family/request`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ requester: data.vmedId, target: id, relation: rel })
+        });
+        alert("Request sent successfully!");
+        closeFamilyModal();
+      } catch(e) {
+        alert("Could not send request. Ensure the ID is correct.");
+      } finally {
+        sendBtn.disabled = false; sendBtn.textContent = "Send Request";
+      }
+    };
+  }
+}
+// ── INFO & FAQ ──────────────────────────────────────────────────
+function initInfo(data) {
+  // Simple static page for now, can be personalized later
+  document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
 }
 
 // ── UTILS ─────────────────────────────────────────────────────────
