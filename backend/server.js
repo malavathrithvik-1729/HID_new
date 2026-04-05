@@ -2,17 +2,24 @@ import express from "express";
 import cors    from "cors";
 import dotenv  from "dotenv";
 import fetch   from "node-fetch";
+import Parser  from "rss-parser";
 
-dotenv.config();
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+dotenv.config({ path: join(__dirname, ".env") });
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json({ limit: "50kb" }));
+app.use(express.json({ limit: "1mb" }));
 
 const GEMINI_KEY   = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = "gemini-2.5-flash";  // ✅ updated model
+const GEMINI_MODEL = "gemini-2.0-flash";  // ✅ corrected model name
 
 // ✅ Function instead of constant — always reads live key, never stale
 const getGeminiUrl = () =>
@@ -21,6 +28,24 @@ const getGeminiUrl = () =>
 console.log("🔑 Gemini key loaded:", !!GEMINI_KEY);
 console.log("🔑 Key preview      :", GEMINI_KEY ? `...${GEMINI_KEY.slice(-6)}` : "MISSING ❌");
 console.log(`📡 Model            : ${GEMINI_MODEL}`);
+
+// --- GOOGLE DRIVE HELPERS ---
+function getDriveId(url) {
+  if (!url) return null;
+  // Patterns for typical Drive URLs
+  const docRegex = /\/document\/d\/([a-zA-Z0-9-_]+)/;
+  const fileRegex = /\/file\/d\/([a-zA-Z0-9-_]+)/;
+  const spreadsheetRegex = /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/;
+  const presentationRegex = /\/presentation\/d\/([a-zA-Z0-9-_]+)/;
+  const ucRegex = /[?&]id=([a-zA-Z0-9-_]+)/;
+
+  const match = url.match(docRegex) || 
+                url.match(fileRegex) || 
+                url.match(spreadsheetRegex) || 
+                url.match(presentationRegex) || 
+                url.match(ucRegex);
+  return match ? match[1] : null;
+}
 
 // ── SAFETY SETTINGS (shared across all requests) ──────────────────
 const SAFETY_SETTINGS = [
@@ -61,7 +86,7 @@ const LANG_INSTRUCTIONS = {
   },
   hi: {
     name: "Hindi",
-    instruction: `LANGUAGE RULE (HIGHEST PRIORITY): You MUST reply entirely in Hindi (हिन्दी). Every single word of your response must be in Hindi script. Do NOT mix English words into your answer — use Hindi equivalents for all medical terms. For example: "blood pressure" → "रक्तचाप", "diabetes" → "मधुमेह", "tablet" → "गोली", "doctor" → "डॉक्टर". Write naturally as a Hindi speaker would to a patient. If you cannot find a Hindi word for something very technical, you may write it in Hindi transliteration, but the rest of the sentence must still be in Hindi. NEVER reply in English.`
+    instruction: `LANGUAGE RULE (HIGHEST PRIORITY): You MUST reply entirely in Hindi (हिन्दी). Every single word of your response must be in Hindi script. Do NOT mix English words into your answer — use Hindi equivalents for all medical terms. For example: "blood pressure" → "रक्तचाप", "diabetes" → "मधుमेह", "tablet" → "गोली", "doctor" → "डॉक्टर". Write naturally as a Hindi speaker would to a patient. If you cannot find a Hindi word for something very technical, you may write it in Hindi transliteration, but the rest of the sentence must still be in Hindi. NEVER reply in English.`
   },
   te: {
     name: "Telugu",
@@ -79,7 +104,12 @@ You speak directly to the patient. Be warm, clear, and concise.
 Never diagnose diseases or prescribe medications. Always recommend consulting a real doctor for medical decisions.
 Format responses using markdown: **bold** for key terms, bullet lists for steps, ## headings for sections.
 
-${langRule}`;
+## BEHAVIOR RULES (CRITICAL):
+1. **AESTHETICS ARE CRITICAL**: Your responses must feel premium. Use emojis where appropriate to make the experience friendly and modern.
+2. **Context Awareness**: Always mention specific documents, vitals (BP, Sugar, Weight), or visit history by name if they are relevant to the query.
+3. **Health Score Awareness**: If the patient asks about their health or how they are doing, refer to their Health Score.
+4. **Action Orientation**: Suggest specific quick actions (e.g., "Would you like me to analyze your latest Blood Report?" or "Should we check your Vitals history?").
+5. **Multi-language Priority**: ${langRule}`;
 
   if (!patient) return base;
 
@@ -127,8 +157,19 @@ ${langRule}`;
 
   const docs     = patient.documents || [];
   const docsText = docs.length > 0
-    ? docs.map(d => `  - ${d.title} (${d.type || "document"})${d.description ? ': ' + d.description : ''}`).join("\n")
+    ? docs.map(d => `  - ${d.title} (${d.type || "document"})${d.verified ? " [DOCTOR VERIFIED]" : ""}${d.description ? ': ' + d.description : ''}`).join("\n")
     : "  No documents uploaded";
+
+  const vitalsArr = patient.vitalsHistory || [];
+  const vitalsText = vitalsArr.length > 0
+    ? vitalsArr.slice(-5).reverse().map(v => 
+        `  - ${v.date}: BP=${v.bp || "--"}, Sugar=${v.sugar || "--"}, Pulse=${v.pulse || "--"}, Temp=${v.temp || "--"}, Wt=${v.weight || "--"}${v.verified ? " [DOCTOR VERIFIED]" : " [SELF LOGGED]"}`
+      ).join("\n")
+    : "  No vitals recorded yet";
+
+  const scoreText = patient.healthScore 
+    ? `Total: ${patient.healthScore.total}/1000 (Last calc: ${patient.healthScore.lastCalculated || "N/A"})`
+    : "Not yet calculated";
 
   // ✅ Plain text headers — no repeated unicode chars that trigger RECITATION
   return `${base}
@@ -139,9 +180,13 @@ Use the details below to personalise every answer.
 Name: ${name}, Age: ${age}, Gender: ${gender}
 Blood group: ${blood}, Occupation: ${occupation}
 V-Med ID: ${vmedId}
+Health Score: ${scoreText}
 
 Active Medications (${activeMeds.length}):
 ${medsText}
+
+Clinical Vitals (Latest 5):
+${vitalsText}
 
 Recent Visits (last ${visits.length}):
 ${visitsText}
@@ -149,7 +194,7 @@ ${visitsText}
 Linked Doctors (${doctors.length}):
 ${doctorsText}
 
-Uploaded Documents (${docs.length}):
+Medical Documents:
 ${docsText}
 
 --- BEHAVIOUR RULES ---
@@ -165,14 +210,14 @@ ${docsText}
 }
 
 // ── BUILD DOCTOR SYSTEM PROMPT ────────────────────────────────────
-function buildDoctorPrompt(doctor) {
+function buildDoctorPrompt(doctor, patient = null) {
   const name  = doctor?.identity?.fullName           || "Doctor";
   const spec  = doctor?.doctorData?.specializations || "General Medicine";
   const qual  = doctor?.doctorData?.qualification   || "";
   const since = doctor?.doctorData?.practisingSince || "";
   const count = doctor?.patientCount ?? 0;
 
-  return `You are V-Med AI Clinical Assistant, an AI tool for doctors inside the V-Med ID platform.
+  let base = `You are V-Med AI Clinical Assistant, an AI tool for doctors inside the V-Med ID platform.
 You are speaking to a medical professional. Use clinical language. Be precise and concise.
 
 Doctor: Dr. ${name}, Specialization: ${spec}, Qualification: ${qual}
@@ -189,14 +234,168 @@ Rules:
 1. Always reply in English.
 2. State when information is guideline-based vs evidence-based.
 3. Always recommend clinical judgment over AI suggestions.
-4. Never diagnose a specific patient — you have no patient data in this mode.
-5. For dangerous drug interactions, use bold text and a warning emoji.
-6. Keep answers structured with headings and bullet points.`;
+4. For dangerous drug interactions, use bold text and a warning emoji.
+5. Keep answers structured with headings and bullet points.`;
+
+  if (!patient) {
+    return `${base}\n\nMODE: General Clinical Reference (No specific patient context provided).`;
+  }
+
+  // Add Patient Context
+  const pName = patient.identity?.fullName || "the patient";
+  const pDob  = patient.identity?.dob || "unknown";
+  const pAge  = pDob !== "unknown" ? `${new Date().getFullYear() - new Date(pDob).getFullYear()} years old` : "age unknown";
+  const pGen  = patient.identity?.gender || "not specified";
+  const pBlood = patient.patientData?.bloodGroup || "not on record";
+
+  const allMeds    = patient.medications || [];
+  const activeMeds = allMeds.filter(m => m.active !== false);
+  const medsText   = activeMeds.length > 0
+    ? activeMeds.map(m => `  - ${m.name} (${m.dosage || ""})`).join("\n")
+    : "  None currently active";
+
+  const visits     = (patient.visits || []).slice(-5).reverse();
+  const visitsText = visits.length > 0
+    ? visits.map(v => `  - ${v.date}: ${v.reason}${v.diagnosis ? ' (Diag: ' + v.diagnosis + ')' : ''}`).join("\n")
+    : "  No visits recorded";
+
+  const docs     = patient.documents || [];
+  const docsText = docs.length > 0
+    ? docs.map(d => `  - ${d.title} (${d.type})${d.verified ? " [VERIFIED]" : ""}${d.description ? ': ' + d.description : ''}`).join("\n")
+    : "  No documents uploaded";
+
+  const vitalsArr = patient.vitalsHistory || [];
+  const vitalsText = vitalsArr.length > 0
+    ? vitalsArr.slice(-5).reverse().map(v => 
+        `  - ${v.date}: BP=${v.bp}, Sugar=${v.sugar}, Pulse=${v.pulse}, Temp=${v.temp}, Wt=${v.weight}${v.verified ? " [VERIFIED]" : ""}`
+      ).join("\n")
+    : "  - No vitals recorded yet";
+
+  const scoreText = patient.healthScore 
+    ? `Total: ${patient.healthScore.total}/1000`
+    : "Not yet calculated";
+
+  return `${base}
+
+MODE: Patient Case Analysis
+Current Patient: ${pName} (${pAge}, ${pGen})
+Blood group: ${pBlood}
+Health Score: ${scoreText}
+
+[Active Medications]
+${medsText}
+
+[Clinical Vitals (Latest 5)]
+${vitalsText}
+
+[Recent History]
+${visitsText}
+
+[Related Documents & Reports]
+${docsText}
+
+[GUIDANCE FOR THIS CASE]
+1. Analyze this patient's history and medications when answering.
+2. If the doctor asks about drug interactions, check specifically against their current medications listed above.
+3. When discussing lab results (from documents), explain the clinical significance for this patient's profile.
+4. Keep the tone professional but patient-centric.`;
 }
 
 // ── HEALTH CHECK ──────────────────────────────────────────────────
 app.get("/", (req, res) => {
   res.json({ status: "ok", model: GEMINI_MODEL, service: "V-Med AI Backend" });
+});
+
+// ── HEALTH TIPS ENDPOINT ──────────────────────────────────────────
+const parser = new Parser();
+const HEALTH_FEEDS = [
+  { name: "Harvard Health", url: "https://www.health.harvard.edu/blog/feed" },
+  { name: "WHO News", url: "https://www.who.int/rss-feeds/news-english.xml" },
+  { name: "MedlinePlus", url: "https://medlineplus.gov/rss/allmedlineplus.xml" },
+  { name: "Mayo Clinic", url: "https://www.mayoclinic.org/rss/all-health-information-topics" }
+];
+
+app.get("/api/health-tips", async (req, res) => {
+  const { bloodGroup, conditions } = req.query;
+  
+  try {
+    let feed = null;
+    let feedSource = null;
+    
+    // Shuffle feeds and try them until one succeeds
+    const shuffled = [...HEALTH_FEEDS].sort(() => 0.5 - Math.random());
+    
+    for (const source of shuffled) {
+      try {
+        console.log(`📡 Fetching feed from: ${source.name}...`);
+        // Timeout the RSS parse specifically
+        feed = await Promise.race([
+          parser.parseURL(source.url),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000))
+        ]);
+        feedSource = source;
+        if (feed) break;
+      } catch (e) {
+        console.warn(`⚠️ Failed to fetch ${source.name}:`, e.message);
+      }
+    }
+
+    if (!feed) {
+      return res.json({
+        tip: "Maintain a balanced diet, prioritize 7-8 hours of sleep, and stay physically active to support your long-term wellness.",
+        source: "V-Med Health Library",
+        articles: []
+      });
+    }
+    
+    // Take top 3 items
+    const items = feed.items.slice(0, 3).map(item => ({
+      title: item.title,
+      content: item.contentSnippet || item.content || item.summary || "",
+      link: item.link
+    }));
+
+    const prompt = `
+      Act as a clinical health assistant. I will provide you with 3 recent health news articles from ${feedSource.name}. 
+      Your task is to provide a single, short, encouraging health tip (max 3 sentences) personalized for a patient.
+      
+      Patient Info:
+      - Blood Group: ${bloodGroup || "Not specified"}
+      - Known Conditions: ${conditions || "None specified"}
+
+      Articles:
+      ${items.map((it, i) => `${i+1}. ${it.title}: ${it.content}`).join("\n")}
+
+      Rules:
+      1. Be encouraging and concise.
+      2. If the articles aren't directly related to the conditions, provide a general top-tier health tip inspired by the news.
+      3. Do NOT give specific medical prescriptions.
+      4. Mention the source: "${feedSource.name}".
+      5. Return ONLY the tip text.
+    `;
+
+    const response = await fetch(getGeminiUrl(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        safetySettings: SAFETY_SETTINGS
+      })
+    });
+
+    const result = await response.json();
+    const tip = result.candidates?.[0]?.content?.parts?.[0]?.text || "Stay hydrated and maintain a balanced diet for optimal health.";
+
+    res.json({
+      tip: tip.trim(),
+      source: feedSource.name,
+      articles: items.map(it => ({ title: it.title, link: it.link }))
+    });
+
+  } catch (error) {
+    console.error("Health tips error:", error);
+    res.status(500).json({ error: "Failed to fetch health tips" });
+  }
 });
 
 // ── AI CHAT ENDPOINT ──────────────────────────────────────────────
@@ -219,7 +418,7 @@ app.post("/api/ai/chat", async (req, res) => {
   const safeLang     = ["en", "hi", "te"].includes(lang) ? lang : "en";
   const isDoctor     = !!doctor;
   const systemPrompt = isDoctor
-    ? buildDoctorPrompt(doctor)
+    ? buildDoctorPrompt(doctor, patient)
     : buildSystemPrompt(patient, safeLang);
 
   const patientName = patient?.identity?.fullName || null;
@@ -227,7 +426,9 @@ app.post("/api/ai/chat", async (req, res) => {
 
   // Opening acknowledgement in target language
   const openingAckMap = isDoctor
-    ? `Understood. I am your V-Med AI Clinical Assistant. Ready for clinical queries, Dr. ${doctorName || ""}.`
+    ? (patientName 
+        ? `Understood. Clinical context for ${patientName} is loaded. Ready for consultation, Dr. ${doctorName || ""}.`
+        : `Understood. I am your V-Med AI Clinical Assistant. Ready for clinical queries, Dr. ${doctorName || ""}.`)
     : {
         en: patientName
           ? `I have ${patientName}'s health profile loaded and will answer in English.`
@@ -350,6 +551,90 @@ app.post("/api/ai/chat", async (req, res) => {
       error:  "Could not reach Gemini API. Check your internet connection.",
       detail: err.message
     });
+  }
+});
+
+// ── AI EXTRACTION ENDPOINT ─────────────────────────────────────────
+app.post("/api/ai/extract", async (req, res) => {
+  const { url, type = "document" } = req.body;
+
+  if (!url) return res.status(400).json({ error: "URL is required" });
+  if (!GEMINI_KEY) return res.status(500).json({ error: "AI key not configured" });
+
+  const driveId = getDriveId(url);
+  if (!driveId) {
+    return res.status(400).json({ error: "Invalid Google Drive link. Please provide a standard sharing URL." });
+  }
+
+  console.log(`📑 Extracting from Drive ID: ${driveId}`);
+
+  try {
+    // 1. Try to fetch as a Google Doc (Plain Text) first
+    // This is most efficient for docs/sheets
+    const exportUrl = `https://docs.google.com/document/d/${driveId}/export?format=txt`;
+    const docResponse = await fetch(exportUrl);
+
+    let contentData = null;
+    let mimeType = "text/plain";
+    let extractionPrompt = "Extract the key medical findings, diagnosis summary, and critical values from this document text. Provide a professional, concise summary.";
+
+    if (docResponse.ok) {
+        contentData = await docResponse.text();
+    } else {
+        // 2. If not a Google Doc, fetch as raw file (PDF/Image)
+        const downloadUrl = `https://drive.google.com/uc?id=${driveId}&export=download`;
+        const downloadRes = await fetch(downloadUrl);
+        
+        if (!downloadRes.ok) {
+            return res.status(400).json({ 
+                error: "Could not access file. Ensure the link visibility is set to 'Anyone with the link can view'." 
+            });
+        }
+
+        const buffer = await downloadRes.arrayBuffer();
+        const detectedMime = downloadRes.headers.get("content-type") || "application/pdf";
+        
+        // Convert to base64 for Gemini
+        contentData = Buffer.from(buffer).toString("base64");
+        mimeType = detectedMime;
+        extractionPrompt = "Analyze this medical document (PDF/Image). Extract the patient's condition, laboratory results, and doctor's impressions. Provide a concise, structured medical summary.";
+    }
+
+    // 3. Send to Gemini for Extraction
+    const parts = [{ text: extractionPrompt }];
+    if (mimeType === "text/plain") {
+        parts.push({ text: `DOCUMENT CONTENT:\n${contentData}` });
+    } else {
+        parts.push({
+            inlineData: {
+                mimeType: mimeType,
+                data: contentData
+            }
+        });
+    }
+
+    const aiRes = await fetch(getGeminiUrl(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
+        safetySettings: SAFETY_SETTINGS
+      })
+    });
+
+    const data = await aiRes.json();
+    const summary = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!summary) {
+        throw new Error(data.error?.message || "Gemini failed to generate extraction summary.");
+    }
+
+    res.json({ summary: summary.trim() });
+
+  } catch (error) {
+    console.error("Extraction error:", error);
+    res.status(500).json({ error: "Extraction failed: " + error.message });
   }
 });
 
