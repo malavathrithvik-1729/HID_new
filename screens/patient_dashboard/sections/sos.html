@@ -1,0 +1,79 @@
+<div class="section-wrap" style="max-width: 800px; margin: 0 auto;">
+    <div class="page-title" style="display: flex; align-items: center; gap: 12px;">
+        <span>🚨</span> Emergency SOS
+    </div>
+    <p class="page-sub">Instant emergency assistance and family alerts</p>
+
+    <div class="card" style="text-align: center; padding: 40px 20px; margin-bottom: 24px; background: linear-gradient(135deg, #c0392b, #8e44ad); color: #fff; border: none;">
+        <div id="sosStatus" style="font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; opacity: 0.9;">Secure & Ready</div>
+        
+        <div class="sos-btn-wrap" style="position: relative; width: 180px; height: 180px; margin: 0 auto 24px;">
+            <div class="sos-ripple" style="position: absolute; inset: 0; background: rgba(255,255,255,0.2); border-radius: 50%; animation: pulse-sos 2s infinite;"></div>
+            <button id="mainSosBtn" style="position: relative; z-index: 2; width: 100%; height: 100%; border-radius: 50%; border: 8px solid rgba(255,255,255,0.3); background: #fff; color: #c0392b; font-size: 42px; font-weight: 800; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, background 0.2s;">
+                SOS
+            </button>
+        </div>
+
+        <h2 style="color: #fff; margin-bottom: 8px;">Tap for 3 Seconds</h2>
+        <p style="font-size: 14px; opacity: 0.8; max-width: 300px; margin: 0 auto;">This will alert nearby doctors, your emergency contacts, and share your live location.</p>
+    </div>
+
+    <div class="grid-2" style="gap: 20px; align-items: start;">
+        <!-- Emergency Contacts -->
+        <div class="card">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Emergency Contacts</span>
+                <button onclick="loadSection(null, 'settings')" style="background: none; border: none; font-size: 12px; color: var(--accent); cursor: pointer;">Edit</button>
+            </div>
+            <div id="sosContactsList" style="display: flex; flex-direction: column; gap: 12px;">
+                <!-- Dynamically filled -->
+                <div style="text-align: center; color: var(--muted); padding: 20px;">Loading contacts...</div>
+            </div>
+        </div>
+
+        <!-- AI Emergency Helper -->
+        <div class="card" style="background: var(--surface-2);">
+            <div class="card-title">AI First-Aid Guide</div>
+            <div id="sosAiGuide" style="font-size: 14px; line-height: 1.6; color: var(--ink);">
+                <div style="background: var(--accent-light); padding: 12px; border-radius: 8px; border-left: 4px solid var(--accent); margin-bottom: 12px;">
+                    💡 <strong>Pro-Tip:</strong> Describe your situation (e.g., "Shortness of breath") and I'll give immediate instructions while help arrives.
+                </div>
+                <div class="ai-input-row" style="margin-top: 10px;">
+                    <input type="text" id="sosAiInput" placeholder="What is the emergency?" style="border-radius: 10px; padding: 10px 14px;">
+                    <button id="sosAiSend" class="ai-send-btn" style="padding: 10px 18px;">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top: 24px;">
+        <div class="card-title">Nearby Assistance</div>
+        <div id="sosNearbyInfo" style="font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 12px;">
+            <div style="flex: 1;">
+                <p>Waiting for location access...</p>
+            </div>
+            <button id="shareLocationBtn" class="btn-primary" style="font-size: 12px; padding: 8px 16px;">Share Location</button>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes pulse-sos {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(1.6); opacity: 0; }
+}
+#mainSosBtn:active { transform: scale(0.95); background: #f0f0f0; }
+.sos-contact-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px; background: var(--surface-2); border-radius: 12px;
+}
+.sos-call-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #1a6b4a; color: #fff; display: flex; align-items: center; justify-content: center;
+    text-decoration: none; font-size: 16px; margin-left: auto;
+}
+</style>
+
+<script>
+// Logic handled in dashboard.js initSOS()
+</script>

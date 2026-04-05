@@ -1,0 +1,58 @@
+<div class="section-wrap">
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px">
+    <button onclick="loadPage('home')" class="btn-secondary" style="background:var(--surface); border:1px solid var(--border); padding:6px 12px; border-radius:8px; cursor:pointer; font-family:'Outfit'; font-size:13px;">← Back to Home</button>
+    <h2 style="font-family:'Playfair Display',serif; font-size:22px; color:var(--ink); margin:0">Health Score & Insights</h2>
+  </div>
+
+  <div class="card" style="margin-bottom:24px; border-left:4px solid var(--accent); padding:28px;">
+    <h3 style="font-size:18px; margin-bottom:12px; font-family:'Playfair Display',serif;">How is your score calculated?</h3>
+    <p style="font-size:14px; color:var(--muted); line-height:1.6; margin-bottom:20px;">
+      Your V-Med Health Score is a numerical representation of your medical record's reliability and completeness. Having a high score ensures that emergency responders and new doctors get an accurate, trusted view of your clinical status.
+    </p>
+    
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px">
+      <div style="background:var(--surface-2); padding:18px; border-radius:14px; border:1px solid var(--border);">
+        <div style="font-weight:600; color:var(--accent); margin-bottom:6px; font-size:15px;">📊 Profile Completeness (40%)</div>
+        <div style="font-size:13px; color:var(--muted); line-height:1.5;">Evaluates how well your identity details (ABHA, Aadhaar, DOB, Blood Group) and contact information are filled. A complete profile is vital for identity verification.</div>
+      </div>
+      <div style="background:var(--surface-2); padding:18px; border-radius:14px; border:1px solid var(--border);">
+        <div style="font-weight:600; color:var(--info); margin-bottom:6px; font-size:15px;">📈 Medical Activity (30%)</div>
+        <div style="font-size:13px; color:var(--muted); line-height:1.5;">Factors in your recent clinical visits, active medications, and consistency in tracking vitals. regular updates show an active commitment to health.</div>
+      </div>
+      <div style="background:var(--surface-2); padding:18px; border-radius:14px; border:1px solid var(--border);">
+        <div style="font-weight:600; color:var(--ink); margin-bottom:6px; font-size:15px;">🛡️ Data Integrity (30%)</div>
+        <div style="font-size:13px; color:var(--muted); line-height:1.5;">The gold standard. Data uploaded or verified by a registered Doctor carries a higher trust weight (3x) compared to self-logged entries.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:28px;">
+    <h3 style="font-size:18px; margin-bottom:20px; font-family:'Playfair Display',serif;">Knowledge Base & FAQs</h3>
+    
+    <div style="display:flex; flex-direction:column; gap:24px">
+      <div>
+        <div style="font-weight:600; font-size:16px; margin-bottom:6px; color:var(--ink);">❓ Why did my score drop?</div>
+        <div style="font-size:14px; color:var(--muted); line-height:1.6;">Scores can fluctuate if your medical records become "stale" (e.g., no vitals logged for 3 months) or if you add new data that hasn't been verified by a doctor yet. Verified records are the best way to keep your score high.</div>
+      </div>
+      
+      <div style="border-top:1px solid var(--border); padding-top:24px">
+        <div style="font-weight:600; font-size:16px; margin-bottom:6px; color:var(--ink);">❓ Is a higher score always better?</div>
+        <div style="font-size:14px; color:var(--muted); line-height:1.6;">Yes. A high score means your V-Med profile is a "Trusted Digital Twin." It reduces diagnostic errors during new consultations and helps in faster processing for medical insurance or emergency care.</div>
+      </div>
+
+      <div style="border-top:1px solid var(--border); padding-top:24px">
+        <div style="font-weight:600; font-size:16px; margin-bottom:6px; color:var(--ink);">❓ Can I delete unverified data?</div>
+        <div style="font-size:14px; color:var(--muted); line-height:1.6;">You can manage and delete your self-uploaded records at any time. However, to maintain clinical integrity, documents verified by a Doctor (with their clinical ID) are locked and cannot be deleted by the patient.</div>
+      </div>
+
+      <div style="border-top:1px solid var(--border); padding-top:24px">
+        <div style="font-weight:600; font-size:16px; margin-bottom:6px; color:var(--ink);">❓ Who can see my Health Score?</div>
+        <div style="font-size:14px; color:var(--muted); line-height:1.6;">Your health data is private. Only you, and the specific doctors with whom you share your unique V-Med ID, can view your medical summary and health score.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin-top:32px; padding-bottom:20px;">
+    <p style="font-size:13px; color:var(--muted);">Need further help? Speak with our <strong>AI Assistant</strong> for personalized explanations.</p>
+  </div>
+</div>

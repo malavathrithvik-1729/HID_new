@@ -13,30 +13,58 @@
     <div class="ai-msg ai">
       <div class="bubble">
         👋 Hello, Doctor! I'm your <strong>AI Clinical Assistant</strong>, powered by Gemini.<br><br>
+        I can now help you analyze specific patient cases. Select a patient below to start a consultation.<br><br>
         I can help with:
         <ul style="margin:8px 0 8px 18px;padding:0">
-          <li>Drug references and interaction checks</li>
-          <li>Clinical terminology and definitions</li>
-          <li>Symptom and condition information</li>
-          <li>Treatment guidelines (general reference)</li>
-          <li>Dosage calculations and reminders</li>
-          <li>Health education content for patients</li>
+          <li>Analyzing a patient's symptoms and history</li>
+          <li>Checking for drug interactions in a patient's profile</li>
+          <li>Explaining lab results and scans from their records</li>
+          <li>Drafting patient-friendly explanations for conditions</li>
         </ul>
-        <em>I do not diagnose. Always apply clinical judgment. This is a reference tool only.</em>
+        <em>Always apply clinical judgment. This is a reference tool only.</em>
       </div>
     </div>
   </div>
 
-  <!-- Quick prompts -->
-  <div style="flex-shrink:0;display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 8px">
-    <button class="ai-quick-btn" onclick="window._docAiQuick(this)">Drug interactions for Metformin</button>
-    <button class="ai-quick-btn" onclick="window._docAiQuick(this)">Normal BP range by age</button>
-    <button class="ai-quick-btn" onclick="window._docAiQuick(this)">Explain Type 2 diabetes to a patient</button>
-    <button class="ai-quick-btn" onclick="window._docAiQuick(this)">Signs of Vitamin D deficiency</button>
+  <!-- Context & Prompts Area -->
+  <div id="aiPromptArea" style="padding:12px 16px 0; background:var(--surface); border-top:1px solid var(--border);">
+    
+    <!-- Selectors Row -->
+    <div style="display:flex; flex-wrap:wrap; gap:16px; margin-bottom:12px; align-items:center;">
+      <!-- Patient Selector -->
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div style="font-size:12px; font-weight:600; color:var(--muted); white-space:nowrap;">Patient:</div>
+        <select id="aiPatientSelect" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); font-family:'Outfit',sans-serif; font-size:13px; color:var(--ink); width:200px;">
+          <option value="">— General Reference —</option>
+        </select>
+      </div>
+
+      <!-- Report Multi-select Dropdown -->
+      <div id="reportDropdownContainer" style="display:none; align-items:center; gap:8px;">
+        <div style="font-size:12px; font-weight:600; color:var(--muted); white-space:nowrap;">Discuss:</div>
+        <div class="custom-dropdown" id="reportDropdown">
+          <div class="dropdown-header" onclick="toggleReportDropdown()">
+            <span id="selectedCount">All Reports (Default)</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="dropdown-content" id="aiReportChecklist">
+            <!-- Reports checkboxes here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick prompts -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="quickPrompts">
+      <button class="ai-quick-btn" onclick="window._docAiQuick(this)">Drug interactions for Metformin</button>
+      <button class="ai-quick-btn" onclick="window._docAiQuick(this)">Normal BP range by age</button>
+      <button class="ai-quick-btn" onclick="window._docAiQuick(this)">Explain Type 2 diabetes to a patient</button>
+      <button class="ai-quick-btn" onclick="window._docAiQuick(this)">Signs of Vitamin D deficiency</button>
+    </div>
   </div>
 
-  <div class="ai-input-row" style="flex-shrink:0;padding-bottom:16px">
-    <input type="text" id="aiInput" placeholder="Ask a clinical question…"/>
+  <div class="ai-input-row" style="flex-shrink:0;padding:0 16px 16px; background:var(--surface);">
+    <input type="text" id="aiInput" placeholder="Ask a clinical question or about this patient…"/>
     <button class="ai-send-btn" id="aiSendBtn">Send</button>
   </div>
 </div>
@@ -57,12 +85,86 @@
   background:rgba(26,74,138,0.1);
   border-color:rgba(26,74,138,0.4);
 }
+
+/* Custom Multi-select Dropdown (Doctor Theme) */
+.custom-dropdown {
+  position: relative;
+  width: 220px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: 'Outfit', sans-serif;
+  user-select: none;
+}
+.dropdown-header {
+  padding: 6px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ink);
+}
+.dropdown-header .arrow { font-size: 10px; transition: transform .2s; }
+.custom-dropdown.open .arrow { transform: rotate(180deg); }
+.dropdown-content {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+.custom-dropdown.open .dropdown-content { display: flex; }
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.dropdown-item:hover { background: var(--surface-2); }
+.dropdown-item input { accent-color: var(--accent); cursor: pointer; }
+.dropdown-item span { font-size: 12px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Scrollbar adjustment */
+.dropdown-content::-webkit-scrollbar { width: 4px; }
+.dropdown-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 </style>
 
 <script>
+// Toggle for the custom dropdown
+window.toggleReportDropdown = function() {
+  const dd = document.getElementById("reportDropdown");
+  dd?.classList.toggle("open");
+};
+
+// Close dropdown when clicking outside
+document.addEventListener("click", e => {
+  const dd = document.getElementById("reportDropdown");
+  const header = dd?.querySelector('.dropdown-header');
+  if (dd && !dd.contains(e.target)) dd.classList.remove("open");
+});
+
 window._docAiQuick = function(btn) {
   const input   = document.getElementById("aiInput");
   const sendBtn = document.getElementById("aiSendBtn");
-  if (input && sendBtn) { input.value = btn.textContent.trim(); sendBtn.click(); }
+  if (input && sendBtn) { 
+    input.value = btn.textContent.trim(); 
+    window._clickedQuickPrompt = true;
+    sendBtn.click(); 
+  }
 };
 </script>

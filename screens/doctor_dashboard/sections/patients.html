@@ -45,28 +45,106 @@
         <div><div style="font-size:11px;color:var(--muted)">Date of birth</div>  <div style="font-size:14px;font-weight:500;color:var(--ink)" id="modalDob">--</div></div>
         <div><div style="font-size:11px;color:var(--muted)">Blood group</div>    <div style="font-size:14px;font-weight:500;color:var(--ink)" id="modalBlood">--</div></div>
         <div><div style="font-size:11px;color:var(--muted)">ABHA</div>           <div style="font-size:14px;font-weight:500;color:var(--ink)" id="modalAbha">--</div></div>
-        <div><div style="font-size:11px;color:var(--muted)">Email</div>          <div style="font-size:13px;font-weight:500;color:var(--ink)" id="modalEmail">--</div></div>
-        <div><div style="font-size:11px;color:var(--muted)">Phone</div>          <div style="font-size:14px;font-weight:500;color:var(--ink)" id="modalPhone">--</div></div>
+        <div style="display: flex; flex-direction: column;">
+          <div style="font-size:11px;color:var(--muted)">Health Score</div>
+          <div id="modalHealthScore" style="font-size:16px;font-weight:700;color:var(--accent)">--</div>
+        </div>
       </div>
     </div>
 
-    <!-- Visits -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);margin-bottom:10px">Visit history</div>
-      <div id="modalVisitList"></div>
+    <!-- Tabs for Clinical Management -->
+    <div class="modal-tabs" style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px;padding-bottom:2px">
+      <button class="modal-tab active" id="btnTabHistory" onclick="switchModalTab(this, 'tabHistory')" style="background:none;border:none;padding:8px 12px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent">History</button>
+      <button class="modal-tab" id="btnTabVitals" onclick="switchModalTab(this, 'tabVitals')" style="background:none;border:none;padding:8px 12px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent">Add Vitals</button>
+      <button class="modal-tab" id="btnTabDocuments" onclick="switchModalTab(this, 'tabDocuments')" style="background:none;border:none;padding:8px 12px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent">Add Document</button>
+      <button class="modal-tab" id="btnTabAnalytics" onclick="switchModalTab(this, 'tabAnalytics')" style="background:none;border:none;padding:8px 12px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent">Analytics</button>
     </div>
 
-    <!-- Medications -->
-    <div style="margin-bottom:16px">
-      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);margin-bottom:10px">Medications</div>
-      <div id="modalMedList"></div>
+    <!-- Tab Contents -->
+    <div id="tabHistory" class="modal-tab-content">
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);margin-bottom:10px">Visit history</div>
+        <div id="modalVisitList"></div>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);margin-bottom:10px">Medications</div>
+        <div id="modalMedList"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);margin-bottom:10px">Documents</div>
+        <div id="modalDocList"></div>
+      </div>
     </div>
 
-    <!-- Documents -->
-    <div>
-      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);margin-bottom:10px">Documents</div>
-      <div id="modalDocList"></div>
+    <div id="tabVitals" class="modal-tab-content" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div class="form-group">
+          <label style="font-size:11px">BP (e.g. 120/80)</label>
+          <input type="text" id="modalInBP" placeholder="---/---" />
+        </div>
+        <div class="form-group">
+          <label style="font-size:11px">Blood Sugar (mg/dL)</label>
+          <input type="number" id="modalInSugar" />
+        </div>
+        <div class="form-group">
+          <label style="font-size:11px">Pulse (bpm)</label>
+          <input type="number" id="modalInPulse" />
+        </div>
+        <div class="form-group">
+          <label style="font-size:11px">Temp (°C)</label>
+          <input type="number" step="0.1" id="modalInTemp" />
+        </div>
+        <div class="form-group">
+          <label style="font-size:11px">Weight (kg)</label>
+          <input type="number" step="0.1" id="modalInWeight" />
+        </div>
+        <div class="form-group">
+          <label style="font-size:11px">Notes</label>
+          <input type="text" id="modalInVitNotes" />
+        </div>
+      </div>
+      <button class="btn-primary" id="btnSaveModalVitals" style="width:100%">Save Verified Vitals</button>
+      <div id="modalVitMsg" class="alert" style="display:none;margin-top:12px"></div>
     </div>
+
+    <div id="tabDocuments" class="modal-tab-content" style="display:none">
+      <div class="form-group" style="margin-bottom:12px">
+        <label style="font-size:11px">Document Title</label>
+        <input type="text" id="modalDocTitle" placeholder="e.g., Blood Test Report" />
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label style="font-size:11px">Type</label>
+        <select id="modalDocType" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface)">
+          <option value="Report">Report</option>
+          <option value="Prescription">Prescription</option>
+          <option value="Scan">Scan</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label style="font-size:11px">Google Drive Link</label>
+        <input type="url" id="modalDocUrl" placeholder="https://drive.google.com/..." />
+      </div>
+      <div class="form-group" style="margin-bottom:16px">
+        <label style="font-size:11px">Short Description</label>
+        <textarea id="modalDocDesc" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-family:inherit" rows="2"></textarea>
+      </div>
+      <button class="btn-primary" id="btnSaveModalDoc" style="width:100%">Upload Verified Document</button>
+      <div id="modalDocMsg" class="alert" style="display:none;margin-top:12px"></div>
+    </div>
+
+    <div id="tabAnalytics" class="modal-tab-content" style="display:none">
+      <div id="modalAnalyticsContainer">
+        <p style="color:var(--muted);text-align:center;padding:40px">Analyzing patient data...</p>
+      </div>
+    </div>
+
+<style>
+  .modal-tab.active { border-bottom-color: var(--accent) !important; color: var(--accent) !important; }
+  .modal-tab:hover { background: var(--surface-2) !important; border-radius: 4px; }
+  .modal-box { max-height: 85vh; overflow-y: auto; }
+</style>
+
   </div>
 </div>
 

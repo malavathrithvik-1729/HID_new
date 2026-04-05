@@ -17,22 +17,8 @@
     ℹ️ V-Med AI uses your actual health profile for personalised answers. It does <strong>not</strong> diagnose diseases or prescribe medicines. Always consult your doctor for medical decisions.
   </div>
 
-  <!-- Quick prompts — pre-filled questions relevant to the patient -->
-  <div style="margin-bottom:16px">
-    <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Quick questions</div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px" id="quickPrompts">
-      <button class="quick-prompt-btn" onclick="window._aiQuickSend(this)">What are my current medications?</button>
-      <button class="quick-prompt-btn" onclick="window._aiQuickSend(this)">Explain my last diagnosis</button>
-      <button class="quick-prompt-btn" onclick="window._aiQuickSend(this)">Am I taking too many medicines?</button>
-      <button class="quick-prompt-btn" onclick="window._aiQuickSend(this)">Give me a diet plan for my health</button>
-      <button class="quick-prompt-btn" onclick="window._aiQuickSend(this)">What side effects should I watch for?</button>
-      <button class="quick-prompt-btn" onclick="window._aiQuickSend(this)">How can I improve my health?</button>
-    </div>
-  </div>
-
   <!-- Chat window -->
-  <div class="card" style="padding:0;overflow:hidden">
-
+  <div class="card" style="padding:0;overflow:hidden; display:flex; flex-direction:column;">
     <!-- Messages -->
     <div id="aiChat" style="
       height:420px;
@@ -63,8 +49,48 @@
     <!-- Divider -->
     <div style="height:1px;background:var(--border,rgba(0,0,0,0.08))"></div>
 
+    <!-- Mode Switcher -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; background:var(--surface-2); padding:4px; border-radius:12px; margin:0 16px 12px; gap:4px; border:1px solid var(--border);">
+      <button id="modeAssistant" class="ai-mode-btn active">
+        🤖 Health Assistant
+      </button>
+      <button id="modeSymptom" class="ai-mode-btn">
+        🌡️ Symptom Checker
+      </button>
+    </div>
+
+    <!-- Context & Prompts Area (Above Input) -->
+    <div id="aiPromptArea" style="padding:12px 16px 0; background:var(--surface);">
+      <!-- Quick prompts -->
+      <div id="quickPromptsWrapper" style="margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Quick questions</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px" id="quickPrompts">
+          <button class="quick-prompt-btn" onclick="window._aiQuickSend(this)">What are my current medications?</button>
+          <button class="quick-prompt-btn" onclick="window._aiQuickSend(this)">Explain my last diagnosis</button>
+          <button class="quick-prompt-btn" onclick="window._aiQuickSend(this)">Am I taking too many medicines?</button>
+          <button class="quick-prompt-btn" onclick="window._aiQuickSend(this)">Give me a diet plan for my health</button>
+          <button class="quick-prompt-btn" onclick="window._aiQuickSend(this)">What side effects should I watch for?</button>
+          <button class="quick-prompt-btn" onclick="window._aiQuickSend(this)">How can I improve my health?</button>
+        </div>
+      </div>
+
+      <!-- Selective Context (Dropdown) -->
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+        <div style="font-size:12px; font-weight:600; color:var(--muted); white-space:nowrap;">Discuss reports:</div>
+        <div class="custom-dropdown" id="reportDropdown">
+          <div class="dropdown-header" onclick="toggleReportDropdown()">
+            <span id="selectedCount">All Reports (Default)</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="dropdown-content" id="aiReportChecklist">
+            <!-- Checkboxes injected here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Input row -->
-    <div style="display:flex;gap:10px;padding:14px 16px;align-items:flex-end">
+    <div style="display:flex;gap:10px;padding:8px 16px 16px;align-items:flex-end; background:var(--surface);">
       <textarea
         id="aiInput"
         rows="1"
@@ -128,6 +154,18 @@
   background: rgba(26,107,74,0.1);
   border-color: rgba(26,107,74,0.4);
 }
+
+.ai-mode-btn {
+  padding: 8px; border: none; border-radius: 8px;
+  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600;
+  cursor: pointer; background: transparent; color: var(--muted);
+  transition: all 0.2s;
+}
+.ai-mode-btn.active {
+  background: var(--surface); color: var(--accent);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
 .ai-msg { display: flex; }
 .ai-msg.user { justify-content: flex-end; }
 .ai-msg.ai   { justify-content: flex-start; }
@@ -153,15 +191,86 @@
 .ai-msg.ai .bubble h4 { font-size:14px; margin:8px 0 4px; }
 .ai-msg.ai .bubble ul { margin:6px 0 6px 18px; padding:0; }
 .ai-msg.ai .bubble li { margin-bottom:3px; }
+
+/* Custom Multi-select Dropdown */
+.custom-dropdown {
+  position: relative;
+  width: 240px;
+  background: var(--surface-2, #f0ede6);
+  border: 1px solid var(--border, rgba(0,0,0,0.1));
+  border-radius: 8px;
+  font-family: 'Outfit', sans-serif;
+  user-select: none;
+}
+.dropdown-header {
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ink);
+}
+.dropdown-header .arrow { font-size: 10px; transition: transform .2s; }
+.custom-dropdown.open .arrow { transform: rotate(180deg); }
+.dropdown-content {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: 100%;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, rgba(0,0,0,0.12));
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+.custom-dropdown.open .dropdown-content { display: flex; }
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.dropdown-item:hover { background: var(--surface-2, #f0ede6); }
+.dropdown-item input { accent-color: var(--accent); cursor: pointer; }
+.dropdown-item span { font-size: 12.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Scrollbar adjustment */
+.dropdown-content::-webkit-scrollbar { width: 4px; }
+.dropdown-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 </style>
 
 <script>
-// Quick prompt handler — clicking a pill puts its text into the input and sends
+// Toggle for the custom dropdown
+window.toggleReportDropdown = function() {
+  const dd = document.getElementById("reportDropdown");
+  dd?.classList.toggle("open");
+};
+
+// Close dropdown when clicking outside
+document.addEventListener("click", e => {
+  const dd = document.getElementById("reportDropdown");
+  if (dd && !dd.contains(e.target)) dd.classList.remove("open");
+});
+
+// Quick prompt handler — now with 'disappearing' logic handled in dashboard.js
 window._aiQuickSend = function(btn) {
   const input = document.getElementById("aiInput");
   const sendBtn = document.getElementById("aiSendBtn");
   if (input && sendBtn) {
     input.value = btn.textContent.trim();
+    // Signal for dashboard.js to hide wrapper
+    window._clickedQuickPrompt = true; 
     sendBtn.click();
   }
 };
