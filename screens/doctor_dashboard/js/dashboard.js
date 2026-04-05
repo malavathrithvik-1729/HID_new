@@ -5,7 +5,7 @@ import {
   collection, query, where, getDocs
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const API_BASE = "http://localhost:3000";
+const API_BASE = "http://127.0.0.1:3000";
 
 // ── DARK MODE ─────────────────────────────────────────────────
 const DARK_KEY = "vmed_dark_mode";
@@ -36,7 +36,7 @@ function toggleDark() {
 window.toggleDark = toggleDark;
 
 // ── SPA ROUTER ────────────────────────────────────────────────
-async function loadPage(pageName) {
+async function loadPage(pageName, arg = null) {
   const content = document.getElementById("content");
   if (!content) return;
   try {
@@ -61,14 +61,15 @@ async function loadPage(pageName) {
     // Always await fresh data
     const data = await window.doctorDataReady;
 
-    if (pageName === "home")         initHome(data);
-    if (pageName === "patients")     initPatients(data);
-    if (pageName === "add_patient")  initAddPatient(data);
-    if (pageName === "consultation") initConsultation(data);
-    if (pageName === "add_document") initAddDocument(data);
-    if (pageName === "history")      initHistory(data);
-    if (pageName === "ai")           initAIChat(data);
-    if (pageName === "settings")     initSettings(data);
+    if (pageName === "home")           initHome(data);
+    if (pageName === "patients")       initPatients(data);
+    if (pageName === "add_patient")    initAddPatient(data);
+    if (pageName === "consultation")   initConsultation(data);
+    if (pageName === "add_document")   initAddDocument(data);
+    if (pageName === "history")        initHistory(data);
+    if (pageName === "ai")             initAIChat(data, arg);
+    if (pageName === "settings")       initSettings(data);
+    if (pageName === "patient_detail") initPatientDetail(data, arg);
 
   } catch (e) {
     console.error("loadPage error:", e);
@@ -80,10 +81,16 @@ async function loadPage(pageName) {
   }
 }
 
-function loadSection(btn, page) {
+function loadSection(btn, page, arg = null) {
   document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
-  if (btn) btn.classList.add("active");
-  loadPage(page);
+  if (btn) {
+    btn.classList.add("active");
+  } else {
+    // If no btn provided, try to find the one with data-page=page
+    const target = document.querySelector(`.nav-item[data-page="${page}"]`);
+    if (target) target.classList.add("active");
+  }
+  loadPage(page, arg);
 }
 
 function toggleSidebar() {
@@ -148,7 +155,7 @@ async function initPatients(data) {
       const initials  = name.trim().split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
       const lastVisit = (p.visits || []).slice(-1)[0];
       return `
-        <div class="patient-card" onclick="window._showPatientDetail('${p.id}')">
+        <div class="patient-card" onclick="loadSection(null, 'patient_detail', '${p.id}')">
           <div class="patient-avatar">${initials}</div>
           <div class="patient-info">
             <strong>${escHtml(name)}</strong>
@@ -177,84 +184,259 @@ async function initPatients(data) {
       ));
     });
   }
+}
 
-  window._showPatientDetail = async (patientId) => {
-    const p = allPatients.find(x => x.id === patientId);
-    if (!p) return;
-    const modal = document.getElementById("patientModal");
-    if (!modal) return;
+// ── PATIENT DETAIL ANALYSIS ──────────────────────────────────
+async function initPatientDetail(data, pid) {
+  if (!pid || typeof pid !== 'string' || pid.length < 5) {
+    console.error("Invalid Patient ID:", pid);
+    loadSection(null, 'patients');
+    return;
+  }
 
-    const name     = p.identity?.fullName || "Unknown";
-    const initials = name.trim().split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
+  const $ = id => document.getElementById(id);
+  let snap;
+  try {
+    snap = await getDoc(doc(db, "users", pid));
+  } catch (err) {
+    console.error("Firestore fetch error:", err);
+    alert("Could not load patient record. Please check your connection.");
+    return;
+  }
+  
+  if (!snap.exists()) {
+     alert("Patient record not found.");
+     loadSection(null, 'patients');
+     return;
+  }
+  
+  const p = snap.data();
+  const name = p.identity?.fullName || "Patient";
+  const initials = name.trim().split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
 
-    const nameEl = document.getElementById("modalPatientName");
-    if (nameEl) nameEl.textContent = name;
-    const vmedEl = document.getElementById("modalPatientVmed");
-    if (vmedEl) vmedEl.textContent = p.vmedId || "--";
-    const avatarEl = document.getElementById("modalPatientAvatar");
-    if (avatarEl) avatarEl.textContent = initials;
+  if ($("detName"))       $("detName").textContent = name;
+  if ($("detVmed"))       $("detVmed").textContent = p.vmedId || "--";
+  if ($("detAvatar"))     $("detAvatar").textContent = initials;
+  if ($("consultPatName")) $("consultPatName").textContent = name;
+  
+  const age = p.identity?.dob ? `${new Date().getFullYear() - new Date(p.identity.dob).getFullYear()} yrs` : "--";
+  if ($("detGenderAge")) $("detGenderAge").textContent = `${p.identity?.gender || "--"}, ${age}`;
+  if ($("detBlood"))     $("detBlood").textContent     = `Blood: ${p.patientData?.bloodGroup || "--"}`;
+  if ($("detAbha"))      $("detAbha").textContent      = p.identity?.abha || "--";
+  if ($("detPhone"))     $("detPhone").textContent     = p.contact?.phone || "--";
+  if ($("detHealthScore")) $("detHealthScore").textContent = p.healthScore?.total || "N/A";
 
-    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || "--"; };
-    set("modalGender", p.identity?.gender);
-    set("modalDob",    p.identity?.dob);
-    set("modalBlood",  p.patientData?.bloodGroup);
-    set("modalEmail",  p.contact?.email);
-    set("modalPhone",  p.contact?.phone);
-    set("modalAbha",   p.identity?.abha);
+  // Vitals Logic (History only now, sidebar card removed)
+  const vitalsArr = p.vitalsHistory || [];
+  const latestVit = vitalsArr.length > 0 ? vitalsArr[vitalsArr.length - 1] : {};
+  
+  if ($("vitBP"))       $("vitBP").textContent       = latestVit.bp || "--/--";
+  if ($("vitHR"))       $("vitHR").textContent       = latestVit.heartRate || "--";
+  if ($("vitTemp"))     $("vitTemp").textContent     = latestVit.temp || "--";
+  if ($("vitWeight"))   $("vitWeight").textContent   = latestVit.weight || "--";
+  if ($("vitLastDate")) $("vitLastDate").textContent = latestVit.date ? `Updated ${latestVit.date}` : "No data";
 
-    const vList  = document.getElementById("modalVisitList");
-    const visits = p.visits || [];
-    if (vList) {
-      vList.innerHTML = visits.length === 0
-        ? `<p style="font-size:13px;color:var(--muted)">No visits recorded yet.</p>`
-        : [...visits].reverse().map(v => `
-            <div class="visit-card" style="margin-bottom:10px">
-              <div class="visit-header">
-                <h4>${escHtml(v.reason || "Consultation")}</h4>
-                <span class="visit-date">${v.date || ""}</span>
-              </div>
-              ${v.diagnosis ? `<div class="visit-detail"><strong>Diagnosis:</strong> ${escHtml(v.diagnosis)}</div>` : ""}
-              ${v.notes     ? `<div class="visit-detail">${escHtml(v.notes)}</div>` : ""}
-              ${v.prescriptions?.length
-                ? `<div class="visit-pills">${v.prescriptions.map(pr =>
-                    `<span class="visit-pill">💊 ${escHtml(pr)}</span>`).join("")}</div>`
-                : ""}
-            </div>`).join("");
-    }
+  if ($("detVitHistList")) {
+    $("detVitHistList").innerHTML = vitalsArr.length === 0
+      ? `<div class="empty-state">No recorded vitals history.</div>`
+      : `<div class="card" style="padding:0">
+          <table style="width:100%; font-size:13px; border-collapse:collapse;">
+            <thead><tr style="text-align:left; border-bottom:1px solid var(--border); background:var(--surface-2);"><th style="padding:12px 16px;">Date</th><th>BP</th><th>Sugar</th><th>Pulse</th><th>Temp</th><th>Wt</th><th>Status</th></tr></thead>
+            <tbody>${vitalsArr.map(v => `<tr style="border-bottom:1px solid var(--border);"><td style="padding:12px 16px; color:var(--muted);">${v.date}</td><td><strong>${v.bp || "--"}</strong></td><td>${v.sugar || "--"}</td><td>${v.pulse || "--"}</td><td>${v.temp || "--"}°C</td><td>${v.weight || "--"}kg</td><td><span class="patient-tag ${v.verified ? "tag-active" : ""}" style="font-size:10px">${v.verified ? "Verified" : "Self"}</span></td></tr>`).reverse().join("")}</tbody>
+          </table>
+        </div>`;
+  }
 
-    const mList = document.getElementById("modalMedList");
-    const meds  = p.medications || [];
-    if (mList) {
-      mList.innerHTML = meds.length === 0
-        ? `<p style="font-size:13px;color:var(--muted)">No medications on file.</p>`
-        : meds.map(m => `
-            <div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-              <span>💊</span>
-              <div>
-                <strong style="font-size:14px;color:var(--ink)">${escHtml(m.name)}</strong><br>
-                <span style="font-size:12px;color:var(--muted)">${escHtml(m.dosage || "")} ${escHtml(m.frequency || "")}</span>
-              </div>
-              <span class="patient-tag ${m.active !== false ? "tag-active" : ""}" style="margin-left:auto">
-                ${m.active !== false ? "Active" : "Done"}
-              </span>
-            </div>`).join("");
-    }
+  // Consultation & Documents setup
+  if ($("detConsultAI")) $("detConsultAI").onclick = () => loadSection(null, "ai", pid);
 
-    const dList = document.getElementById("modalDocList");
-    const docs  = p.documents || [];
-    if (dList) {
-      dList.innerHTML = docs.length === 0
-        ? `<p style="font-size:13px;color:var(--muted)">No documents uploaded.</p>`
-        : docs.map(d => `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-              <span style="font-size:14px;color:var(--ink)">📄 ${escHtml(d.title || "Document")}</span>
-              <a href="${d.externalUrl}" target="_blank" style="font-size:12px;color:var(--accent);text-decoration:none">View</a>
-            </div>`).join("");
-    }
-
-    modal.classList.add("open");
-    modal.style.display = "flex";
+  // AI Summary Logic
+  const genAiInsight = async () => {
+    const box = $("detailAiSummary");
+    if (!box) return;
+    box.innerHTML = `<div class="loader-ring" style="width:16px;height:16px;border-width:2px;"></div><span style="font-size:12px;color:var(--muted);margin-left:8px;">Synthesizing...</span>`;
+    try {
+      const res = await fetch(`${API_BASE}/api/ai/chat`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "Provide a sharp clinical insight for this patient. Sum up history, trend of vitals if any, and current medications. Max 120 words.",
+          patient: { ...p, vitalsHistory: vitalsArr },
+          doctor:  { identity: data.identity }, lang: "en"
+        })
+      });
+      const resJson = await res.json();
+      box.innerHTML = parseMd(resJson.reply || "No insight available.");
+    } catch (e) { box.textContent = "Analysis unavailable."; }
   };
+  genAiInsight();
+  if ($("btnRegenSummary")) $("btnRegenSummary").onclick = genAiInsight;
+
+  // ── SAVE HANDLERS ──────────────────────────────────────────
+
+  // Vitals
+  if ($("btnSaveVitalsDetail")) {
+    $("btnSaveVitalsDetail").onclick = async () => {
+      const btn = $("btnSaveVitalsDetail");
+      const msg = $("vitalsDetMsg");
+      const vData = {
+        bp:        $("inBP").value,
+        sugar:     $("inSugar").value,
+        pulse:     $("inPulse").value,
+        temp:      $("inTemp").value,
+        weight:    $("inWeight").value,
+        notes:     $("inVitNotes").value,
+        verified:  true,
+        recordedBy: data.identity?.fullName || "Doctor",
+        doctorId:   data.vmedId || "",
+        date:      new Date().toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" })
+      };
+      if (!vData.bp || !vData.pulse) { alert("Please enter BP and Pulse"); return; }
+      btn.disabled = true;
+      try {
+        await updateDoc(doc(db, "users", pid), { vitalsHistory: arrayUnion(vData) });
+        msg.className = "alert success"; msg.textContent = "Verified vitals recorded!"; msg.style.display = "block";
+        setTimeout(() => loadPage("patient_detail", pid), 1000);
+      } catch (e) { btn.disabled = false; alert(e.message); }
+    };
+  }
+
+  // Consultation
+  window.addDetMedRow = () => {
+    const cont = $("detMedsContainer");
+    if (!cont) return;
+    const div = document.createElement("div");
+    div.className = "med-row";
+    div.innerHTML = `
+      <input type="text" class="med-name" placeholder="Med" style="flex:1.2" />
+      <input type="text" class="med-dosage" placeholder="Dose" style="flex:0.8" />
+      <input type="text" class="med-freq" placeholder="Freq" style="flex:0.8" />
+      <select class="med-timing" style="flex:1; font-size:12px; border-radius:8px; border:1px solid var(--border);">
+        <option value="After Food">After Food</option>
+        <option value="Before Food">Before Food</option>
+        <option value="With Food">With Food</option>
+        <option value="Empty Stomach">Empty Stomach</option>
+        <option value="Bedtime">Bedtime</option>
+      </select>
+      <input type="text" class="med-end" placeholder="End Date" style="flex:0.8; font-size:11px;" />`;
+    cont.appendChild(div);
+  };
+
+  if ($("btnSaveConsultDetail")) {
+    $("btnSaveConsultDetail").onclick = async () => {
+      const btn = $("btnSaveConsultDetail");
+      const msg = $("consultDetMsg");
+      const consultData = {
+        reason:    $("detVisitReason").value,
+        diagnosis: $("detVisitDiagnosis").value,
+        notes:     $("detVisitNotes").value,
+        date:      new Date().toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" }),
+        prescriptions: Array.from(document.querySelectorAll("#detMedsContainer .med-row")).map(row => {
+          const name = row.querySelector(".med-name").value;
+          const dose = row.querySelector(".med-dosage").value;
+          const freq = row.querySelector(".med-freq").value;
+          const time = row.querySelector(".med-timing")?.value || "";
+          const end  = row.querySelector(".med-end")?.value || "";
+          return name ? `${name} (${dose} ${freq}) - ${time}${end ? " until " + end : ""}` : null;
+        }).filter(Boolean)
+      };
+      if (!consultData.reason) { alert("Reason is required"); return; }
+      btn.disabled = true;
+      try {
+        await updateDoc(doc(db, "users", pid), {
+          visits: arrayUnion(consultData),
+          medications: arrayUnion(...Array.from(document.querySelectorAll("#detMedsContainer .med-row")).map(row => {
+            const name = row.querySelector(".med-name").value;
+            if (!name) return null;
+            return { 
+              name, 
+              dosage: row.querySelector(".med-dosage").value, 
+              frequency: row.querySelector(".med-freq").value, 
+              timing: row.querySelector(".med-timing")?.value || "After Food",
+              endDate: row.querySelector(".med-end")?.value || "",
+              active: true 
+            };
+          }).filter(Boolean))
+        });
+        msg.className = "alert success"; msg.textContent = "Consultation saved!"; msg.style.display = "block";
+        setTimeout(() => loadPage("patient_detail", pid), 1000);
+      } catch (e) { btn.disabled = false; alert(e.message); }
+    };
+  }
+
+  // Upload Document
+  if ($("btnSaveDocDetail")) {
+    $("btnSaveDocDetail").onclick = async () => {
+      const btn = $("btnSaveDocDetail");
+      const docData = {
+        id: "doc_" + Date.now(),
+        title: $("detDocTitle").value,
+        type:  $("detDocType").value,
+        externalUrl: $("detDocUrl").value,
+        description: $("detDocDesc").value,
+        date: new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+        addedAt: new Date().toISOString(),
+        verified: true,
+        uploadedBy: data.vmedId,
+        addedBy: data.identity?.fullName || "Doctor"
+      };
+      if (!docData.title || !docData.externalUrl) { alert("Title and URL required"); return; }
+      btn.disabled = true;
+      try {
+        await updateDoc(doc(db, "users", pid), { documents: arrayUnion(docData) });
+        const msg = $("addDocDetMsg");
+        if (msg) { msg.className = "alert success"; msg.textContent = "Verified document added!"; msg.style.display = "block"; }
+        setTimeout(() => loadPage("patient_detail", pid), 1000);
+      } catch (e) { btn.disabled = false; alert(e.message); }
+    };
+  }
+
+  // Visit Timeline Rendering
+  const vList = $("detVisitList");
+  if (vList) {
+    const visits = p.visits || [];
+    vList.innerHTML = visits.length === 0
+      ? `<div class="empty-state">No clinical notes recorded yet.</div>`
+      : [...visits].reverse().map(v => `
+          <div class="history-card" style="border-left: 4px solid var(--accent);">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+              <strong style="color:var(--ink)">${escHtml(v.reason)}</strong>
+              <span style="font-size:12px;color:var(--muted)">${v.date}</span>
+            </div>
+            ${v.diagnosis ? `<p style="font-size:13px;margin-bottom:4px"><strong>Diagnosis:</strong> ${escHtml(v.diagnosis)}</p>` : ""}
+            <p style="font-size:13px;color:var(--muted)">${escHtml(v.notes || "No notes.")}</p>
+            ${v.prescriptions?.length ? `<div class="visit-pills" style="margin-top:8px">${v.prescriptions.map(med => `<span class="visit-pill">💊 ${med}</span>`).join("")}</div>` : ""}
+          </div>`).join("");
+  }
+
+  // Medications
+  if ($("detMedList")) {
+    const meds = p.medications || [];
+    $("detMedList").innerHTML = meds.length === 0
+      ? `<div style="padding:24px; color:var(--muted); font-size:13px;">No current medications.</div>`
+      : meds.map(m => `
+          <div style="display:flex;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border)">
+            <span>💊</span>
+            <div><strong style="font-size:14px;">${escHtml(m.name)}</strong><br><span style="font-size:12px;color:var(--muted);">${m.dosage || ""} · ${m.frequency || ""}</span></div>
+            <span class="patient-tag ${m.active !== false ? "tag-active" : ""}" style="margin-left:auto">${m.active !== false ? "Active" : "Completed"}</span>
+          </div>`).join("");
+  }
+
+  // Documents
+  if ($("detDocList")) {
+    const docs = p.documents || [];
+    $("detDocList").innerHTML = docs.length === 0 ? `<div class="empty-state">No uploaded records.</div>` : docs.map(d => `
+      <div class="card" style="padding:16px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">${d.verified ? "🛡️" : "📄"}</span>
+          <div>
+            <strong style="font-size:14px;">${escHtml(d.title)}</strong>
+            ${d.verified ? `<span class="patient-tag tag-active" style="font-size:10px; padding: 2px 6px; margin-left: 6px;">Verified</span>` : ""}
+            <br><span style="font-size:11px;color:var(--muted);">${d.type} · ${d.date || "Unknown date"}</span>
+          </div>
+        </div>
+        <a href="${d.externalUrl}" target="_blank" class="btn-secondary" style="font-size:12px;text-decoration:none">View</a>
+      </div>`).join("");
+  }
 }
 
 // ── ADD PATIENT ───────────────────────────────────────────────
@@ -776,36 +958,127 @@ async function initHistory(data) {
 }
 
 // ── AI CHAT (Doctor mode) ─────────────────────────────────────
-function initAIChat(data) {
-  const input   = document.getElementById("aiInput");
-  const chat    = document.getElementById("aiChat");
-  const sendBtn = document.getElementById("aiSendBtn");
-  if (!input || !chat || !sendBtn) return;
+function initAIChat(data, initialPatientId = null) {
+  if (!data) return;
+  const input      = document.getElementById("aiInput");
+  const chat       = document.getElementById("aiChat");
+  const sendBtn    = document.getElementById("aiSendBtn");
+  const pSelect    = document.getElementById("aiPatientSelect");
+  const ddContainer = document.getElementById("reportDropdownContainer");
+  const checklist  = document.getElementById("aiReportChecklist");
+  const countEl    = document.getElementById("selectedCount");
 
-  const doctorPayload = data ? {
+  if (!input || !chat || !sendBtn || !pSelect) return;
+
+  const doctorPayload = {
     vmedId:   data.vmedId,
     role:     "doctor",
-    identity: {
-      fullName: data.identity?.fullName,
-      gender:   data.identity?.gender,
-    },
-    doctorData: {
-      specializations: data.doctorData?.specializations,
-      qualification:   data.doctorData?.qualification,
-      practisingSince: data.doctorData?.practisingSince,
-    },
+    identity: { fullName: data.identity?.fullName },
+    doctorData: { specializations: data.doctorData?.specializations },
     patientCount: (data.linkedPatients || []).length,
-  } : null;
+  };
+
+  let selectedPatientData = null;
+
+  // 1. Populate Patients dropdown
+  const linkedPatients = data.linkedPatients || [];
+  (async () => {
+    pSelect.innerHTML = `<option value="">— General Reference —</option>`;
+    const snaps = await Promise.all(linkedPatients.map(pid => getDoc(doc(db, "users", pid)).catch(() => null)));
+    snaps.forEach(snap => {
+      if (snap?.exists()) {
+        const d = snap.data();
+        const opt = document.createElement("option");
+        opt.value = snap.id;
+        opt.textContent = `${d.identity?.fullName || "Unknown"} — ${d.vmedId || ""}`;
+        if (initialPatientId && snap.id === initialPatientId) opt.selected = true;
+        pSelect.appendChild(opt);
+      }
+    });
+
+    // If pre-selected, trigger change manually
+    if (initialPatientId) {
+      pSelect.dispatchEvent(new Event("change"));
+    }
+  })();
+
+  // 2. Handle Patient Selection Change
+  pSelect.addEventListener("change", async () => {
+    const pid = pSelect.value;
+    if (!pid) {
+      selectedPatientData = null;
+      ddContainer.style.display = "none";
+      return;
+    }
+
+    pSelect.disabled = true;
+    try {
+      const snap = await getDoc(doc(db, "users", pid));
+      if (snap.exists()) {
+        selectedPatientData = { uid: pid, ...snap.data() };
+        renderReportDropdown(selectedPatientData.documents || []);
+        ddContainer.style.display = "flex";
+      }
+    } catch (e) {
+      console.error("Fetch patient error:", e);
+    } finally {
+      pSelect.disabled = false;
+    }
+  });
+
+  function renderReportDropdown(docs) {
+    if (!checklist) return;
+    if (docs.length === 0) {
+      checklist.innerHTML = `<p style="font-size:11px; color:var(--muted); margin:4px 8px;">No reports found for this patient.</p>`;
+      if (countEl) countEl.textContent = "No Reports Available";
+      return;
+    }
+    checklist.innerHTML = docs.map((d, i) => `
+      <div class="dropdown-item" onclick="var cb=this.querySelector('input'); cb.checked=!cb.checked; cb.dispatchEvent(new Event('change', {bubbles:true}));">
+        <input type="checkbox" class="ai-doc-cb" value="${i}" checked onclick="event.stopPropagation()">
+        <span>${escHtml(d.title)}</span>
+      </div>`).join("");
+    
+    checklist.addEventListener("change", () => updateReportCount(docs.length));
+    updateReportCount(docs.length);
+  }
+
+  function updateReportCount(total) {
+    if (!countEl) return;
+    const checked = document.querySelectorAll(".ai-doc-cb:checked").length;
+    countEl.textContent = checked === 0 ? "No Reports Selected" : (checked === total ? "All Reports (Default)" : `${checked} Reports Selected`);
+  }
 
   const chatHistory = [];
 
+  // 3. Send Message
   async function send(overrideMsg) {
     const text = overrideMsg || input.value.trim();
     if (!text) return;
 
+    // Hide quick prompts on first interaction
+    const promptArea = document.getElementById("quickPrompts");
+    if (promptArea) promptArea.style.display = "none";
+
+    // Build patient context if selected
+    let patientPayload = null;
+    if (selectedPatientData) {
+      const selectedIndices = Array.from(document.querySelectorAll(".ai-doc-cb"))
+        .filter(cb => cb.checked).map(cb => parseInt(cb.value));
+      const filteredDocs = (selectedPatientData.documents || []).filter((_, i) => selectedIndices.includes(i));
+      
+      patientPayload = {
+        vmedId: selectedPatientData.vmedId,
+        identity: selectedPatientData.identity,
+        patientData: selectedPatientData.patientData,
+        medications: selectedPatientData.medications,
+        visits: selectedPatientData.visits,
+        documents: filteredDocs
+      };
+    }
+
     if (!overrideMsg) {
-      chat.insertAdjacentHTML("beforeend",
-        `<div class="ai-msg user"><div class="bubble">${escHtml(text)}</div></div>`);
+      chat.insertAdjacentHTML("beforeend", `<div class="ai-msg user"><div class="bubble">${escHtml(text)}</div></div>`);
       input.value = "";
     }
     chat.scrollTop = chat.scrollHeight;
@@ -825,76 +1098,33 @@ function initAIChat(data) {
         body: JSON.stringify({
           message: text,
           doctor:  doctorPayload,
+          patient: patientPayload,
           history: chatHistory,
           lang:    "en",
         })
       });
 
-      if (!res.ok) {
-        let errMsg = `Server error ${res.status}`;
-        try { const j = await res.json(); errMsg = j.error || errMsg; } catch {}
-        throw new Error(errMsg);
-      }
-
+      if (!res.ok) throw new Error("Server error");
       const json = await res.json();
       typing.remove();
 
-      if (json.error) {
-        chat.insertAdjacentHTML("beforeend",
-          `<div class="ai-msg ai"><div class="bubble" style="color:var(--danger,#c0392b)">⚠️ ${escHtml(json.error)}</div></div>`);
-        return;
-      }
-
       const reply = json.reply || "";
-      chatHistory.push({ role: "user",  text });
+      chatHistory.push({ role: "user", text });
       chatHistory.push({ role: "model", text: reply });
       if (chatHistory.length > 20) chatHistory.splice(0, 2);
 
-      chat.insertAdjacentHTML("beforeend",
-        `<div class="ai-msg ai"><div class="bubble">${parseMd(reply)}</div></div>`);
-
-      const trimmed = reply.trimEnd();
-      if (trimmed.length > 200 && !/[.!?:]$/.test(trimmed)) {
-        const cont = document.createElement("div");
-        cont.id = "aiContinueBtn";
-        cont.style.cssText = "text-align:center;margin:8px 0";
-        cont.innerHTML = `<button onclick="window._aiContinue()"
-          style="padding:7px 20px;background:var(--accent);color:#fff;border:none;
-                 border-radius:20px;font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer">
-          Continue
-        </button>`;
-        chat.appendChild(cont);
-      }
-
+      chat.insertAdjacentHTML("beforeend", `<div class="ai-msg ai"><div class="bubble">${parseMd(reply)}</div></div>`);
     } catch (err) {
       typing.remove();
-      console.error("Doctor AI error:", err);
-      const msg = err.message || "";
-      let userMsg;
-      if (msg.includes("Failed to fetch") || msg.includes("ERR_CONNECTION_REFUSED")) {
-        userMsg = `⚠️ Cannot reach the AI server at <code>${API_BASE}</code>. Run <code>node server.js</code> in the backend folder.`;
-      } else if (msg.includes("503")) {
-        userMsg = "⚠️ Gemini is temporarily unavailable. Please try again in a moment.";
-      } else {
-        userMsg = `⚠️ ${escHtml(msg) || "AI service unavailable. Please ensure the backend server is running."}`;
-      }
-      chat.insertAdjacentHTML("beforeend",
-        `<div class="ai-msg ai"><div class="bubble" style="color:var(--danger,#c0392b);line-height:1.8">${userMsg}</div></div>`);
+      chat.insertAdjacentHTML("beforeend", `<div class="ai-msg ai"><div class="bubble" style="color:var(--danger)">⚠️ Error: ${err.message}</div></div>`);
     } finally {
       sendBtn.disabled = false;
       chat.scrollTop   = chat.scrollHeight;
     }
   }
 
-  window._aiContinue = () => {
-    document.getElementById("aiContinueBtn")?.remove();
-    send("Please continue your previous response from where you left off.");
-  };
-
   sendBtn.onclick = () => send();
-  input.addEventListener("keydown", e => {
-    if (e.key === "Enter") { e.preventDefault(); send(); }
-  });
+  input.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); send(); } };
 }
 
 // ── SETTINGS ──────────────────────────────────────────────────
