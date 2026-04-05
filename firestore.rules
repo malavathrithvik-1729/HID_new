@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // HELPER FUNCTIONS
+    
+    function isDoctor(callerUid) {
+      let docSnap = get(/databases/$(database)/documents/users/$(callerUid));
+      return (docSnap != null && "role" in docSnap.data && (docSnap.data.role == "doctor" || docSnap.data.role == "Doctor"));
+    }
+
+    function isDoctorLinked(callerUid, patientUid) {
+      let docSnap = get(/databases/$(database)/documents/users/$(callerUid));
+      // Secure array check via hasAny for CEL — no 'in' operator for arrays in strict context
+      let doctorHasLinked = (docSnap != null && "linkedPatients" in docSnap.data && docSnap.data.linkedPatients.hasAny([patientUid]));
+      // Fallback check against patient document
+      let patientHasLinked = (resource != null && "linkedDoctorIds" in resource.data && resource.data.linkedDoctorIds.hasAny([callerUid]));
+      
+      return isDoctor(callerUid) && (doctorHasLinked || patientHasLinked);
+    }
+
+    function onlyMedicalFields() {
+      let affected = request.resource.data.diff(resource.data).affectedKeys();
+      // Doctors can only touch these clinical fields
+      // Corrected: added 'vitalsHistory' to match the database field name
+      return affected.hasOnly(["visits", "medications", "documents", "vitals", "vitalsHistory"]) 
+          || affected.hasOnly(["visits", "medications", "documents", "vitalsHistory"]) 
+          || affected.hasOnly(["visits", "medications", "documents"]) 
+          || affected.hasOnly(["visits", "medications"]) 
+          || affected.hasOnly(["visits", "documents"])
+          || affected.hasOnly(["medications", "documents"])
+          || affected.hasOnly(["visits"]) 
+          || affected.hasOnly(["medications"])
+          || affected.hasOnly(["documents"])
+          || affected.hasOnly(["vitalsHistory"])
+          || affected.hasOnly(["vitals"]);
+    }
+
+    function onlyLinkingFields() {
+      let affected = request.resource.data.diff(resource.data).affectedKeys();
+      return affected.hasOnly(["linkedDoctors", "linkedDoctorIds"]) 
+          || affected.hasOnly(["linkedDoctors"]) 
+          || affected.hasOnly(["linkedDoctorIds"]);
+    }
+
+    // MAIN DOCUMENT RULES
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false;
+
+      // Merged allow update rule using || logic as per Architecture Rule 13
+      allow update: if request.auth != null && (
+        request.auth.uid == userId
+        || (isDoctor(request.auth.uid) && onlyLinkingFields())
+        || (isDoctorLinked(request.auth.uid, userId) && onlyMedicalFields())
+      );
+    }
+  }
+}
