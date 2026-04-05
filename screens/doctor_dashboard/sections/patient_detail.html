@@ -1,0 +1,207 @@
+<div class="section-wrap">
+  <!-- Header with Clinical Actions -->
+  <div style="display: flex; align-items: flex-start; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;">
+    <button class="btn-secondary" onclick="loadSection(null, 'patients')" style="padding: 8px 12px; display: flex; align-items: center; gap: 6px;">
+      ← Back
+    </button>
+    <div style="flex: 1; min-width: 250px;">
+      <h1 class="page-title" id="detName" style="margin-bottom: 4px;">Patient Analysis</h1>
+      <p class="page-sub" id="detVmed">VMED-xxxx-xxxx</p>
+    </div>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+      <button class="btn-primary" onclick="showDetailModal('modalNewConsult')" style="background:var(--accent); font-size:13px; display:flex; align-items:center; gap:6px;">📝 New Consultation</button>
+      <button class="btn-primary" onclick="showDetailModal('modalAddDoc')" style="background:var(--success); font-size:13px; display:flex; align-items:center; gap:6px;">📄 Upload Report</button>
+      <button class="btn-primary" onclick="showDetailModal('modalAddVitals')" style="background:var(--warning); font-size:13px; display:flex; align-items:center; gap:6px;">💓 Record Vitals</button>
+      <button class="btn-secondary" id="detConsultAI" style="border: 1px solid var(--accent); color: var(--accent); font-size:13px; font-weight: 500; display:flex; align-items:center; gap:6px;">🤖 Consult AI</button>
+    </div>
+  </div>
+
+  <div class="grid-2" style="grid-template-columns: 320px 1fr; align-items: start; gap: 24px;">
+    
+    <!-- Sidebar: Profile & Analysis Insight -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      
+      <!-- Bio Summary -->
+      <div class="card" style="padding: 20px;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+          <div class="patient-detail-avatar" id="detAvatar" style="width: 50px; height: 50px; font-size: 20px;">P</div>
+          <div>
+            <div id="detGenderAge" style="font-size: 14px; font-weight: 600;">--</div>
+            <div id="detBlood" style="font-size: 11px; color: var(--muted); text-transform: uppercase;">Blood: --</div>
+          </div>
+        </div>
+        <div style="border-top: 1px solid var(--border); padding-top: 12px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; justify-content: space-between;"><span style="font-size: 11px; color: var(--muted);">ABHA</span><span id="detAbha" style="font-size: 13px; font-weight: 500;">--</span></div>
+          <div style="display: flex; justify-content: space-between;"><span style="font-size: 11px; color: var(--muted);">Phone</span><span id="detPhone" style="font-size: 13px; font-weight: 500;">--</span></div>
+          <div style="display: flex; justify-content: space-between; border-top: 1px dashed var(--border); padding-top: 10px; margin-top: 4px;">
+            <span style="font-size: 11px; color: var(--muted);">Health Score</span>
+            <span id="detHealthScore" style="font-size: 15px; font-weight: 700; color: var(--accent);">--</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Clinical Insight -->
+      <div class="card" style="padding: 24px; border-left: 4px solid var(--accent);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <div class="card-title" style="margin: 0; border: none; padding: 0;">AI Clinical Insight</div>
+          <button id="btnRegenSummary" style="background: none; border: none; cursor: pointer; font-size: 14px;" title="Regenerate Summary">🔄</button>
+        </div>
+        <div id="detailAiSummary" style="font-size: 13px; line-height: 1.6; color: var(--ink);">
+          <div class="loader-ring" style="width: 20px; height: 20px; border-width: 2px;"></div>
+          <span style="font-size: 12px; color: var(--muted); margin-left: 8px;">Synthesizing history...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Section: Tabs & Record Exploration -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      
+      <!-- Premium Tabs Header -->
+      <div style="display: flex; gap: 28px; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 8px;">
+        <button class="tab-btn active" onclick="switchDetailTab(this, 'timeline')">Clinical Timeline</button>
+        <button class="tab-btn" onclick="switchDetailTab(this, 'meds')">Medications</button>
+        <button class="tab-btn" onclick="switchDetailTab(this, 'vitHist')">Vitals History</button>
+        <button class="tab-btn" onclick="switchDetailTab(this, 'docs')">Medical Records</button>
+        <button class="tab-btn" onclick="switchDetailTab(this, 'analytics')">Analytics</button>
+      </div>
+
+      <!-- Contents -->
+      <div id="timelineTab" class="detail-tab-content">
+        <div id="detVisitList"></div>
+      </div>
+
+      <div id="medsTab" class="detail-tab-content" style="display: none;">
+        <div class="card" id="detMedList" style="padding: 0;"></div>
+      </div>
+
+      <div id="vitHistTab" class="detail-tab-content" style="display: none;">
+        <div id="detVitHistList"></div>
+      </div>
+
+      <div id="docsTab" class="detail-tab-content" style="display: none;">
+        <div class="grid-2" id="detDocList" style="gap: 12px;"></div>
+      </div>
+
+      <div id="analyticsTab" class="detail-tab-content" style="display: none;">
+        <div class="card" style="padding: 24px;">
+           <div class="card-title">Patient Health Trends</div>
+           <div id="analyticsContainer" style="min-height: 300px; display: flex; align-items: center; justify-content: center;">
+             <p style="color:var(--muted)">Loading health metrics and charts...</p>
+           </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── MODALS —─────────────────────────────────────────────── -->
+  
+  <div class="modal-overlay" id="modalNewConsult" style="display:none">
+    <div class="modal-box" style="max-width: 600px;">
+      <h2>New Consultation</h2>
+      <p style="font-size: 12px; color: var(--muted); margin-bottom: 20px;">Patient: <span id="consultPatName" style="color: var(--ink); font-weight: 600;">--</span></p>
+      <div id="consultDetMsg" style="display:none"></div>
+      <div class="form-group"><label class="req">Reason for Visit</label><input type="text" id="detVisitReason" placeholder="Follow-up, Hypertension management, Routine checkup..."/></div>
+      <div class="form-group"><label>Diagnosis (Optional)</label><input type="text" id="detVisitDiagnosis" placeholder="e.g., Sinusitis, Common cold..."/></div>
+      <div class="form-group"><label>Clinical Notes</label><textarea id="detVisitNotes" rows="3" placeholder="Symptoms reported..."></textarea></div>
+      <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--accent); margin: 16px 0 8px;">Prescriptions</div>
+      <div id="detMedsContainer">
+        <div class="med-row" id="det-med-row-1">
+          <input type="text" class="med-name" placeholder="Med" style="flex:1.2" />
+          <input type="text" class="med-dosage" placeholder="Dose" style="flex:0.8" />
+          <input type="text" class="med-freq" placeholder="Freq" style="flex:0.8" />
+          <select class="med-timing" style="flex:1; font-size:12px; border-radius:8px; border:1px solid var(--border);">
+            <option value="After Food">After Food</option>
+            <option value="Before Food">Before Food</option>
+            <option value="With Food">With Food</option>
+            <option value="Empty Stomach">Empty Stomach</option>
+            <option value="Bedtime">Bedtime</option>
+          </select>
+          <input type="text" class="med-end" placeholder="End Date" style="flex:0.8; font-size:11px;" />
+        </div>
+      </div>
+      <button class="add-med-btn" onclick="window.addDetMedRow()" style="margin-bottom: 24px;">+ Add Medicine</button>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="hideDetailModal('modalNewConsult')">Cancel</button>
+        <button class="btn-confirm" id="btnSaveConsultDetail">Save Record</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalAddDoc" style="display:none">
+    <div class="modal-box">
+      <h2>Upload Verified Document</h2>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:16px;">Documents uploaded by doctors are automatically marked as <b>Verified</b>.</p>
+      <div id="addDocDetMsg" style="display:none"></div>
+      <div class="form-group"><label class="req">Title</label><input type="text" id="detDocTitle" placeholder="e.g., Lab Report..."/></div>
+      <div class="form-group"><label class="req">Type</label><select id="detDocType"><option value="Report">Report</option><option value="Scan">Scan</option><option value="Prescription">Prescription</option><option value="Other">Other</option></select></div>
+      <div class="form-group"><label class="req">Google Drive URL</label><input type="url" id="detDocUrl" placeholder="https://drive.google.com/..."/></div>
+      <div class="form-group"><label>Summary / Clinical Findings</label><textarea id="detDocDesc" rows="3" placeholder="Key findings from this report..."></textarea></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="hideDetailModal('modalAddDoc')">Cancel</button>
+        <button class="btn-confirm" id="btnSaveDocDetail">Add Document</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalAddVitals" style="display:none">
+    <div class="modal-box">
+      <h2>Record Verified Vitals</h2>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:16px;">Vitals recorded here are flagged as <b>Doctor Verified</b> in the patient's health score.</p>
+      <div id="vitalsDetMsg" style="display:none"></div>
+      <div class="grid-2">
+        <div class="form-group"><label class="req">BP (mmHg)</label><input type="text" id="inBP" placeholder="e.g. 120/80"/></div>
+        <div class="form-group"><label class="req">Blood Sugar (mg/dL)</label><input type="number" id="inSugar" placeholder="e.g. 95"/></div>
+        <div class="form-group"><label class="req">Pulse (bpm)</label><input type="number" id="inPulse" placeholder="e.g. 72"/></div>
+        <div class="form-group"><label class="req">Temp (°C)</label><input type="number" id="inTemp" step="0.1" placeholder="e.g. 36.8"/></div>
+        <div class="form-group"><label class="req">Weight (kg)</label><input type="number" id="inWeight" step="0.1" placeholder="e.g. 68.5"/></div>
+        <div class="form-group"><label>Notes</label><input type="text" id="inVitNotes" placeholder="e.g. Fasting, Post-lunch..."/></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="hideDetailModal('modalAddVitals')">Cancel</button>
+        <button class="btn-confirm" id="btnSaveVitalsDetail">Record Vitals</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.tab-btn {
+  background: none; border: none; padding: 10px 4px;
+  font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 500;
+  color: var(--muted); cursor: pointer; position: relative;
+  transition: all .2s; border-radius: 4px;
+}
+.tab-btn:hover { color: var(--accent); background: var(--accent-light); }
+.tab-btn.active { color: var(--accent); }
+.tab-btn.active::after {
+  content: ''; position: absolute; bottom: -11px; left: 0; right: 0;
+  height: 3px; background: var(--accent); border-radius: 100px;
+}
+.detail-tab-content { animation: fadeIn .3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Form styles inside modals */
+.med-row { display:flex; gap:8px; margin-bottom:8px; }
+.med-row input { padding:8px 12px; border:1px solid var(--border); border-radius:100px; font-size:13px; background:var(--surface-2); outline:none; }
+.med-row input:focus { border-color:var(--accent); }
+</style>
+
+<script>
+window.switchDetailTab = function(btn, tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.detail-tab-content').forEach(c => c.style.display = 'none');
+  const target = document.getElementById(tab + 'Tab');
+  if (target) target.style.display = 'block';
+};
+
+window.showDetailModal = function(id) {
+  const m = document.getElementById(id);
+  if (m) { m.classList.add('open'); m.style.display = 'flex'; }
+};
+window.hideDetailModal = function(id) {
+  const m = document.getElementById(id);
+  if (m) { m.classList.remove('open'); m.style.display = 'none'; }
+};
+</script>
