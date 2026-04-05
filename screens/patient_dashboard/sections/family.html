@@ -1,0 +1,103 @@
+<div class="section-wrap">
+    <div class="page-title" style="display: flex; align-items: center; gap: 12px;">
+        <span>👨‍👩‍👧‍👦</span> Family Link
+    </div>
+    <p class="page-sub">Manage and access health profiles for your dependents</p>
+
+    <div class="grid-2" style="gap: 20px; align-items: start;">
+        <!-- Family List -->
+        <div class="card">
+            <div class="card-title">Linked Profiles</div>
+            <div id="familyList" style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- Dynamically filled -->
+                <div style="text-align: center; color: var(--muted); padding: 40px 10px;">
+                    <div style="font-size: 32px; margin-bottom: 12px;">🏠</div>
+                    No family members linked yet.
+                </div>
+            </div>
+            
+            <div style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px;">
+                <button id="addFamilyBtn" class="btn-primary" style="width: 100%; border-radius: 10px; font-weight: 600;">+ Link New Dependent</button>
+            </div>
+        </div>
+
+        <!-- Role & Permissions -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="card" style="background: var(--surface-2);">
+                <div class="card-title" style="border-bottom: 1px solid var(--border);">Active Authorization</div>
+                <div style="font-size: 13px; color: var(--muted); line-height: 1.6;">
+                    <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 18px;">🛡️</span>
+                        <span>Children below 18 can be linked by parents directly.</span>
+                    </div>
+                    <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 18px;">🔄</span>
+                        <span>Elderly parents or adults must approve your link request via their dashboard.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Shared Access Requests</div>
+                <div id="familyRequests" style="font-size: 13px; color: var(--muted);">
+                    <div class="alert info" style="margin-bottom: 0;">No pending requests from family members.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for adding family -->
+<div id="addFamilyModal" class="modal-overlay">
+    <div class="modal-box">
+        <h2>Link Family Member</h2>
+        <p style="font-size: 13px; color: var(--muted); margin-bottom: 20px;">Enter their V-Med ID or Phone Number to send a request.</p>
+        <div class="modal-input-group">
+            <label style="display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px;">V-Med ID / Phone / Email</label>
+            <input type="text" id="familyIdentifier" class="modal-input" placeholder="e.g. VMED-P-XXXX" style="margin-bottom: 16px;">
+        </div>
+        <div class="modal-input-group">
+            <label style="display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px;">Relation</label>
+            <select id="familyRelation" class="modal-input">
+                <option value="Child">Child</option>
+                <option value="Parent">Parent</option>
+                <option value="Spouse">Spouse</option>
+                <option value="Sibling">Sibling</option>
+                <option value="Grandparent">Grandparent</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeFamilyModal()">Cancel</button>
+            <button id="sendFamilyRequestBtn" class="btn-confirm">Send Request</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.family-card {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    transition: 0.2s;
+}
+.family-card:hover { border-color: var(--accent); background: var(--accent-light); }
+.family-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Playfair Display', serif; font-weight: 700; flex-shrink: 0;
+}
+.family-info { flex: 1; min-width: 0; }
+.family-info strong { display: block; font-size: 15px; margin-bottom: 2px; }
+.family-info span { font-size: 12px; color: var(--muted); }
+.family-view-btn {
+    padding: 7px 16px; background: var(--accent); color: #fff;
+    border: none; border-radius: 100px; font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: 0.2s;
+}
+.family-view-btn:hover { background: var(--accent-dark); }
+</style>
+
+<script>
+// Logic handled in dashboard.js initFamily()
+</script>
