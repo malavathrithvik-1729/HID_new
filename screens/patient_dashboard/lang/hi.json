@@ -19,7 +19,12 @@
     "settings":    "सेटिंग्स",
     "darkMode":    "डार्क मोड",
     "lightMode":   "लाइट मोड",
-    "logout":      "लॉगआउट"
+    "logout":      "लॉगआउट",
+    "shortcutTip": "टिप: सेक्शन बदलने के लिए <strong>Alt + 1…0</strong> का उपयोग करें।"
+  },
+  "offline": {
+    "modeLabel": "ऑफलाइन मोड: कैश्ड डेटा दिखाया जा रहा है",
+    "reconnect": "फिर से कनेक्ट करें"
   },
 
   "home": {

@@ -7,15 +7,17 @@ import {
 import { t, initI18n, setLang, getCurrentLang, LANGUAGES } from "./i18n.js";
 
 const API_BASE = "http://127.0.0.1:3000";
+const LAST_PAGE_KEY = "vmed_last_patient_page";
 
 // ── DARK MODE ─────────────────────────────────────────────────────
 const DARK_KEY = "vmed_dark_mode";
 
 function applyTheme(dark) {
   document.documentElement.classList.toggle("dark", dark);
-  document.querySelectorAll(".dark-toggle-btn").forEach(btn => {
-    btn.textContent = dark ? `☀️ ${t("nav.lightMode")}` : `🌙 ${t("nav.darkMode")}`;
-  });
+  const label = document.querySelector("#sidebarDarkBtn .nav-label");
+  const icon = document.querySelector("#sidebarDarkBtn .nav-icon");
+  if (label) label.textContent = dark ? t("nav.lightMode") : t("nav.darkMode");
+  if (icon) icon.textContent = dark ? "☀️" : "🌙";
 }
 
 function toggleDark() {
@@ -64,6 +66,12 @@ function applyNavTranslations() {
   if (loaderP) loaderP.textContent = t("loading");
   const loaderSmall = document.querySelector(".loader-box small");
   if (loaderSmall) loaderSmall.textContent = t("loadingQuote");
+  const shortcutTip = document.getElementById("shortcutTip");
+  if (shortcutTip) shortcutTip.innerHTML = t("nav.shortcutTip");
+  const offlineLabel = document.getElementById("offlineLabel");
+  if (offlineLabel) offlineLabel.textContent = t("offline.modeLabel");
+  const reconnectBtn = document.getElementById("reconnectBtn");
+  if (reconnectBtn) reconnectBtn.textContent = t("offline.reconnect");
 
   document.querySelectorAll("[data-lang-btn]").forEach(btn => {
     btn.classList.toggle("lang-btn-active", btn.dataset.langBtn === getCurrentLang());
@@ -74,6 +82,13 @@ function applyNavTranslations() {
 async function loadPage(pageName) {
   const content = document.getElementById("content");
   if (!content) return;
+  content.innerHTML = `
+    <div class="loader-box">
+      <div class="loader-ring"></div>
+      <p>${t("loading")}</p>
+      <small>${t("loadingQuote")}</small>
+    </div>
+  `;
   try {
     const res = await fetch(`sections/${pageName}.html`);
     if (!res.ok) throw new Error("Section not found");
@@ -151,11 +166,15 @@ function loadSection(btn, page) {
   document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
   if (btn) btn.classList.add("active");
   _currentPage = page;
+  localStorage.setItem(LAST_PAGE_KEY, page);
   loadPage(page);
 }
 
 function toggleSidebar() {
-  document.getElementById("sidebar").classList.toggle("collapsed");
+  const sidebar = document.getElementById("sidebar");
+  if (!sidebar) return;
+  sidebar.classList.toggle("collapsed");
+  localStorage.setItem("vmed_sidebar_collapsed", sidebar.classList.contains("collapsed") ? "1" : "0");
 }
 
 async function handleLogout() {
@@ -1597,13 +1616,39 @@ window._setLang = async (code) => {
   applyNavTranslations();
 };
 
+function setupKeyboardShortcuts() {
+  const pageOrder = [
+    "home", "documents", "medications", "vitals", "visits",
+    "ai", "sos", "blood_donor", "family", "settings"
+  ];
+  document.addEventListener("keydown", (e) => {
+    if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (!/^[0-9]$/.test(e.key)) return;
+    const idx = Number(e.key) - 1;
+    const page = pageOrder[idx];
+    if (!page) return;
+    const btn = document.querySelector(`.nav-item[data-page="${page}"]`);
+    if (!btn) return;
+    e.preventDefault();
+    loadSection(btn, page);
+  });
+}
+
 // ── BOOT ──────────────────────────────────────────────────────────
 (async () => {
   await initI18n();
   applyNavTranslations();
   document.documentElement.lang = getCurrentLang();
+  const sidebar = document.getElementById("sidebar");
+  if (sidebar && localStorage.getItem("vmed_sidebar_collapsed") === "1") {
+    sidebar.classList.add("collapsed");
+  }
+  setupKeyboardShortcuts();
   await window.patientDataReady;
-  loadPage("home");
+  const savedPage = localStorage.getItem(LAST_PAGE_KEY) || "home";
+  const firstBtn = document.querySelector(`.nav-item[data-page="${savedPage}"]`)
+    || document.querySelector(`.nav-item[data-page="home"]`);
+  loadSection(firstBtn, savedPage);
   document.addEventListener("langchange", async () => {
     applyNavTranslations();
     document.documentElement.lang = getCurrentLang();
