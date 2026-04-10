@@ -16,6 +16,8 @@ const DEFAULT_LANG  = "en";
 
 // Loaded translation objects cached here
 const cache = {};
+const pendingLoads = {};
+const warnedMissing = new Set();
 
 // Currently active translations
 let _current = {};
@@ -27,18 +29,25 @@ let _lang     = DEFAULT_LANG;
 
 async function loadLang(code) {
   if (cache[code]) return cache[code];
+  if (pendingLoads[code]) return pendingLoads[code];
+  pendingLoads[code] = (async () => {
   try {
     // Path is relative to patient_dashboard/index.html
     const res  = await fetch(`lang/${code}.json`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     cache[code] = data;
-    return data;
+    return cache[code];
   } catch (err) {
     console.warn(`i18n: failed to load lang/${code}.json —`, err.message);
     if (code !== DEFAULT_LANG) return loadLang(DEFAULT_LANG);
-    return {};
+    cache[code] = {};
+    return cache[code];
+  } finally {
+    delete pendingLoads[code];
   }
+  })();
+  return pendingLoads[code];
 }
 
 // ── Read saved language preference ────────────────────────────────
@@ -94,25 +103,15 @@ export function getCurrentLang() { return _lang; }
 // t("key", { name: "Priya" }) → replaces {name} in the string
 
 export function t(key, vars) {
-  const parts = key.split(".");
-  let   val   = _current;
-
-  for (const part of parts) {
-    if (val == null || typeof val !== "object") { val = undefined; break; }
-    val = val[part];
-  }
+  const val = resolvePath(_current, key) ?? resolvePath(cache[DEFAULT_LANG], key);
 
   if (val === undefined || val === null) {
-    // Fallback: try same key in English cache
-    let fb = cache[DEFAULT_LANG];
-    if (fb) {
-      for (const part of parts) {
-        if (fb == null || typeof fb !== "object") { fb = undefined; break; }
-        fb = fb[part];
-      }
-      val = fb;
+    const warnId = `${_lang}:${key}`;
+    if (!warnedMissing.has(warnId)) {
+      warnedMissing.add(warnId);
+      console.warn(`i18n: missing key "${key}" for "${_lang}"`);
     }
-    if (val === undefined || val === null) return key; // absolute fallback
+    return key;
   }
 
   if (typeof val !== "string") return String(val);
@@ -128,7 +127,18 @@ export function t(key, vars) {
 // ── Get full translation object for a section ─────────────────────
 // tSection("nav") → { home: "Home", history: "...", ... }
 export function tSection(section) {
-  return _current[section] || {};
+  return resolvePath(_current, section) || resolvePath(cache[DEFAULT_LANG], section) || {};
+}
+
+function resolvePath(obj, key) {
+  if (!obj || !key) return undefined;
+  const parts = String(key).split(".");
+  let val = obj;
+  for (const part of parts) {
+    if (val == null || typeof val !== "object") return undefined;
+    val = val[part];
+  }
+  return val;
 }
 
 // ── Update language toggle buttons already in the DOM ─────────────

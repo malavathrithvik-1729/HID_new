@@ -4,7 +4,7 @@ import {
   signInWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
-  collection, query, where, getDocs
+  doc, getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 export async function signupUser(email, password) {
@@ -13,14 +13,13 @@ export async function signupUser(email, password) {
 }
 
 export async function loginWithVMEDId(vmedId, password) {
-  const q = query(collection(db, "users"), where("vmedId", "==", vmedId));
-  const snap = await getDocs(q);
-  if (snap.empty) throw new Error("Invalid V-Med ID. Please check and try again.");
-  const docSnap = snap.docs[0];
-  const userData = docSnap.data();
+  const indexSnap = await getDoc(doc(db, "vmedIndex", vmedId));
+  if (!indexSnap.exists()) throw new Error("Invalid V-Med ID. Please check and try again.");
+  const userData = indexSnap.data();
   const email = userData.contact?.email;
-  if (!email) throw new Error("No email linked to this V-Med ID.");
-  const cred = await signInWithEmailAndPassword(auth, email, password);
-  if (cred.user.uid !== docSnap.id) throw new Error("Account mismatch. Contact support.");
+  const resolvedEmail = email || userData.email;
+  if (!resolvedEmail) throw new Error("No email linked to this V-Med ID.");
+  const cred = await signInWithEmailAndPassword(auth, resolvedEmail, password);
+  if (userData.uid && cred.user.uid !== userData.uid) throw new Error("Account mismatch. Contact support.");
   return { user: cred.user, role: userData.role, status: userData.status };
 }

@@ -1,8 +1,7 @@
 import { auth, db } from "../../../js/firebase.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
-  doc, getDoc, updateDoc, arrayUnion,
-  collection, query, where, getDocs
+  doc, getDoc, updateDoc, arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const API_BASE = "http://127.0.0.1:3000";
@@ -460,14 +459,16 @@ function initAddPatient(data) {
     searchBtn.disabled    = true;
     searchBtn.textContent = "Searching…";
     try {
-      const q    = query(collection(db, "users"), where("vmedId", "==", vmedId));
-      const snap = await getDocs(q);
-      if (snap.empty) { showMsg("error", "No patient found with this V-Med ID."); return; }
-      const docSnap = snap.docs[0];
-      const pData   = docSnap.data();
+      const mapSnap = await getDoc(doc(db, "vmedIndex", vmedId));
+      if (!mapSnap.exists()) { showMsg("error", "No patient found with this V-Med ID."); return; }
+      const mapped = mapSnap.data();
+      if (!mapped.uid) { showMsg("error", "Invalid V-Med mapping. Contact support."); return; }
+      const docSnap = await getDoc(doc(db, "users", mapped.uid));
+      if (!docSnap.exists()) { showMsg("error", "Patient profile not found."); return; }
+      const pData = docSnap.data();
       if (pData.role !== "patient") { showMsg("error", "This V-Med ID does not belong to a patient."); return; }
       foundPatient   = pData;
-      foundPatientId = docSnap.id;
+      foundPatientId = mapped.uid;
       const linked   = data?.linkedPatients || [];
       if (linked.includes(foundPatientId)) {
         showMsg("info", "This patient is already linked to your profile.");

@@ -10,9 +10,10 @@ function generateVMEDId(role, fullName) {
 }
 
 export async function savePatientApplication(user, data) {
+  const vmedId = generateVMEDId("patient", data.fullName);
   await setDoc(doc(db, "users", user.uid), {
     uid: user.uid,
-    vmedId: generateVMEDId("patient", data.fullName),
+    vmedId,
     role: "patient",
     status: "active",
     createdAt: serverTimestamp(),
@@ -32,12 +33,21 @@ export async function savePatientApplication(user, data) {
     medications: [],
     visits: []
   });
+  await setDoc(doc(db, "vmedIndex", vmedId), {
+    uid: user.uid,
+    email: data.email || "",
+    role: "patient",
+    status: "active",
+    vmedId,
+    updatedAt: serverTimestamp()
+  });
 }
 
 export async function saveDoctorApplication(user, data) {
+  const vmedId = generateVMEDId("doctor", data.fullName);
   await setDoc(doc(db, "users", user.uid), {
     uid: user.uid,
-    vmedId: generateVMEDId("doctor", data.fullName),
+    vmedId,
     role: "doctor",
     status: "active",
     createdAt: serverTimestamp(),
@@ -58,6 +68,14 @@ export async function saveDoctorApplication(user, data) {
     },
     documents: Array.isArray(data.documents) ? data.documents : [],
     patients: []
+  });
+  await setDoc(doc(db, "vmedIndex", vmedId), {
+    uid: user.uid,
+    email: data.email || "",
+    role: "doctor",
+    status: "active",
+    vmedId,
+    updatedAt: serverTimestamp()
   });
 }
 

@@ -19,7 +19,12 @@
     "settings":    "Settings",
     "darkMode":    "Dark mode",
     "lightMode":   "Light mode",
-    "logout":      "Logout"
+    "logout":      "Logout",
+    "shortcutTip": "Tip: use <strong>Alt + 1…0</strong> to jump between sections quickly."
+  },
+  "offline": {
+    "modeLabel": "Offline Mode: Showing cached data from",
+    "reconnect": "Reconnect"
   },
 
   "home": {
