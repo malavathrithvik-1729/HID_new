@@ -53,7 +53,10 @@
     "visitHistory":   "विज़िट इतिहास",
     "bloodGroup":     "रक्त समूह",
     "allergies":      "एलर्जी",
-    "closeBtn":       "✕ बंद करें"
+    "closeBtn":       "✕ बंद करें",
+    "scoreExcellent": "शानदार",
+    "scoreGood":      "अच्छा",
+    "scorePending":   "सुधार हो रहा है"
   },
 
   "history": {

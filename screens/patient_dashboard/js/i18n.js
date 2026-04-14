@@ -9,6 +9,7 @@
 //   setLang("hi");             // switch language, re-renders sidebar
 //
 // ─────────────────────────────────────────────────────────────────
+import { vStore } from "./vStore.js";
 
 const LANG_KEY      = "vmed_lang";
 const SUPPORTED     = ["en", "hi", "te"];
@@ -52,7 +53,7 @@ async function loadLang(code) {
 
 // ── Read saved language preference ────────────────────────────────
 function getSavedLang() {
-  const saved = localStorage.getItem(LANG_KEY);
+  const saved = vStore.get(LANG_KEY, 'local');
   return SUPPORTED.includes(saved) ? saved : DEFAULT_LANG;
 }
 
@@ -81,7 +82,7 @@ export async function setLang(code) {
 
   _lang    = code;
   _current = await loadLang(code);
-  localStorage.setItem(LANG_KEY, code);
+  vStore.set(LANG_KEY, code, 'local');
 
   // Tell the app to re-render everything
   document.dispatchEvent(new CustomEvent("langchange", { detail: { lang: code } }));

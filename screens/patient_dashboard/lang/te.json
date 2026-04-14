@@ -53,7 +53,10 @@
     "visitHistory":   "సందర్శన చరిత్ర",
     "bloodGroup":     "రక్త వర్గం",
     "allergies":      "అలెర్జీలు",
-    "closeBtn":       "✕ మూసివేయి"
+    "closeBtn":       "✕ మూసివేయి",
+    "scoreExcellent": "అద్భుతం",
+    "scoreGood":      "మంచిది",
+    "scorePending":   "మెరుగుపడుతోంది"
   },
 
   "history": {

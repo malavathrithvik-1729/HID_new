@@ -54,9 +54,13 @@
       <span class="patient-tag" style="background: rgba(26,107,74,0.15); color: var(--accent); border: 1px solid rgba(26,107,74,0.3); font-weight: 700;">PREDICTIVE</span>
     </div>
     
-    <div id="aiVitalsForecastContent" style="font-size: 14px; color: var(--ink); line-height: 1.6; min-height: 60px;">
-      <div style="display:flex; align-items:center; gap:12px; padding:20px; color:var(--muted);">
-        <div class="spinner-small"></div>
+    <div id="aiVitalsForecastContent" style="font-size: 14px; color: var(--ink); line-height: 1.6; min-height: 100px; display: flex; align-items: center; justify-content: center;">
+      <div id="forecastInitialView" style="text-align: center; padding: 20px;">
+        <p style="color: var(--muted); margin-bottom: 20px;">V-Med AI can analyze your vitals history to detect patterns and predict health trends.</p>
+        <button id="calculateTrendBtn" class="btn-primary" style="padding: 10px 24px; border-radius: 30px; font-weight: 600; box-shadow: 0 4px 12px rgba(26,107,74,0.2);">🔍 Calculate Your Trends using AI</button>
+      </div>
+      <div id="forecastLoadingView" style="display:none; align-items:center; gap:12px; padding:20px; color:var(--muted);">
+        <div class="spinner-small" style="width:20px;height:20px;border:3px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></div>
         <span>Analyzing vitals history for patterns...</span>
       </div>
     </div>

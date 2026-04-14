@@ -2,6 +2,27 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
+<script>
+  /* 🛡️ V-Med ID Storage Protector 
+     Intercepts storage access EARLIEST to prevent console noise from 3rd party libs (jsPDF, etc.) */
+  (function() {
+    function createMock() {
+      let s = {};
+      return {
+        getItem: k => s[k] || null,
+        setItem: (k, v) => { s[k] = String(v); },
+        removeItem: k => { delete s[k]; },
+        clear: () => { s = {}; },
+        key: i => Object.keys(s)[i] || null,
+        get length() { return Object.keys(s).length; }
+      };
+    }
+    try { localStorage.getItem('v'); } catch (e) {
+      Object.defineProperty(window, 'localStorage', { value: createMock(), configurable: true });
+      Object.defineProperty(window, 'sessionStorage', { value: createMock(), configurable: true });
+    }
+  })();
+</script>
 <title>V-Med ID | Doctor Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
@@ -546,7 +567,7 @@ protectRoute("doctor");
 
 </div>
 
-<script type="module" src="./js/doctorData.js"></script>
-<script type="module" src="./js/dashboard.js"></script>
+<script type="module" src="js/doctorData.js"></script>
+<script type="module" src="js/dashboard.js"></script>
 </body>
 </html>

@@ -9,6 +9,18 @@ import { t, initI18n, setLang, getCurrentLang, LANGUAGES } from "./i18n.js";
 const API_BASE = "http://127.0.0.1:3000";
 const LAST_PAGE_KEY = "vmed_last_patient_page";
 
+import { vStore } from "./vStore.js";
+
+const $ = id => document.getElementById(id);
+window.$ = $;
+window.toggleDark = toggleDark;
+window.loadPage = loadPage;
+window.loadSection = loadSection;
+window.toggleSidebar = toggleSidebar;
+window.handleLogout = handleLogout;
+
+// Multi-lingual support helpers
+
 // ── DARK MODE ─────────────────────────────────────────────────────
 const DARK_KEY = "vmed_dark_mode";
 
@@ -22,12 +34,12 @@ function applyTheme(dark) {
 
 function toggleDark() {
   const next = !document.documentElement.classList.contains("dark");
-  localStorage.setItem(DARK_KEY, next ? "1" : "0");
+  vStore.set(DARK_KEY, next ? "1" : "0", "local");
   applyTheme(next);
 }
 
 ; (function initTheme() {
-  const saved = localStorage.getItem(DARK_KEY);
+  const saved = vStore.get(DARK_KEY, "local");
   const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
   document.documentElement.classList.toggle("dark",
     saved !== null ? saved === "1" : prefersDark);
@@ -68,9 +80,9 @@ function applyNavTranslations() {
   if (loaderSmall) loaderSmall.textContent = t("loadingQuote");
   const shortcutTip = document.getElementById("shortcutTip");
   if (shortcutTip) shortcutTip.innerHTML = t("nav.shortcutTip");
-  const offlineLabel = document.getElementById("offlineLabel");
+  const offlineLabel = $("offlineLabel");
   if (offlineLabel) offlineLabel.textContent = t("offline.modeLabel");
-  const reconnectBtn = document.getElementById("reconnectBtn");
+  const reconnectBtn = $("reconnectBtn");
   if (reconnectBtn) reconnectBtn.textContent = t("offline.reconnect");
 
   document.querySelectorAll("[data-lang-btn]").forEach(btn => {
@@ -80,7 +92,7 @@ function applyNavTranslations() {
 
 // ── SPA LOADER ────────────────────────────────────────────────────
 async function loadPage(pageName) {
-  const content = document.getElementById("content");
+  const content = $("content");
   if (!content) return;
   content.innerHTML = `
     <div class="loader-box">
@@ -89,6 +101,7 @@ async function loadPage(pageName) {
       <small>${t("loadingQuote")}</small>
     </div>
   `;
+  vStore.set(LAST_PAGE_KEY, pageName, "local");
   try {
     const res = await fetch(`sections/${pageName}.html`);
     if (!res.ok) throw new Error("Section not found");
@@ -117,16 +130,16 @@ async function loadPage(pageName) {
         if (freshSnap.exists()) {
           data = freshSnap.data();
           window.currentPatientData = data;
-          // Save to offline cache
-          localStorage.setItem("vmed_offline_data", JSON.stringify(data));
-          localStorage.setItem("vmed_last_sync", new Date().toISOString());
+          vStore.set("vmed_offline_data", JSON.stringify(data), 'local');
+          vStore.set("vmed_last_sync", new Date().toISOString(), 'local');
         }
       } catch (e) {
         console.warn("Network error, attempting to load from offline cache...", e);
-        const cached = localStorage.getItem("vmed_offline_data");
+        const cached = vStore.get("vmed_offline_data", 'local');
         if (cached) {
           data = JSON.parse(cached);
           isOffline = true;
+          window.currentPatientData = data;
         }
       }
     }
@@ -136,7 +149,7 @@ async function loadPage(pageName) {
     if (offlineBanner) {
       offlineBanner.style.display = isOffline ? "flex" : "none";
       if (isOffline) {
-        const syncTime = localStorage.getItem("vmed_last_sync");
+        const syncTime = vStore.get("vmed_last_sync", 'local');
         document.getElementById("offlineSyncTime").textContent = syncTime ? new Date(syncTime).toLocaleString() : "Unknown";
       }
     }
@@ -166,20 +179,98 @@ function loadSection(btn, page) {
   document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
   if (btn) btn.classList.add("active");
   _currentPage = page;
-  localStorage.setItem(LAST_PAGE_KEY, page);
+  vStore.set(LAST_PAGE_KEY, page, 'local');
   loadPage(page);
 }
 
 function toggleSidebar() {
   const sidebar = document.getElementById("sidebar");
-  if (!sidebar) return;
-  sidebar.classList.toggle("collapsed");
-  localStorage.setItem("vmed_sidebar_collapsed", sidebar.classList.contains("collapsed") ? "1" : "0");
+  if (sidebar) {
+    vStore.set("vmed_sidebar_collapsed", sidebar.classList.contains("collapsed") ? "1" : "0", 'local');
+    sidebar.classList.toggle("collapsed");
+  }
 }
 
 async function handleLogout() {
   await signOut(auth);
   window.location.replace("../login/login.html");
+}
+
+// --- HEALTH SCORE CALCULATION (V2 Weighted Model) ---
+function calculateScore(d) {
+    let scores = {
+        comp: 0,   // Profile Completeness (200)
+        act: 0,    // Medical Activity (150)
+        integ: 0,  // Data Integrity (200)
+        prev: 0,   // Preventive Health (100)
+        life: 0,   // Lifestyle (100)
+        cons: 0,   // Consistency (100)
+        risk: 0,   // Risk Prediction (50)
+        wellness: 0, // Mental Wellness (50)
+        emer: 0    // Emergency Readiness (50)
+    };
+
+    // 1. Profile Completeness (200)
+    const idFields = ['fullName', 'gender', 'dob', 'address']; 
+    const contactFields = ['email', 'phone'];
+    scores.comp += idFields.reduce((acc, f) => acc + (d.identity?.[f] ? 30 : 0), 0); // 120
+    scores.comp += contactFields.reduce((acc, f) => acc + (d.contact?.[f] ? 20 : 0), 0); // 40
+    scores.comp += (d.patientData?.bloodGroup ? 20 : 0) + (d.patientData?.occupation ? 20 : 0); // 40
+    scores.comp = Math.min(200, scores.comp);
+
+    // 2. Medical Activity (150)
+    const visitCount = (d.visits || []).length;
+    const medCount   = (d.medications || []).length;
+    const docCount   = (d.documents || []).length;
+    scores.act += Math.min(50, visitCount * 10);
+    scores.act += Math.min(50, medCount * 10);
+    scores.act += Math.min(50, docCount * 10);
+
+    // 3. Data Integrity (200)
+    const totalRecs = docCount + (d.vitalsHistory?.length || 0);
+    const verifiedRecs = (d.documents || []).filter(v => v.verified).length + 
+                         (d.vitalsHistory || []).filter(v => v.verified).length;
+    scores.integ = totalRecs > 0 ? Math.round((verifiedRecs / totalRecs) * 200) : 100;
+
+    // 4. Preventive Health (100) - Vitals Freshness
+    const vitals = d.vitalsHistory || [];
+    if (vitals.length > 0) {
+        const lastVital = new Date(vitals[vitals.length-1].date);
+        const diffDays = Math.floor((new Date() - lastVital) / (1000 * 60 * 60 * 24));
+        if (diffDays < 30) scores.prev = 100;
+        else if (diffDays < 90) scores.prev = 50;
+        else scores.prev = 20;
+    } else {
+        scores.prev = 0;
+    }
+
+    // 5. Lifestyle (100) - Chronic care & Personal details
+    scores.life += (d.patientData?.conditions ? 50 : 25); // Documenting conditions is better for records
+    scores.life += (docCount > 0 ? 50 : 0); // Historic data presence
+
+    // 6. Consistency (100) - App retention
+    const created = d.createdAt ? (d.createdAt.seconds ? new Date(d.createdAt.seconds*1000) : new Date(d.createdAt)) : new Date();
+    const monthAge = Math.max(1, Math.floor((new Date() - created) / (1000 * 60 * 60 * 24 * 30)));
+    scores.cons = Math.min(100, monthAge * 20); // 5 months = 100% consistency
+
+    // 7. Risk Prediction (50) - AI Engagement
+    scores.risk = (d.healthScore?.lastAiInteraction ? 50 : (d.visits?.length > 0 ? 25 : 0));
+
+    // 8. Mental Wellness (50) - (Placeholder mapping to Medication Adherence or Self-Care)
+    scores.wellness = (medCount > 0 ? 50 : 25); 
+
+    // 9. Emergency Readiness (50)
+    const ecCount = (d.emergencyContacts || []).length;
+    scores.emer = Math.min(45, ecCount * 15) + ((d.familyLinks || []).length > 0 ? 5 : 0);
+
+    const total = Object.values(scores).reduce((a, b) => a + b, 0);
+    
+    return { 
+        total: Math.round(total), 
+        compPct: Math.round((scores.comp / 200) * 100), 
+        actPct: Math.round((scores.act / 150) * 100),
+        integPct: Math.round((scores.integ / 200) * 100)
+    };
 }
 
 // ── HOME ──────────────────────────────────────────────────────────
@@ -223,28 +314,6 @@ function initHome(data) {
   if ($("homeVisitCount")) $("homeVisitCount").textContent = (data.visits || []).length;
   if ($("homeDocCount")) $("homeDocCount").textContent = (data.documents || []).length;
 
-  // --- HEALTH SCORE CALCULATION ---
-  function calculateScore(d) {
-      let score = 0;
-      // 1. Completeness (400)
-      const idF = ['fullName', 'gender', 'dob', 'phoneNumber', 'abhaNumber', 'address'];
-      const idPts = idF.reduce((acc, f) => acc + (d.identity?.[f] ? 66 : 0), 0);
-      const pPts = (d.patientData?.bloodGroup ? 50 : 0) + (d.patientData?.occupation ? 50 : 0);
-      const comp = Math.min(400, idPts + pPts);
-      // 2. Activity (300)
-      const act = ((d.medications?.length || 0) > 0 ? 100 : 0) +
-                  ((d.visits?.length || 0) > 0 ? 100 : 0) +
-                  ((d.documents?.length || 0) > 0 ? 100 : 0);
-      // 3. Integrity (300)
-      const totalClin = (d.documents?.length || 0) + (d.vitalsHistory?.length || 0);
-      const verClin = (d.documents || []).filter(doc => doc.verified).length + 
-                      (d.vitalsHistory || []).filter(v => v.verified).length;
-      let integ = totalClin > 0 ? Math.round((verClin / totalClin) * 300) : 150;
-      
-      const total = Math.round(comp + act + integ);
-      return { total, compPct: Math.round(comp/4), actPct: Math.round(act/3) };
-  }
-
   const s = calculateScore(data);
   if ($("homeHealthScore")) {
       $("homeHealthScore").textContent = s.total;
@@ -255,8 +324,11 @@ function initHome(data) {
       }
       if ($("barComp")) $("barComp").style.width = s.compPct + "%";
       if ($("barAct"))  $("barAct").style.width = s.actPct + "%";
+      if ($("barInteg")) $("barInteg").style.width = s.integPct + "%";
+      
       if ($("scoreComp")) $("scoreComp").textContent = s.compPct + "%";
       if ($("scoreAct"))  $("scoreAct").textContent = s.actPct + "%";
+      if ($("scoreInteg")) $("scoreInteg").textContent = s.integPct + "%";
       
       const statusEl = $("scoreStatus");
       if (statusEl) {
@@ -353,56 +425,81 @@ function initHome(data) {
   modal?.addEventListener("click", e => { if (e.target === modal) modal.style.display = "none"; });
 
   // ── HEALTH TIPS (Priority 8) ──────────────────────────────
-  loadHealthTips(data);
+  const cached = vStore.get(`vmed_insights_${data.uid}`);
+  if (cached) {
+    const loading = $("healthTipLoading");
+    if (loading) loading.style.display = "none";
+    renderHealthTips(JSON.parse(cached));
+  } else {
+    loadHealthTips(data);
+  }
 }
 
 async function loadHealthTips(data) {
-  const container = document.getElementById("healthTipContent");
-  const loading = document.getElementById("healthTipLoading");
-  const sourceLabel = document.getElementById("healthTipSource");
-  if (!container || !loading) return;
+  const loading = $("healthTipLoading");
+  if (!loading) return;
 
   try {
     const bg = encodeURIComponent(data.patientData?.bloodGroup || "");
-    // Extract a few symptoms/diagnoses from recent visits for context
-    const conditions = (data.visits || [])
-      .slice(0, 3)
-      .map(v => v.diagnosis)
-      .filter(d => d)
-      .join(", ");
+    const conditions = (data.visits || []).slice(0, 3).map(v => v.diagnosis).filter(d => d).join(", ");
     const cond = encodeURIComponent(conditions || "");
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout for AI response
-
-    const resp = await fetch(`${API_BASE}/api/health-tips?bloodGroup=${bg}&conditions=${cond}`, {
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-
-    if (!resp.ok) throw new Error("Tips fetch failed");
+    const resp = await fetch(`${API_BASE}/api/health-tips?bloodGroup=${bg}&conditions=${cond}`);
+    if (!resp.ok) {
+        if (resp.status === 429) throw new Error("Medical engine is busy. Please try again shortly.");
+        throw new Error("Failed to curate insights");
+    }
     
     const result = await resp.json();
+    vStore.set(`vmed_insights_${data.uid}`, JSON.stringify(result));
     
-    loading.style.display = "none";
-    container.innerHTML = `
-      <div style="margin-bottom: 12px;">${result.tip}</div>
-      <div style="font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 8px;">
-        <strong>Related Articles:</strong>
-        <ul style="margin: 4px 0 0 16px; padding: 0;">
-          ${result.articles.map(a => `<li><a href="${a.link}" target="_blank" style="color:var(--primary); text-decoration:none;">${a.title}</a></li>`).join("")}
-        </ul>
-      </div>
-    `;
-    container.style.display = "block";
-    if (sourceLabel) {
-      sourceLabel.textContent = result.source;
-      sourceLabel.style.display = "inline-block";
-    }
+    if (loading) loading.style.display = "none";
+    renderHealthTips(result);
 
   } catch (e) {
-    console.warn("Health tips load error:", e);
-    loading.textContent = "Unable to load personalized tips at this moment. Stay healthy!";
+    console.warn("Health tips error:", e);
+    if (loading) {
+        loading.innerHTML = `<p style="font-size:12px; color:var(--muted); padding:20px;">Insights engine warming up. Check back shortly.</p>`;
+    }
+  }
+}
+
+function renderHealthTips(result) {
+  const container = document.getElementById("healthTipContent");
+  const sourceLabel = document.getElementById("healthTipSource");
+  const mainTip = document.getElementById("mainTipText");
+  const articlesList = document.getElementById("insightsArticlesList");
+  const mediaBox = document.getElementById("insightsMedia");
+
+  if (!container) return;
+  
+  if (mainTip) mainTip.innerHTML = `“${result.tip}”`;
+  
+  if (articlesList) {
+    articlesList.innerHTML = result.articles.map(a => `
+      <a href="${a.link}" target="_blank" class="article-item">
+        <span class="article-title">${a.title}</span>
+        <div class="article-meta">WHO Health Topics &nbsp;·&nbsp; 2 min read</div>
+      </a>
+    `).join("");
+  }
+
+  if (mediaBox) {
+    mediaBox.innerHTML = `
+      <iframe width="100%" height="100%" src="https://www.youtube.com/embed/videoseries?list=PL9S6xGsoqIBXRQzSDOfFb13iPrbL8fgy1" 
+        title="WHO Science in 5 - Health Tips" frameborder="0" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+        allowfullscreen style="border:none;"></iframe>
+      <div style="position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.6); padding:4px 8px; border-radius:4px; font-size:10px; color:white; pointer-events:none;">
+        If video fails, <a href="https://www.youtube.com/playlist?list=PL9S6xGsoqIBXRQzSDOfFb13iPrbL8fgy1" target="_blank" style="color:#3b82f6; pointer-events:auto; text-decoration:none;">click here</a>
+      </div>
+    `;
+  }
+
+  container.style.display = "block";
+  if (sourceLabel) {
+    sourceLabel.textContent = `SOURCE: ${result.source || 'V-MED INTELLIGENCE'}`;
+    sourceLabel.style.display = "inline-block";
   }
 }
 
@@ -587,12 +684,14 @@ function initAIChat(data) {
     assistantBtn.onclick = () => {
       aiMode = "assistant";
       assistantBtn.classList.add("active"); symptomBtn.classList.remove("active");
-      chat.insertAdjacentHTML("beforeend", `<div class="alert info" style="margin:10px 0">Switched to <strong>AI Health Assistant</strong> mode. Ask about your records or health tips.</div>`);
+      // Console log instead of noisy chat bubble
+      console.log("Switched to Health Assistant mode");
     };
     symptomBtn.onclick = () => {
       aiMode = "symptom";
       symptomBtn.classList.add("active"); assistantBtn.classList.remove("active");
-      chat.insertAdjacentHTML("beforeend", `<div class="alert danger" style="margin:10px 0"><strong>Symptom Checker Mode Active.</strong> Describe what you're feeling. <br><small>Disclaimer: This is NOT a medical diagnosis.</small></div>`);
+      // Console log instead of noisy chat bubble
+      console.log("Switched to Symptom Checker mode");
     };
   }
 
@@ -686,7 +785,10 @@ function initAIChat(data) {
 
     const typing = document.createElement("div");
     typing.className = "ai-msg ai";
-    typing.innerHTML = `<div class="bubble" style="color:var(--muted)">${t("ai.thinking")}</div>`;
+    typing.innerHTML = `<div class="bubble" style="opacity:0.6; display:flex; align-items:center; gap:8px;">
+      <div class="spinner-small" style="width:12px;height:12px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></div>
+      ${t("ai.thinking")}
+    </div>`;
     chat.appendChild(typing);
     chat.scrollTop = chat.scrollHeight;
 
@@ -699,74 +801,72 @@ function initAIChat(data) {
           patient: patientPayloadFiltered,
           history: chatHistory,
           lang: getCurrentLang(),
-          mode: aiMode, // Send mode to backend
+          mode: aiMode,
         })
       });
 
-      // ✅ FIX 2: check HTTP status before parsing JSON
-      //    Previously a non-200 response caused res.json() to reject,
-      //    landing in catch{} which showed the generic "server not running" message
-      //    even when the server WAS running but returned an error code.
       if (!res.ok) {
-        let errMsg = `Server returned ${res.status}`;
+        let errMsg = `Server error (${res.status})`;
         try {
           const errBody = await res.json();
           errMsg = errBody.error || errMsg;
-        } catch { /* body wasn't valid JSON — keep status message */ }
+        } catch { }
         throw new Error(errMsg);
       }
 
       const json = await res.json();
       typing.remove();
 
-      if (json.error) {
-        chat.insertAdjacentHTML("beforeend",
-          `<div class="ai-msg ai"><div class="bubble" style="color:var(--danger,#c0392b)">⚠️ ${escHtml(json.error)}</div></div>`);
-        chat.scrollTop = chat.scrollHeight;
-        return;
-      }
+      if (json.error) throw new Error(json.error);
 
       const reply = json.reply || "";
       chatHistory.push({ role: "user", text });
       chatHistory.push({ role: "model", text: reply });
       if (chatHistory.length > 20) chatHistory.splice(0, 2);
 
+      const fName = _currentData?.identity?.fullName?.split(" ")[0] || "Patient";
       chat.insertAdjacentHTML("beforeend",
-        `<div class="ai-msg ai"><div class="bubble">${parseMd(reply)}</div></div>`);
+        `<div class="ai-msg ai">
+          <div class="bubble">
+            ${parseMd(reply)}
+            <div class="msg-footer" style="margin-top:10px; padding-top:8px; border-top:1px solid var(--border); font-size:10px; opacity:0.5; display:flex; justify-content:space-between;">
+               <span>V-Med Engine · Gemini 2.0</span>
+               <span>${t("ai.personalised")} ${fName}</span>
+            </div>
+          </div>
+        </div>`);
 
       const trimmed = reply.trimEnd();
       if (trimmed.length > 200 && !/[.!?:»।]$/.test(trimmed)) addContinueBtn();
 
     } catch (err) {
-      // ✅ FIX 3: show the REAL error so you can diagnose it
-      //    Old code: catch{} — swallowed err, always showed generic message
-      //    New code: reads err.message and maps to a helpful diagnosis
-      typing.remove();
+      if (typing) typing.remove();
       console.error("AI fetch error:", err);
-
       const msg = err.message || "";
       let userMsg;
 
-      if (msg.includes("Failed to fetch") || msg.includes("ERR_CONNECTION_REFUSED") || msg.includes("NetworkError")) {
-        // Server is not running — most common cause
-        userMsg =
-          `⚠️ Cannot connect to the AI server at <code>${API_BASE}</code>.<br><br>` +
-          `Open a terminal in the <code>backend/</code> folder and run:<br>` +
-          `<code style="background:rgba(0,0,0,0.08);padding:2px 6px;border-radius:4px">node server.js</code>`;
-      } else if (msg.includes("503") || msg.includes("UNAVAILABLE")) {
-        userMsg = "⚠️ Gemini is temporarily unavailable. Please wait a moment and try again.";
+      if (msg.includes("Failed to fetch") || msg.includes("ERR_CONNECTION_REFUSED")) {
+        userMsg = "⚠️ Cannot connect to the AI server. Please ensure the backend is running.";
       } else if (msg.includes("429")) {
-        userMsg = "⚠️ Rate limit reached. Please wait a few seconds and try again.";
-      } else if (msg.includes("401") || msg.includes("403")) {
-        userMsg = "⚠️ Gemini API key issue. Check your <code>.env</code> file in the backend folder.";
-      } else if (msg.includes("404")) {
-        userMsg = "⚠️ Gemini model not found. Update <code>GEMINI_MODEL</code> in <code>server.js</code>.";
+        userMsg = "⚠️ Rate limit reached. The AI engine is currently busy.";
       } else {
         userMsg = `⚠️ ${escHtml(msg) || t("ai.aiUnavailable")}`;
       }
 
+      const rid = "retry_" + Date.now();
       chat.insertAdjacentHTML("beforeend",
-        `<div class="ai-msg ai"><div class="bubble" style="color:var(--danger,#c0392b);line-height:1.8">${userMsg}</div></div>`);
+        `<div class="ai-msg ai error">
+          <div class="bubble" style="color:var(--danger); background:var(--danger-bg); border:1px solid rgba(192,57,43,0.1);">
+            ${userMsg}
+            <div style="margin-top:12px;"><button id="${rid}" class="btn-primary" style="padding:4px 12px; font-size:11px; background:var(--danger); border:none;">🔄 Retry Now</button></div>
+          </div>
+        </div>`);
+      
+      document.getElementById(rid)?.addEventListener("click", () => {
+        const lastErr = chat.querySelector(".ai-msg.error:last-child");
+        if (lastErr) lastErr.remove();
+        send(text, true);
+      });
     }
 
     chat.scrollTop = chat.scrollHeight;
@@ -1172,16 +1272,20 @@ function initVitals(data) {
           vitalsHistory: arrayUnion(newEntry)
         });
 
-        // Update local session data so we don't have to re-fetch everything
+        // Update local session data & persistent cache
         if (window.currentPatientData) {
             if (!window.currentPatientData.vitalsHistory) window.currentPatientData.vitalsHistory = [];
             window.currentPatientData.vitalsHistory.push(newEntry);
+            vStore.set(`vmed_data_${auth.currentUser.uid}`, JSON.stringify(window.currentPatientData));
         }
 
+        console.log("✅ Vitals saved to cloud & cache");
         alert("Vitals logged successfully!");
-        loadPage("vitals"); // Reload view
+        loadPage("vitals"); 
       } catch (e) {
-        alert("Error saving vitals: " + e.message);
+        console.error("❌ Vitals save error:", e);
+        const isPerm = e.message.includes("permission");
+        alert(isPerm ? "Security Block: Check your login session. You may not have permission to edit this record." : "Error: " + e.message);
         saveBtn.disabled = false;
         saveBtn.textContent = "Log Vitals";
       }
@@ -1189,12 +1293,26 @@ function initVitals(data) {
   }
 
   // ── AI Forecast ──
-  const forecastContent = document.getElementById("aiVitalsForecastContent");
+  const calcBtn = document.getElementById("calculateTrendBtn");
   const refreshBtn = document.getElementById("refreshForecastBtn");
-  
+  const initialV = document.getElementById("forecastInitialView");
+  const loadingV = document.getElementById("forecastLoadingView");
+  const forecastContent = document.getElementById("aiVitalsForecastContent");
+
+  const startCalc = () => {
+    if (initialV) initialV.style.display = "none";
+    if (loadingV) loadingV.style.display = "flex";
+    if (forecastContent && forecastContent.querySelector('.forecast-result')) {
+        forecastContent.querySelector('.forecast-result').style.opacity = '0.3';
+    }
+    updateForecast();
+  };
+
+  if (calcBtn) calcBtn.onclick = startCalc;
+  if (refreshBtn) refreshBtn.onclick = startCalc;
+
   async function updateForecast() {
     if (!forecastContent) return;
-    forecastContent.innerHTML = `<div style="display:flex; align-items:center; gap:12px; padding:20px; color:var(--muted);"><div class="spinner-small" style="width:16px;height:16px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></div><span>Analyzing patterns...</span></div>`;
     
     try {
       const resp = await fetch(`${API_BASE}/api/vitals/forecast`, {
@@ -1202,18 +1320,30 @@ function initVitals(data) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           history: history.slice(-5), 
-          patient: { dob: data.identity?.dob, bloodGroup: data.patientData?.bloodGroup } 
+          patient: { dob: data.identity?.dob, bloodGroup: data.patientData?.bloodGroup, vmedId: data.vmedId } 
         })
       });
+
+      if (!resp.ok) throw new Error("Forecast engine busy");
+
       const res = await resp.json();
-      forecastContent.innerHTML = `<div style="background:rgba(255,255,255,0.4); padding:16px; border-radius:12px; border:1px solid rgba(0,0,0,0.05); font-size:14px; line-height:1.6;">${parseMd(res.forecast)}</div>`;
+      if (loadingV) loadingV.style.display = "none";
+      
+      forecastContent.innerHTML = `
+        <div class="forecast-result" style="width:100%; animation: fadeIn 0.5s ease-out;">
+          <div style="background:rgba(255,255,255,0.6); padding:20px; border-radius:16px; border:1px solid var(--border); font-size:14px; line-height:1.7; color:var(--ink);">
+            ${parseMd(res.forecast)}
+          </div>
+        </div>`;
     } catch (e) {
-       forecastContent.innerHTML = `<div class="alert info" style="margin:0; font-size:12px;">📊 Initializing predictive model. Accurate forecasting requires at least 3 distinct daily logs. Continue monitoring your vitals.</div>`;
+       if (loadingV) loadingV.style.display = "none";
+       if (initialV) initialV.style.display = "block";
+       console.error("Forecast error:", e);
+       alert("AI Forecasting is currently at capacity. Please try again in 30 seconds.");
     }
   }
 
-  if (refreshBtn) refreshBtn.onclick = updateForecast;
-  if (history.length > 0) updateForecast();
+  // if (history.length > 0) updateForecast(); // Removed automatic call to prevent 429
 }
 
 function renderVitalsCharts(history) {
@@ -1479,6 +1609,25 @@ function initSOS(data) {
           }
       };
   }
+  
+  // Location sharing UX
+  const shareBtn = $("shareLocationBtn");
+  const nearbyInfo = $("sosNearbyInfo");
+  if (shareBtn && nearbyInfo) {
+      shareBtn.onclick = async () => {
+          shareBtn.disabled = true;
+          shareBtn.textContent = "Acquiring...";
+          try {
+              const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 }));
+              const msg = `Location Shared! Lat: ${pos.coords.latitude.toFixed(4)}, Lon: ${pos.coords.longitude.toFixed(4)}`;
+              nearbyInfo.innerHTML = `<div style="flex:1; color:var(--success); font-weight:600;"><p>O📍 ${msg}</p><p style="font-size:11px; margin-top:4px;">Notifying 3 nearby medical centers and your emergency contacts.</p></div>`;
+          } catch(e) {
+              shareBtn.disabled = false;
+              shareBtn.textContent = "Share Location";
+              alert("Could not access location. Please check browser permissions.");
+          }
+      };
+  }
 }
 
 // ── BLOOD DONOR ─────────────────────────────────────────────────
@@ -1576,8 +1725,18 @@ function initFamily(data) {
 }
 // ── INFO & FAQ ──────────────────────────────────────────────────
 function initInfo(data) {
-  // Simple static page for now, can be personalized later
   document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
+  
+  if (!data) return;
+  const s = calculateScore(data);
+  const $ = id => document.getElementById(id);
+  
+  if ($("infoMainScore")) $("infoMainScore").textContent = "Your V-Med Health Score is " + s.total;
+  
+  // Update percentages if the elements exist in info.html
+  if ($("infoCompScore")) $("infoCompScore").textContent = s.compPct + "%";
+  if ($("infoActScore")) $("infoActScore").textContent = s.actPct + "%";
+  if ($("infoIntegScore")) $("infoIntegScore").textContent = s.integPct + "%";
 }
 
 // ── UTILS ─────────────────────────────────────────────────────────
@@ -1603,11 +1762,6 @@ function parseMd(t) {
 }
 
 // ── GLOBALS ───────────────────────────────────────────────────────
-window.loadPage = loadPage;
-window.loadSection = loadSection;
-window.toggleSidebar = toggleSidebar;
-window.handleLogout = handleLogout;
-
 window._setLang = async (code) => {
   await setLang(code);
   if (_currentPage && _currentData) {
@@ -1640,12 +1794,12 @@ function setupKeyboardShortcuts() {
   applyNavTranslations();
   document.documentElement.lang = getCurrentLang();
   const sidebar = document.getElementById("sidebar");
-  if (sidebar && localStorage.getItem("vmed_sidebar_collapsed") === "1") {
+  if (sidebar && vStore.get("vmed_sidebar_collapsed", 'local') === "1") {
     sidebar.classList.add("collapsed");
   }
   setupKeyboardShortcuts();
   await window.patientDataReady;
-  const savedPage = localStorage.getItem(LAST_PAGE_KEY) || "home";
+  const savedPage = vStore.get(LAST_PAGE_KEY, 'local') || "home";
   const firstBtn = document.querySelector(`.nav-item[data-page="${savedPage}"]`)
     || document.querySelector(`.nav-item[data-page="home"]`);
   loadSection(firstBtn, savedPage);

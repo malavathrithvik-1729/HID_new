@@ -53,7 +53,10 @@
     "visitHistory":   "Visit History",
     "bloodGroup":     "Blood Group",
     "allergies":      "Allergies",
-    "closeBtn":       "✕ Close"
+    "closeBtn":       "✕ Close",
+    "scoreExcellent": "Excellent",
+    "scoreGood":      "Good",
+    "scorePending":   "Improving"
   },
 
   "history": {

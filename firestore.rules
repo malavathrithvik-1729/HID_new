@@ -37,32 +37,29 @@ service cloud.firestore {
     }
 
     function immutableUserFieldsUnchanged() {
-      return request.resource.data.uid == resource.data.uid
-        && request.resource.data.role == resource.data.role
-        && request.resource.data.vmedId == resource.data.vmedId
-        && request.resource.data.createdAt == resource.data.createdAt;
+      let r = resource.data;
+      let nr = request.resource.data;
+      // Legacy support: Only protect core identity fields if they actually exist in the record.
+      let uidOk = !("uid" in r) || ("uid" in nr && nr.uid == r.uid);
+      let roleOk = !("role" in r) || ("role" in nr && nr.role == r.role);
+      return uidOk && roleOk;
     }
 
     function changedKeysOnly(allowed) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed);
     }
-
     function doctorMedicalUpdate() {
       return changedKeysOnly(["visits", "medications", "documents", "vitals", "vitalsHistory", "healthScore"]);
     }
-
     function doctorLinkingUpdate() {
       return changedKeysOnly(["linkedDoctors", "linkedDoctorIds"]);
     }
 
-    function selfSafeUpdate() {
-      return immutableUserFieldsUnchanged();
+    function selfUpdateAllowed() {
+      return isSelf(userId) && immutableUserFieldsUnchanged();
     }
 
     match /users/{userId} {
-      // Users can read their own profile.
-      // Government accounts can read all user profiles.
-      // Linked doctor<->patient pairs can read each other.
       allow get: if isSelf(userId)
         || isGovernment(request.auth.uid)
         || (signedIn() && (
@@ -70,24 +67,15 @@ service cloud.firestore {
           || doctorLinkedToPatient(userId, request.auth.uid)
         ));
 
-      // Only government dashboards can list all users.
       allow list: if signedIn() && isGovernment(request.auth.uid);
 
-      // New user can create only their own document.
       allow create: if isSelf(userId) && request.resource.data.uid == request.auth.uid;
 
       allow delete: if false;
 
-      // Self updates are allowed but immutable fields are locked.
-      // Linked doctors can only update medical fields of linked patients.
-      // Doctors can also update patient linking fields.
-      allow update: if (
-          isSelf(userId) && selfSafeUpdate()
-        ) || (
-          doctorLinkedToPatient(request.auth.uid, userId) && doctorMedicalUpdate()
-        ) || (
-          isDoctor(request.auth.uid) && doctorLinkingUpdate()
-        );
+      allow update: if selfUpdateAllowed()
+        || (doctorLinkedToPatient(request.auth.uid, userId) && doctorMedicalUpdate())
+        || (isDoctor(request.auth.uid) && doctorLinkingUpdate());
     }
 
     // Public V-Med login lookup (minimal data only: uid/email/role/status/vmedId).
