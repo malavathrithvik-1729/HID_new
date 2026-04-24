@@ -19,3 +19,13 @@ node_modules/
 skills-lock.json
 combined_code.txt
 tmp/
+
+# Security & Credentials
+serviceAccountKey.json
+*serviceAccount*.json
+*.pem
+*.key
+backend/serviceAccountKey.json
+
+# Temporary scripts
+update_api_calls.js

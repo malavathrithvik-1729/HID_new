@@ -1,8 +1,15 @@
-
 import fetch from "node-fetch";
 
-const API_KEY = "AIzaSyCGSBUI1tix0tDNPuZdUjnQ042_FtTl9I4";
-const LOGIN_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${API_KEY}`;
+// 🔑 API Configuration
+// RECOMMENDED: Set FIREBASE_API_KEY in your environment or a .env file
+const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
+
+if (!FIREBASE_API_KEY) {
+  console.error("❌ ERROR: FIREBASE_API_KEY is not set in environment variables.");
+  console.error("Please run: $env:FIREBASE_API_KEY='your_api_key' (Windows) or export FIREBASE_API_KEY='your_api_key' (Mac/Linux)");
+  process.exit(1);
+}
+const AUTH_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`;
 const FIRESTORE_URL = "https://firestore.googleapis.com/v1/projects/vmed-id/databases/(default)/documents";
 
 const testUsers = [
@@ -63,8 +70,12 @@ const testUsers = [
 ];
 
 async function seedUser(u) {
+  console.log(`\n🔹 Seeding user: ${u.email} (${u.role})`);
+  
+
+  // 3. Set standard user document
   console.log(`Signing in as ${u.email}...`);
-  const loginRes = await fetch(LOGIN_URL, {
+  const loginRes = await fetch(AUTH_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: u.email, password: u.password, returnSecureToken: true })
@@ -113,8 +124,17 @@ async function seedUser(u) {
     body: JSON.stringify(userDocBody)
   });
 
-  // 2. Create V-Med Index
-  console.log(`Creating index doc for ${u.vmedId}...`);
+  // 4. Create V-Med Index (Consolidated)
+  console.log(`Checking/Creating index doc for ${u.vmedId}...`);
+  const indexRes = await fetch(`${FIRESTORE_URL}/vmedIndex/${u.vmedId}`);
+  if (indexRes.ok) {
+    const indexData = await indexRes.json();
+    if (indexData.fields.uid.stringValue !== u.uid) {
+      console.warn(`⚠️ COLLISION: V-Med ID ${u.vmedId} is already mapped to UID ${indexData.fields.uid.stringValue}. Skipping index update.`);
+      return;
+    }
+  }
+
   const indexDocBody = {
     fields: {
       uid: { stringValue: u.uid },
@@ -129,6 +149,7 @@ async function seedUser(u) {
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
     body: JSON.stringify(indexDocBody)
   });
+  console.log(`✅ Index entry set for ${u.vmedId}`);
 }
 
 async function run() {

@@ -2,90 +2,84 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function signedIn() {
+    // ── HELPER FUNCTIONS ─────────────────────────────────────────────
+    // Null-safe role lookup: returns null if user doc doesn't exist yet.
+    function getRole() {
+      let uid = request.auth.uid;
+      return (request.auth != null && exists(/databases/$(database)/documents/users/$(uid)))
+        ? get(/databases/$(database)/documents/users/$(uid)).data.role
+        : null;
+    }
+
+    // Is the requesting user the owner of this document?
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function isAuthenticated() {
       return request.auth != null;
     }
 
-    function userDoc(uid) {
-      return get(/databases/$(database)/documents/users/$(uid));
+    function isDoctor() {
+      return getRole() == 'doctor';
     }
 
-    function roleOf(uid) {
-      return userDoc(uid).data.role;
-    }
-
-    function isSelf(uid) {
-      return signedIn() && request.auth.uid == uid;
-    }
-
-    function isDoctor(uid) {
-      return signedIn() && roleOf(uid) == "doctor";
-    }
-
-    function isGovernment(uid) {
-      return signedIn() && roleOf(uid) == "government";
-    }
-
-    function doctorLinkedToPatient(doctorUid, patientUid) {
-      let doctor = userDoc(doctorUid);
-      let patient = userDoc(patientUid);
-      return isDoctor(doctorUid)
-        && (
-          ("linkedPatients" in doctor.data && doctor.data.linkedPatients.hasAny([patientUid]))
-          || ("linkedDoctorIds" in patient.data && patient.data.linkedDoctorIds.hasAny([doctorUid]))
-        );
-    }
-
-    function immutableUserFieldsUnchanged() {
-      let r = resource.data;
-      let nr = request.resource.data;
-      // Legacy support: Only protect core identity fields if they actually exist in the record.
-      let uidOk = !("uid" in r) || ("uid" in nr && nr.uid == r.uid);
-      let roleOk = !("role" in r) || ("role" in nr && nr.role == r.role);
-      return uidOk && roleOk;
-    }
-
-    function changedKeysOnly(allowed) {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed);
-    }
-    function doctorMedicalUpdate() {
-      return changedKeysOnly(["visits", "medications", "documents", "vitals", "vitalsHistory", "healthScore"]);
-    }
-    function doctorLinkingUpdate() {
-      return changedKeysOnly(["linkedDoctors", "linkedDoctorIds"]);
-    }
-
-    function selfUpdateAllowed() {
-      return isSelf(userId) && immutableUserFieldsUnchanged();
-    }
-
+    // ── USERS COLLECTION ─────────────────────────────────────────────
     match /users/{userId} {
-      allow get: if isSelf(userId)
-        || isGovernment(request.auth.uid)
-        || (signedIn() && (
-          doctorLinkedToPatient(request.auth.uid, userId)
-          || doctorLinkedToPatient(userId, request.auth.uid)
-        ));
+      // Users can read their own profile, doctors/government can read any, and anyone can read doctor profiles (for search)
+      allow read: if isOwner(userId) || getRole() in ['doctor', 'government'] || resource.data.role == 'doctor';
+      
+      // RESTRICTION: Owner can create their own data
+      allow create: if isOwner(userId);
+      // RESTRICTION: Owner can update BUT cannot CHANGE 'role', 'status', or 'vmedId'.
+      // Validates against the current 'resource.data' to ensure values match exactly.
+      allow update: if isOwner(userId) && 
+                    request.resource.data.role == resource.data.role &&
+                    request.resource.data.status == resource.data.status &&
+                    request.resource.data.vmedId == resource.data.vmedId;
+      
+      // Doctors can update patient history/documents/meds
+      allow update: if isDoctor() && (
+        request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['visits', 'documents', 'medications', 'patientData', 'linkedDoctors', 'linkedDoctorIds', 'linkedPatients', 'vitalsHistory', 'vitals'])
+      );
 
-      allow list: if signedIn() && isGovernment(request.auth.uid);
-
-      allow create: if isSelf(userId) && request.resource.data.uid == request.auth.uid;
-
+      // No one can delete users from client side
       allow delete: if false;
 
-      allow update: if selfUpdateAllowed()
-        || (doctorLinkedToPatient(request.auth.uid, userId) && doctorMedicalUpdate())
-        || (isDoctor(request.auth.uid) && doctorLinkingUpdate());
+      // Subcollections (medications, visits, vitals as separate collections if ever used)
+      match /{subcollection}/{document=**} {
+        allow read, write: if request.auth != null && (
+          isOwner(userId)       ||
+          getRole() == 'doctor' ||
+          getRole() == 'government'
+        );
+      }
     }
 
-    // Public V-Med login lookup (minimal data only: uid/email/role/status/vmedId).
-    // No collection listing allowed.
-    match /vmedIndex/{vmedId} {
-      allow get: if true;
-      allow list: if false;
-      allow create, update: if signedIn()
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.vmedId == vmedId;
+    // ── VMED INDEX ───────────────────────────────────────────────────
+    // Public read is REQUIRED — loginWithVMEDId reads this BEFORE the user
+    // is authenticated (to look up the email from their V-Med ID).
+    match /vmedIndex/{docId} {
+      // 🔓 Must be public: login lookup happens unauthenticated
+      allow read: if true;
+
+      // ✅ Only the owner of the UID can create/update their mapping
+      allow create, update: if request.auth != null && request.auth.uid == request.resource.data.uid;
+
+      // Never allow client-side deletions of index entries
+      allow delete: if false;
+    }
+
+    // ── MEDICAL RECORDS ──────────────────────────────────────────────
+    match /medical_records/{recordId} {
+      allow read: if request.auth != null && (
+        resource.data.uid == request.auth.uid ||
+        getRole() in ['doctor', 'government']
+      );
+      allow create: if request.auth != null && getRole() == 'doctor';
+      allow update: if request.auth != null
+        && getRole() in ['doctor', 'government'];
       allow delete: if false;
     }
   }

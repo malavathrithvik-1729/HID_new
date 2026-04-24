@@ -1,8 +1,13 @@
-
 import fetch from "node-fetch";
 
-const API_KEY = "AIzaSyCGSBUI1tix0tDNPuZdUjnQ042_FtTl9I4"; 
-const SIGNUP_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`;
+// 🔑 API Configuration
+const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
+
+if (!FIREBASE_API_KEY) {
+  console.error("❌ ERROR: FIREBASE_API_KEY is not set in environment variables.");
+  process.exit(1);
+}
+const SIGNUP_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_API_KEY}`;
 
 const usersToCreate = [
   { email: "dr.mehta@vmed.test", password: "TestPass123!", role: "doctor", name: "Arjun Mehta" },

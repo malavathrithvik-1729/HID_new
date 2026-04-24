@@ -10,6 +10,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-rate-limit": "^8.4.0",
+    "firebase-admin": "^13.8.0",
     "node-fetch": "^3.3.2",
     "rss-parser": "^3.13.0"
   }

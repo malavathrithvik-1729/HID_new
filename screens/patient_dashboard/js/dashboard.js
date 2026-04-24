@@ -425,11 +425,20 @@ function initHome(data) {
   modal?.addEventListener("click", e => { if (e.target === modal) modal.style.display = "none"; });
 
   // ── HEALTH TIPS (Priority 8) ──────────────────────────────
-  const cached = vStore.get(`vmed_insights_${data.uid}`);
+  const cachedKey = `vmed_insights_${data.uid}`;
+  const cached = vStore.get(cachedKey);
+  
   if (cached) {
-    const loading = $("healthTipLoading");
-    if (loading) loading.style.display = "none";
-    renderHealthTips(JSON.parse(cached));
+    const parsed = JSON.parse(cached);
+    // If cache has no articles, or is very old, force a background refresh
+    if (!parsed.articles || parsed.articles.length === 0) {
+        console.log("♻️ Cache stale or empty, refreshing insights...");
+        loadHealthTips(data);
+    } else {
+        const loading = $("healthTipLoading");
+        if (loading) loading.style.display = "none";
+        renderHealthTips(parsed);
+    }
   } else {
     loadHealthTips(data);
   }
@@ -444,7 +453,7 @@ async function loadHealthTips(data) {
     const conditions = (data.visits || []).slice(0, 3).map(v => v.diagnosis).filter(d => d).join(", ");
     const cond = encodeURIComponent(conditions || "");
 
-    const resp = await fetch(`${API_BASE}/api/health-tips?bloodGroup=${bg}&conditions=${cond}`);
+    const resp = await fetch(`${API_BASE}/api/health-tips?bloodGroup=${bg}&conditions=${cond}`, { headers: {  "Authorization": "Bearer " + (auth.currentUser ? await auth.currentUser.getIdToken() : "")  } });
     if (!resp.ok) {
         if (resp.status === 429) throw new Error("Medical engine is busy. Please try again shortly.");
         throw new Error("Failed to curate insights");
@@ -476,12 +485,17 @@ function renderHealthTips(result) {
   if (mainTip) mainTip.innerHTML = `“${result.tip}”`;
   
   if (articlesList) {
-    articlesList.innerHTML = result.articles.map(a => `
-      <a href="${a.link}" target="_blank" class="article-item">
-        <span class="article-title">${a.title}</span>
-        <div class="article-meta">WHO Health Topics &nbsp;·&nbsp; 2 min read</div>
-      </a>
-    `).join("");
+    const articles = result.articles || [];
+    if (articles.length === 0) {
+      articlesList.innerHTML = `<div style="grid-column: 1/-1; padding: 20px; text-align: center; color: var(--muted); font-size: 13px;">Expanding health library... Check back in a moment.</div>`;
+    } else {
+      articlesList.innerHTML = articles.map(a => `
+        <a href="${a.link || '#'}" target="_blank" class="article-item">
+          <span class="article-title">${escHtml(a.title || 'Health Insight')}</span>
+          <div class="article-meta">V-MED HEALTH &nbsp;·&nbsp; 2 min read</div>
+        </a>
+      `).join("");
+    }
   }
 
   if (mediaBox) {
@@ -795,7 +809,7 @@ function initAIChat(data) {
     try {
       const res = await fetch(`${API_BASE}/api/ai/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json",  "Authorization": "Bearer " + (auth.currentUser ? await auth.currentUser.getIdToken() : "")  },
         body: JSON.stringify({
           message: text,
           patient: patientPayloadFiltered,
@@ -954,15 +968,20 @@ function initSettings(data) {
   const langBtnWrap = document.getElementById("langBtnWrap");
   if (langBtnWrap) {
     langBtnWrap.innerHTML = LANGUAGES.map(l => `
-      <button
+      <div
         data-lang-btn="${l.code}"
-        class="lang-btn ${l.code === getCurrentLang() ? "lang-btn-active" : ""}"
+        class="lang-tile ${l.code === getCurrentLang() ? "lang-tile-active" : ""}"
         onclick="window._setLang('${l.code}')"
         title="${l.name}"
       >
-        <span class="lang-native">${l.native}</span>
-        <span class="lang-en">${l.name}</span>
-      </button>`).join("");
+        <div class="lang-tile-content">
+            <span class="lang-native">${l.native}</span>
+            <span class="lang-en">${l.name}</span>
+        </div>
+        <div class="lang-tile-check">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+      </div>`).join("");
   }
 
   setText("passModalTitle", "settings.changePassTitle");
@@ -1317,7 +1336,7 @@ function initVitals(data) {
     try {
       const resp = await fetch(`${API_BASE}/api/vitals/forecast`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json",  "Authorization": "Bearer " + (auth.currentUser ? await auth.currentUser.getIdToken() : "")  },
         body: JSON.stringify({ 
           history: history.slice(-5), 
           patient: { dob: data.identity?.dob, bloodGroup: data.patientData?.bloodGroup, vmedId: data.vmedId } 
@@ -1331,7 +1350,7 @@ function initVitals(data) {
       
       forecastContent.innerHTML = `
         <div class="forecast-result" style="width:100%; animation: fadeIn 0.5s ease-out;">
-          <div style="background:rgba(255,255,255,0.6); padding:20px; border-radius:16px; border:1px solid var(--border); font-size:14px; line-height:1.7; color:var(--ink);">
+          <div style="background:var(--surface-2); padding:20px; border-radius:16px; border:1px solid var(--border); font-size:14px; line-height:1.7; color:var(--ink); box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
             ${parseMd(res.forecast)}
           </div>
         </div>`;
@@ -1583,7 +1602,7 @@ function initSOS(data) {
     // Simulate API call to backend
     fetch(`${API_BASE}/api/sos/trigger`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json",  "Authorization": "Bearer " + (auth.currentUser ? await auth.currentUser.getIdToken() : "")  },
         body: JSON.stringify({ vmedId: data.vmedId, location: locStr, contacts: contacts.map(c=>c.phone) })
     }).catch(e => console.error("SOS notify fail", e));
   }
@@ -1599,11 +1618,11 @@ function initSOS(data) {
           try {
               const res = await fetch(`${API_BASE}/api/ai/emergency-aid`, {
                   method: "POST",
-                  headers: { "Content-Type": "application/json" },
+                  headers: { "Content-Type": "application/json",  "Authorization": "Bearer " + (auth.currentUser ? await auth.currentUser.getIdToken() : "")  },
                   body: JSON.stringify({ query: q, patient: { bloodGroup: data.patientData?.bloodGroup, medications: data.medications } })
               });
               const json = await res.json();
-              $("sosAiGuide").innerHTML = `<div style="background:#fff; border:1px solid var(--border); padding:16px; border-radius:12px; font-size:14px; line-height:1.6;">${parseMd(json.reply)}</div><div class="alert danger" style="margin-top:12px; font-size:11px;">⚠️ Help is arriving. Re-describe if symptoms change.</div>`;
+              $("sosAiGuide").innerHTML = `<div style="background:var(--surface-2); border:1px solid var(--border); padding:16px; border-radius:12px; font-size:14px; line-height:1.6; color:var(--ink);">${parseMd(json.reply)}</div><div class="alert danger" style="margin-top:12px; font-size:11px;">⚠️ Help is arriving. Re-describe if symptoms change.</div>`;
           } catch(e) {
               $("sosAiGuide").textContent = "Unable to reach AI server. Please follow standard first aid measures.";
           }
@@ -1656,7 +1675,7 @@ function initBloodDonor(data) {
       list.innerHTML = `<div style="text-align:center; padding:20px;">Searching for ${grp || "all"} donors...</div>`;
       try {
         // Real Firestore query would go here, simulated for now
-        const resp = await fetch(`${API_BASE}/api/donors/search?group=${encodeURIComponent(grp)}`);
+        const resp = await fetch(`${API_BASE}/api/donors/search?group=${encodeURIComponent(grp)}`, { headers: {  "Authorization": "Bearer " + (auth.currentUser ? await auth.currentUser.getIdToken() : "")  } });
         const donors = await resp.json();
         if (donors.length === 0) {
           list.innerHTML = `<div style="text-align:center; padding:20px; color:var(--muted);">No donors found with this group nearby.</div>`;
@@ -1710,7 +1729,7 @@ function initFamily(data) {
       try {
         await fetch(`${API_BASE}/api/family/request`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json",  "Authorization": "Bearer " + (auth.currentUser ? await auth.currentUser.getIdToken() : "")  },
           body: JSON.stringify({ requester: data.vmedId, target: id, relation: rel })
         });
         alert("Request sent successfully!");

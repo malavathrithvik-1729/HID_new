@@ -7,6 +7,14 @@ import Parser  from "rss-parser";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
+import {
+  AIProvider,
+  GeminiProvider,
+  GroqProvider,
+  OpenRouterProvider,
+  SAFETY_SETTINGS,
+} from "./ai-provider.js";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -21,25 +29,118 @@ const forecastCache = new Map();
 const chatCache = new Map();
 
 function cleanCache(cache, maxItems = 100) {
-  if (cache.size > maxItems) {
+  while (cache.size > maxItems) {
     const firstKey = cache.keys().next().value;
+    if (firstKey === undefined) break; // Safety break
     cache.delete(firstKey);
   }
 }
 
-app.use(cors());
+import rateLimit from "express-rate-limit";
+
+const allowedOrigins = [
+  "http://localhost:5500", 
+  "http://127.0.0.1:5500", 
+  "https://vmed-id.web.app", 
+  "https://vmed-id.firebaseapp.com"
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+}));
+
 app.use(express.json({ limit: "1mb" }));
 
-const GEMINI_KEY   = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = "gemini-2.0-flash";  // ✅ corrected model name
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per window
+  message: { error: "Too many requests, please try again later." }
+});
+app.use("/api/", apiLimiter);
 
-// ✅ Function instead of constant — always reads live key, never stale
-const getGeminiUrl = () =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+import admin from "firebase-admin";
 
-console.log("🔑 Gemini key loaded:", !!GEMINI_KEY);
-console.log("🔑 Key preview      :", GEMINI_KEY ? `...${GEMINI_KEY.slice(-6)}` : "MISSING ❌");
-console.log(`📡 Model            : ${GEMINI_MODEL}`);
+const serviceAccountPath = join(__dirname, "serviceAccountKey.json");
+try {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccountPath)
+  });
+  console.log("✅ Firebase Admin initialized.");
+} catch (error) {
+  console.error("❌ Failed to initialize Firebase Admin:", error.message);
+}
+
+async function verifyAuthToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Unauthorized. Missing or invalid Authorization header." });
+  }
+
+  const token = authHeader.split("Bearer ")[1];
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    req.user = decodedToken;
+    next();
+  } catch (error) {
+    console.error("❌ Token verification failed:", error.message);
+    return res.status(401).json({ error: "Unauthorized. Invalid or expired token." });
+  }
+}
+
+app.use("/api/", verifyAuthToken);
+
+// ── AI PROVIDER CHAIN ────────────────────────────────────────────
+// Providers are tried in order. If a provider responds with 429, the
+// next provider in the chain is tried automatically.
+
+const _geminiKey      = process.env.GEMINI_API_KEY;
+const _groqKey        = process.env.GROQ_API_KEY;
+const _openRouterKey  = process.env.OPENROUTER_API_KEY;
+const GEMINI_MODEL    = "gemini-2.0-flash";
+
+const _providers = [];
+
+if (_geminiKey) {
+  _providers.push(new GeminiProvider(_geminiKey, GEMINI_MODEL));
+  console.log(`✅ Gemini provider ready (model: ${GEMINI_MODEL}, key: ...${_geminiKey.slice(-6)})`);
+} else {
+  console.warn("⚠️  GEMINI_API_KEY missing — Gemini provider skipped.");
+}
+
+if (_groqKey) {
+  _providers.push(new GroqProvider(_groqKey));
+  console.log(`✅ Groq provider ready (fallback, key: ...${_groqKey.slice(-6)})`);
+} else {
+  console.log("ℹ️  GROQ_API_KEY not set — Groq fallback disabled.");
+}
+
+if (_openRouterKey) {
+  _providers.push(new OpenRouterProvider(_openRouterKey));
+  console.log(`✅ OpenRouter provider ready (tertiary fallback, key: ...${_openRouterKey.slice(-6)})`);
+} else {
+  console.log("ℹ️  OPENROUTER_API_KEY not set — OpenRouter fallback disabled.");
+}
+
+if (_providers.length === 0) {
+  console.error("❌ FATAL: No AI providers configured. Set at least GEMINI_API_KEY in .env");
+}
+
+/**
+ * aiProvider — the global multi-provider AI client.
+ * Use aiProvider.chat() for conversational endpoints.
+ * Use aiProvider.generate() for single-turn structured outputs.
+ */
+const aiProvider = new AIProvider(_providers);
+
+// Helper for legacy/multimodal calls that bypass the provider chain
+const getGeminiUrl = () => `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${_geminiKey}`;
+
 
 // --- GOOGLE DRIVE HELPERS ---
 function getDriveId(url) {
@@ -59,13 +160,7 @@ function getDriveId(url) {
   return match ? match[1] : null;
 }
 
-// ── SAFETY SETTINGS (shared across all requests) ──────────────────
-const SAFETY_SETTINGS = [
-  { category: "HARM_CATEGORY_HARASSMENT",        threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-  { category: "HARM_CATEGORY_HATE_SPEECH",       threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-  { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-  { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-];
+// SAFETY_SETTINGS is imported from ./ai-provider.js
 
 // ── RETRY HELPER — auto-retry on 429 ─────────────────────────────
 async function fetchWithRetry(url, options, maxRetries = 5) {
@@ -345,29 +440,47 @@ app.get("/api/health-tips", async (req, res) => {
     let feed = null;
     let feedSource = null;
     
-    // Shuffle feeds and try them until one succeeds
     const shuffled = [...HEALTH_FEEDS].sort(() => 0.5 - Math.random());
+
+    // Parallelized fetching for SPEED
+    const results = await Promise.allSettled(shuffled.map(s => 
+      Promise.race([
+        parser.parseURL(s.url).then(f => ({ feed: f, source: s })),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 4000))
+      ])
+    ));
+
+    const successful = results.find(r => r.status === "fulfilled" && r.value.feed);
     
-    for (const source of shuffled) {
-      try {
-        console.log(`📡 Fetching feed from: ${source.name}...`);
-        // Timeout the RSS parse specifically
-        feed = await Promise.race([
-          parser.parseURL(source.url),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000))
-        ]);
-        feedSource = source;
-        if (feed) break;
-      } catch (e) {
-        console.warn(`⚠️ Failed to fetch ${source.name}:`, e.message);
-      }
+    if (successful) {
+      feed = successful.value.feed;
+      feedSource = successful.value.source;
     }
 
     if (!feed) {
+      // High-quality fallback articles for Demo
+      const fallbacks = [
+        {
+          title: "WHO: Strategic Wellness Initiatives for 2026",
+          content: "The World Health Organization has outlined key strategies for digital health integration and patient empowerment.",
+          link: "https://www.who.int/news-room/news-updates"
+        },
+        {
+          title: "Harvard Health: The Power of Preventive Care",
+          content: "New research highlights how consistent vitals monitoring can reduce long-term cardiovascular risks by 40%.",
+          link: "https://www.health.harvard.edu/blog"
+        },
+        {
+          title: "V-Med Insights: Understanding your Health Score",
+          content: "Learn how your clinical activity and data integrity contribute to a higher, more accurate health score.",
+          link: "https://vmed-id.web.app/library"
+        }
+      ];
+
       return res.json({
-        tip: "Maintain a balanced diet, prioritize 7-8 hours of sleep, and stay physically active to support your long-term wellness.",
+        tip: "Consistent monitoring and verified clinical records are your best tools for long-term health. Keep your profile updated for the most accurate AI insights.",
         source: "V-Med Health Library",
-        articles: []
+        articles: fallbacks
       });
     }
     
@@ -397,18 +510,15 @@ app.get("/api/health-tips", async (req, res) => {
       5. Return ONLY the tip text.
     `;
 
-    const response = await fetchWithRetry(getGeminiUrl(), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        safetySettings: SAFETY_SETTINGS
-      })
-    });
+    const aiResult = await aiProvider.generate(
+      prompt,
+      { temperature: 0.7, maxOutputTokens: 500 },
+      SAFETY_SETTINGS
+    );
 
-    const resultData = response.data;
-    const tipText = resultData?.candidates?.[0]?.content?.parts?.[0]?.text || 
-                    "Focus on heart-healthy fats, 30 minutes of walking daily, and consistent sleep patterns to boost your baseline health score.";
+    const tipText = (aiResult.ok && aiResult.text) ? aiResult.text : 
+                    "Focus on heart-healthy fats, 30 minutes of walking daily, and consistent sleep patterns to boost your health score.";
+
 
     const result = {
       tip: tipText.trim(),
@@ -445,8 +555,8 @@ app.post("/api/ai/chat", async (req, res) => {
   if (!message || typeof message !== "string" || !message.trim()) {
     return res.status(400).json({ error: "message is required" });
   }
-  if (!GEMINI_KEY) {
-    return res.status(500).json({ error: "GEMINI_API_KEY not set in .env" });
+  if (_providers.length === 0) {
+    return res.status(500).json({ error: "No AI providers configured. Check .env for API keys." });
   }
 
   // 📝 Chat Caching — avoids hitting Gemini if the exact same query is asked
@@ -485,138 +595,118 @@ app.post("/api/ai/chat", async (req, res) => {
 
   const openingAck = isDoctor
     ? openingAckMap
-    : (openingAckMap[safeLang] || openingAckMap.en);
+    : (openingAckMap[safeLang] || openingAckMap.en || "Understood.");
 
-  // ── Gemini contents array ─────────────────────────────────────
-  const contents = [
-    { role: "user",  parts: [{ text: systemPrompt }] },
-    { role: "model", parts: [{ text: openingAck   }] },
-    ...history.map(h => ({
-      role:  h.role === "user" ? "user" : "model",
-      parts: [{ text: String(h.text) }]
-    })),
-    { role: "user",  parts: [{ text: message.trim() }] }
-  ];
+  // ── Normalise history into [{role, text}] for provider-agnostic use ──
+  const normHistory = history.map(h => ({
+    role: h.role === "user" ? "user" : "model",
+    text: String(h.text || h.parts?.[0]?.text || "")
+  }));
 
-  // Helper to build request body — temperature can be raised for RECITATION retry
-  const makeBody = (temp = 0.7) => JSON.stringify({
-    contents,
-    generationConfig: {
-      temperature:     temp,
-      topK:            40,
-      topP:            0.95,
-      maxOutputTokens: 4096,
-    },
-    safetySettings: SAFETY_SETTINGS
-  });
+  const generationConfig = {
+    temperature:     0.7,
+    topK:            40,
+    topP:            0.95,
+    maxOutputTokens: 4096,
+  };
 
   try {
-    // ── First attempt ─────────────────────────────────────────
-    const { response, data } = await fetchWithRetry(
-      getGeminiUrl(),   // ✅ fresh URL on every request
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: makeBody(0.7) },
-      3
-    );
+    // ── Route through the multi-provider chain ────────────────
+    const result = await aiProvider.chat({
+      systemPrompt,
+      openingAck,
+      history:          normHistory,
+      userMessage:      message.trim(),
+      generationConfig,
+      safetySettings:   SAFETY_SETTINGS,
+    });
 
-    // ── Gemini-level HTTP errors ──────────────────────────────
-    if (!response.ok || data.error) {
-      const errCode = data.error?.code    || response.status;
-      const errMsg  = data.error?.message || "Unknown error";
-      console.error("❌ Gemini API error:", errCode, errMsg);
-      console.error("   Full:", JSON.stringify(data.error || {}, null, 2));
+    // ── All providers exhausted (429 cascade) → rule-based fallback ──
+    if (!result.ok && result.status === 429) {
+      console.warn("⏳ All providers rate-limited. Serving rule-based fallback.");
+      const lowerQ = message.toLowerCase();
 
-      const friendly = {
-        429: "Too many requests. Please wait a moment and try again.",
-        503: "Gemini is temporarily unavailable. Please try again shortly.",
-        400: "There was a problem with the request. Please try rephrasing.",
-        401: "Gemini API key is invalid. Check your .env file.",
-        403: "API key lacks permission for this model.",
-        404: `Model '${GEMINI_MODEL}' not found.`,
-      };
+      // Extract readable text from patient data for inline fallback
+      const activeMeds   = (patient?.medications || []).filter(m => m.active !== false);
+      const medsText     = activeMeds.length > 0
+        ? activeMeds.map(m => `  - ${m.name}${m.dosage ? " " + m.dosage : ""}`).join("\n")
+        : "No active medications found.";
+      const vitalsArr    = patient?.vitalsHistory || [];
+      const vitalsText   = vitalsArr.length > 0
+        ? vitalsArr.slice(-3).reverse().map(v => `  - ${v.date}: BP=${v.bp||"--"}, Sugar=${v.sugar||"--"}`).join("\n")
+        : "No recent vitals logged.";
 
-      if (errCode === 429) {
-        // Fallback Rule-Based Engine (Overrides Rate Limits for testing)
-        const lowerQ = message.toLowerCase();
-        let fallbackReply = "I'm currently hitting my dynamic rate limit. However, based on your profile:\n\n";
-        
-        if (lowerQ.includes("medication") || lowerQ.includes("medicine") || lowerQ.includes("pills")) {
-          fallbackReply += "**Your Active Medications:**\n" + (medsText || "No active medications found.");
-        } else if (lowerQ.includes("vital") || lowerQ.includes("bp") || lowerQ.includes("sugar")) {
-          fallbackReply += "**Your Recent Vitals:**\n" + (vitalsText || "No recent vitals logged.");
-        } else if (lowerQ.includes("visit") || lowerQ.includes("history") || lowerQ.includes("doctor")) {
-          fallbackReply += "**Your History & Doctors:**\n" + (visitsText || "No visit history.") + "\n\nDoctors:\n" + (doctorsText || "None");
-        } else if (lowerQ.includes("score")) {
-          fallbackReply += "**Current Health Score:**\n" + (scoreText || "Not calculated");
-        } else if (lowerQ.includes("document") || lowerQ.includes("report")) {
-          fallbackReply += "**Your Scanned Documents:**\n" + (docsText || "No documents uploaded.");
-        } else {
-          fallbackReply = "I'm currently assisting too many patients and hit my rate limit. Please try again in just a moment.\n\n*Tip: Try checking your vitals and health tips while you wait.*";
-        }
-        
-        return res.json({ reply: fallbackReply });
+      let fallbackReply = "⚠️ All AI providers are currently busy. Based on your saved profile:\n\n";
+      if (lowerQ.includes("medication") || lowerQ.includes("medicine") || lowerQ.includes("pills")) {
+        fallbackReply += `**Your Active Medications:**\n${medsText}`;
+      } else if (lowerQ.includes("vital") || lowerQ.includes("bp") || lowerQ.includes("sugar")) {
+        fallbackReply += `**Your Recent Vitals:**\n${vitalsText}`;
+      } else if (lowerQ.includes("visit") || lowerQ.includes("history") || lowerQ.includes("doctor")) {
+        const visits = (patient?.visits || []).slice(-3).reverse();
+        fallbackReply += `**Recent Visits:**\n${visits.length > 0 ? visits.map(v => `  - ${v.date}: ${v.reason}`).join("\n") : "No visit history."}`;
+      } else {
+        fallbackReply = "⏳ All AI providers are currently at capacity. Please try again in a moment.\n\n*Tip: Check your vitals history or health tips while you wait.*";
       }
+      return res.json({ reply: fallbackReply });
+    }
 
+    // ── Non-429 provider error ────────────────────────────────
+    if (!result.ok) {
+      const friendly = {
+        400: "There was a problem with the request. Please try rephrasing.",
+        401: "API key is invalid. Check your .env file.",
+        403: "API key lacks permission for this model.",
+        404: `AI model not found. Contact support.`,
+        503: "AI service temporarily unavailable. Please try again shortly.",
+      };
+      console.error(`❌ [${result.provider}] Error ${result.status}: ${result.error}`);
       return res.status(502).json({
-        error: friendly[errCode] || `Gemini error (${errCode}): ${errMsg}`,
-        code:  errCode,
-        raw:   errMsg,
+        error: friendly[result.status] || `AI error (${result.status}): ${result.error}`,
+        code:  result.status,
       });
     }
 
-    const candidate = data.candidates?.[0];
-
-    // ── SAFETY block ──────────────────────────────────────────
-    if (candidate?.finishReason === "SAFETY") {
+    // ── Safety block ──────────────────────────────────────────
+    if (result.finishReason === "SAFETY") {
       return res.json({ reply: "I am unable to respond to that message due to safety guidelines." });
     }
 
-    // ── RECITATION block — retry once with nudge ──────────────
-    if (candidate?.finishReason === "RECITATION") {
-      console.warn("⚠️  RECITATION — retrying with nudge...");
-      const nudgedContents = [
-        ...contents,
-        { role: "model", parts: [{ text: "Here is my response in my own words:" }] }
-      ];
-      const { data: d2 } = await fetchWithRetry(
-        getGeminiUrl(),
-        {
-          method:  "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: nudgedContents,
-            generationConfig: { temperature: 0.9, topK: 40, topP: 0.95, maxOutputTokens: 4096 },
-            safetySettings: SAFETY_SETTINGS
-          })
-        },
-        2
-      );
-      const reply2 = d2.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (reply2) return res.json({ reply: reply2 });
-      return res.json({ reply: "I was not able to generate a response for that. Could you try rephrasing your question?" });
+    // ── RECITATION block — nudge and retry (Gemini-specific) ─
+    if (result.finishReason === "RECITATION") {
+      console.warn("⚠️  RECITATION detected — retrying with nudge...");
+      const retry = await aiProvider.chat({
+        systemPrompt,
+        openingAck:       "Here is my response in my own words:",
+        history:          normHistory,
+        userMessage:      message.trim(),
+        generationConfig: { ...generationConfig, temperature: 0.9 },
+        safetySettings:   SAFETY_SETTINGS,
+      });
+      if (retry.ok && retry.text) return res.json({ reply: retry.text });
+      return res.json({ reply: "I was not able to generate a response. Could you try rephrasing your question?" });
     }
 
-    // ── Extract final reply ───────────────────────────────────
-    const reply = candidate?.content?.parts?.[0]?.text;
-    if (!reply) {
-      console.error("⚠️  Empty Gemini response:", JSON.stringify(data, null, 2));
-      return res.status(502).json({ error: "Gemini returned an empty response." });
+    // ── Empty response guard ──────────────────────────────────
+    if (!result.text) {
+      console.error(`⚠️  Empty response from [${result.provider}]`);
+      return res.status(502).json({ error: "AI returned an empty response. Please try again." });
     }
 
     const ctxLabel = isDoctor
-      ? `DOCTOR · ${doctorName || "unknown"}`
-      : `${safeLang.toUpperCase()}${patientName ? " · " + patientName : ""}`;
+      ? `DOCTOR · ${doctorName || "unknown"} [via ${result.provider}]`
+      : `${safeLang.toUpperCase()}${patientName ? " · " + patientName : ""} [via ${result.provider}]`;
     console.log(`💬 [${ctxLabel}] "${message.slice(0, 60)}${message.length > 60 ? "..." : ""}"`);
 
-    const result = { reply };
-    chatCache.set(cacheKey, { time: Date.now(), data: result });
+    const chatResult = { reply: result.text };
+    chatCache.set(cacheKey, { time: Date.now(), data: chatResult });
     cleanCache(chatCache);
 
-    return res.json(result);
+    return res.json(chatResult);
 
   } catch (err) {
-    console.error("❌ Backend fetch error:", err.message);
+    console.error("❌ Chat endpoint error:", err.message);
     return res.status(500).json({
-      error:  "Could not reach Gemini API. Check your internet connection.",
+      error:  "Could not reach any AI provider. Check your internet connection.",
       detail: err.message
     });
   }
@@ -627,7 +717,7 @@ app.post("/api/ai/extract", async (req, res) => {
   const { url, type = "document" } = req.body;
 
   if (!url) return res.status(400).json({ error: "URL is required" });
-  if (!GEMINI_KEY) return res.status(500).json({ error: "AI key not configured" });
+  if (_providers.length === 0) return res.status(500).json({ error: "AI key not configured" });
 
   const driveId = getDriveId(url);
   if (!driveId) {
@@ -649,13 +739,15 @@ app.post("/api/ai/extract", async (req, res) => {
     if (docResponse.ok) {
         contentData = await docResponse.text();
     } else {
+        console.warn(`⚠️ Google Doc export failed (Status: ${docResponse.status}). Falling back to raw file download...`);
         // 2. If not a Google Doc, fetch as raw file (PDF/Image)
         const downloadUrl = `https://drive.google.com/uc?id=${driveId}&export=download`;
         const downloadRes = await fetch(downloadUrl);
         
         if (!downloadRes.ok) {
+            console.error(`❌ Drive download failed (Status: ${downloadRes.status})`);
             return res.status(400).json({ 
-                error: "Could not access file. Ensure the link visibility is set to 'Anyone with the link can view'." 
+                error: "Could not access file. Ensure the link visibility is set to 'Anyone with the link can view' and the file size is reasonable." 
             });
         }
 
@@ -707,41 +799,67 @@ app.post("/api/ai/extract", async (req, res) => {
 });
 
 // ── VITALS FORECAST ENDPOINT ──────────────────────────────────────
+// Frontend expects: { forecast: "<markdown string>" }
+// Compatible with dashboard.js updateForecast() — no changes needed there.
 app.post("/api/vitals/forecast", async (req, res) => {
   const { history, patient } = req.body;
-  if (!history || !history.length) return res.json({ forecast: "Add more vitals to start your AI health forecast." });
-
-  // Simple hashing for history to cache results
-  const cacheKey = `forecast-${patient?.dob || 'none'}-${history.length}-${JSON.stringify(history[history.length-1])}`;
-  if (forecastCache.has(cacheKey)) {
-    const entry = forecastCache.get(cacheKey);
-    if (Date.now() - entry.time < 3600000) return res.json(entry.data);
+  if (!history || !history.length) {
+    return res.json({ forecast: "Add more vitals to start your AI health forecast." });
   }
 
+  // Cache key — stable across providers, based on content not provider name
+  const cacheKey = `forecast-${patient?.vmedId || patient?.dob || 'anon'}-${history.length}-${JSON.stringify(history[history.length - 1])}`;
+  if (forecastCache.has(cacheKey)) {
+    const entry = forecastCache.get(cacheKey);
+    if (Date.now() - entry.time < 3600000) return res.json(entry.data); // 1 h cache
+  }
+
+  // ── Build RAG-enriched prompt ──────────────────────────────────
+  // Serialize only safe, non-PII vitals and basic patient context.
+  const safePatient = {
+    dob:        patient?.dob,
+    bloodGroup: patient?.bloodGroup,
+    vmedId:     patient?.vmedId,
+    // NOTE: Aadhaar / ABHA are deliberately excluded from this prompt.
+  };
+
+  const prompt = `You are a clinical AI assistant inside the V-Med ID platform.
+Analyze the following patient clinical data and provide a sharp, professional health trend forecast (max 3 sentences).
+
+Patient: ${JSON.stringify(safePatient)}
+Recent Vitals History:
+${JSON.stringify(history, null, 2)}
+
+Instructions:
+1. Examine BP, Blood Sugar, and Pulse specifically.
+2. Identify any concerning trends (e.g., rising BP, erratic sugar).
+3. End with one specific actionable recommendation (e.g., "Reduce sodium intake").
+4. Response must be in Markdown.`;
+
   try {
-    const prompt = `Analyze this patient's vitals history and provide a short, professional health trend forecast (max 3 sentences).
-    
-    Patient: ${JSON.stringify(patient)}
-    History: ${JSON.stringify(history)}
-    
-    Format: Markdown. focus on Blood Pressure, Sugar, or Weight trends if available.`;
+    const aiResult = await aiProvider.generate(
+      prompt,
+      { temperature: 0.1, maxOutputTokens: 500 },
+      SAFETY_SETTINGS
+    );
 
-    const { response, data } = await fetchWithRetry(getGeminiUrl(), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 500 },
-        safetySettings: SAFETY_SETTINGS
-      })
-    });
+    const forecast = (aiResult.ok && aiResult.text)
+      ? aiResult.text
+      : "Stable vitals recorded. Continue regular monitoring and consult your doctor if you notice any changes.";
 
-    const result = { forecast: data.candidates?.[0]?.content?.parts?.[0]?.text || "Stable vitals recorded. Continue regular monitoring." };
+    if (!aiResult.ok) {
+      console.warn(`⚠️ Forecast: provider [${aiResult.provider}] failed (${aiResult.status}). Using fallback text.`);
+    } else {
+      console.log(`📊 Forecast generated via [${aiResult.provider}] for vmedId=${patient?.vmedId || 'anon'}`);
+    }
+
+    const result = { forecast };
     forecastCache.set(cacheKey, { time: Date.now(), data: result });
     cleanCache(forecastCache);
-
     res.json(result);
+
   } catch (e) {
+    console.error("❌ Forecast error:", e.message);
     res.json({ forecast: "Analyzer is busy. Trends will appear shortly." });
   }
 });
@@ -755,27 +873,47 @@ app.post("/api/sos/trigger", (req, res) => {
 });
 
 // ── AI EMERGENCY AID ENDPOINT ─────────────────────────────────────
+// Uses aiProvider with the lowest temperature for deterministic first-aid.
 app.post("/api/ai/emergency-aid", async (req, res) => {
   const { query, patient } = req.body;
+  if (!query) return res.status(400).json({ error: "query is required" });
+
+  // Only pass non-PII clinical context (blood group, active meds)
+  const safePatient = {
+    bloodGroup:  patient?.bloodGroup,
+    medications: (patient?.medications || []).filter(m => m.active !== false).map(m => m.name),
+  };
+
+  const prompt = `You are an Emergency First-Aid AI embedded in the V-Med ID platform.
+Provide immediate, life-saving first-aid steps for the following emergency: "${query}".
+
+Patient clinical context (use only if relevant):
+- Blood Group: ${safePatient.bloodGroup || "unknown"}
+- Active medications: ${safePatient.medications.length > 0 ? safePatient.medications.join(", ") : "none"}
+
+Instructions:
+- Be extremely concise. Use numbered bullet points.
+- Prioritize the most critical action first.
+- Note any medication contraindications if relevant.
+- End every response with: "🚑 Emergency services have been notified. Stay calm and keep the patient still."`;
+
   try {
-    const prompt = `You are an Emergency First-Aid AI. Provide immediate, life-saving steps for the following symptom/emergency: "${query}".
-    Patient profile details (factor this in if relevant like Blood Group or active meds): ${JSON.stringify(patient)}
-    Be extremely concise, structured with bullet points. Always end by reminding them that medical services are on the way.`;
+    const aiResult = await aiProvider.generate(
+      prompt,
+      { temperature: 0.05, maxOutputTokens: 400 },
+      SAFETY_SETTINGS
+    );
 
-    const { response, data } = await fetchWithRetry(getGeminiUrl(), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 300 },
-        safetySettings: SAFETY_SETTINGS
-      })
-    });
+    const reply = (aiResult.ok && aiResult.text)
+      ? aiResult.text
+      : "Stay calm. Lay the patient flat in a safe position, loosen any tight clothing, and do not give food or water. 🚑 Emergency services have been notified. Stay calm and keep the patient still.";
 
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Stay calm, ensure safety, and wait for emergency responders.";
+    console.log(`🚨 Emergency aid via [${aiResult.provider}]: "${query.slice(0, 50)}"`);
     res.json({ reply });
+
   } catch (e) {
-    res.status(500).json({ error: "Failed to generate emergency advice" });
+    console.error("❌ Emergency aid error:", e.message);
+    res.status(500).json({ error: "Failed to generate emergency advice. Follow standard first-aid procedures." });
   }
 });
 

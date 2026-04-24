@@ -40,7 +40,7 @@ function initAIChat() {
       =============================== */
       const res = await fetch("http://localhost:3000/api/ai/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json",  "Authorization": "Bearer " + (auth.currentUser ? await auth.currentUser.getIdToken() : "")  },
         body: JSON.stringify({ message: text })
       });
 

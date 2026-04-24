@@ -210,6 +210,7 @@ async function initPatientDetail(data, pid) {
   }
   
   const p = snap.data();
+  window.activePatientData = p; // 📊 Store for analytics rendering
   const name = p.identity?.fullName || "Patient";
   const initials = name.trim().split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
 
@@ -218,7 +219,18 @@ async function initPatientDetail(data, pid) {
   if ($("detAvatar"))     $("detAvatar").textContent = initials;
   if ($("consultPatName")) $("consultPatName").textContent = name;
   
-  const age = p.identity?.dob ? `${new Date().getFullYear() - new Date(p.identity.dob).getFullYear()} yrs` : "--";
+  const calculateAge = (dob) => {
+    if (!dob) return "--";
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return `${age} yrs`;
+  };
+  const age = calculateAge(p.identity?.dob);
   if ($("detGenderAge")) $("detGenderAge").textContent = `${p.identity?.gender || "--"}, ${age}`;
   if ($("detBlood"))     $("detBlood").textContent     = `Blood: ${p.patientData?.bloodGroup || "--"}`;
   if ($("detAbha"))      $("detAbha").textContent      = p.identity?.abha || "--";
@@ -256,7 +268,7 @@ async function initPatientDetail(data, pid) {
     box.innerHTML = `<div class="loader-ring" style="width:16px;height:16px;border-width:2px;"></div><span style="font-size:12px;color:var(--muted);margin-left:8px;">Synthesizing...</span>`;
     try {
       const res = await fetch(`${API_BASE}/api/ai/chat`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json",  "Authorization": "Bearer " + (auth.currentUser ? await auth.currentUser.getIdToken() : "")  },
         body: JSON.stringify({
           message: "Provide a sharp clinical insight for this patient. Sum up history, trend of vitals if any, and current medications. Max 120 words.",
           patient: { ...p, vitalsHistory: vitalsArr },
@@ -277,10 +289,30 @@ async function initPatientDetail(data, pid) {
     $("btnSaveVitalsDetail").onclick = async () => {
       const btn = $("btnSaveVitalsDetail");
       const msg = $("vitalsDetMsg");
+      const bp = $("inBP").value.trim();
+      const pulse = $("inPulse").value.trim();
+      const sugar = $("inSugar").value.trim();
+      
+      if (!bp || !pulse) { alert("Please enter BP and Pulse"); return; }
+      
+      // BP format validation (e.g., 120/80)
+      const bpRegex = /^\d{2,3}\/\d{2,3}$/;
+      if (!bpRegex.test(bp)) {
+        alert("Invalid BP format. Please use Systolic/Diastolic (e.g. 120/80)");
+        return;
+      }
+
+      // Range validation
+      const pulseNum = parseInt(pulse);
+      if (isNaN(pulseNum) || pulseNum < 20 || pulseNum > 250) {
+        alert("Please enter a valid pulse rate (20-250)");
+        return;
+      }
+
       const vData = {
-        bp:        $("inBP").value,
-        sugar:     $("inSugar").value,
-        pulse:     $("inPulse").value,
+        bp,
+        sugar,
+        pulse,
         temp:      $("inTemp").value,
         weight:    $("inWeight").value,
         notes:     $("inVitNotes").value,
@@ -289,7 +321,6 @@ async function initPatientDetail(data, pid) {
         doctorId:   data.vmedId || "",
         date:      new Date().toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" })
       };
-      if (!vData.bp || !vData.pulse) { alert("Please enter BP and Pulse"); return; }
       btn.disabled = true;
       try {
         await updateDoc(doc(db, "users", pid), { vitalsHistory: arrayUnion(vData) });
@@ -305,18 +336,40 @@ async function initPatientDetail(data, pid) {
     if (!cont) return;
     const div = document.createElement("div");
     div.className = "med-row";
+    div.style = "display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; padding:12px; background:var(--surface-2); border-radius:12px;";
     div.innerHTML = `
-      <input type="text" class="med-name" placeholder="Med" style="flex:1.2" />
-      <input type="text" class="med-dosage" placeholder="Dose" style="flex:0.8" />
-      <input type="text" class="med-freq" placeholder="Freq" style="flex:0.8" />
-      <select class="med-timing" style="flex:1; font-size:12px; border-radius:8px; border:1px solid var(--border);">
-        <option value="After Food">After Food</option>
-        <option value="Before Food">Before Food</option>
-        <option value="With Food">With Food</option>
-        <option value="Empty Stomach">Empty Stomach</option>
-        <option value="Bedtime">Bedtime</option>
-      </select>
-      <input type="text" class="med-end" placeholder="End Date" style="flex:0.8; font-size:11px;" />`;
+      <div style="flex:1.2; min-width:150px;">
+        <input type="text" class="med-name" placeholder="Medicine Name" style="width:100%;" />
+      </div>
+      <div style="flex:0.8; min-width:120px;">
+        <select class="med-dosage" style="width:100%; height:38px; font-size:12px; border-radius:8px; border:1px solid var(--border);">
+          <option value="1 tablet">1 tablet</option>
+          <option value="2 tablets">2 tablets</option>
+          <option value="0.5 tablet">0.5 tablet</option>
+          <option value="1 tsp (5ml)">1 tsp (5ml)</option>
+          <option value="2 tsp (10ml)">2 tsp (10ml)</option>
+          <option value="1 injection">1 injection</option>
+          <option value="As needed">As needed</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:6px; background:var(--surface); padding:4px 8px; border-radius:8px; border:1px solid var(--border);">
+        <label style="font-size:10px; display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="med-timing-m" checked> M</label>
+        <label style="font-size:10px; display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="med-timing-a"> A</label>
+        <label style="font-size:10px; display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="med-timing-n" checked> N</label>
+      </div>
+      <div style="flex:0.8; min-width:120px;">
+        <select class="med-timing" style="width:100%; height:38px; font-size:12px; border-radius:8px; border:1px solid var(--border);">
+          <option value="After Food">After Food</option>
+          <option value="Before Food">Before Food</option>
+          <option value="With Food">With Food</option>
+          <option value="Empty Stomach">Empty Stomach</option>
+        </select>
+      </div>
+      <div style="flex:0.6; min-width:100px;">
+        <input type="date" class="med-end" style="width:100%; font-size:11px;" />
+      </div>
+      <button onclick="this.parentElement.remove()" style="background:none; border:none; cursor:pointer; font-size:16px;">🗑️</button>
+    `;
     cont.appendChild(div);
   };
 
@@ -332,7 +385,10 @@ async function initPatientDetail(data, pid) {
         prescriptions: Array.from(document.querySelectorAll("#detMedsContainer .med-row")).map(row => {
           const name = row.querySelector(".med-name").value;
           const dose = row.querySelector(".med-dosage").value;
-          const freq = row.querySelector(".med-freq").value;
+          const m = row.querySelector(".med-timing-m").checked ? "M" : "-";
+          const a = row.querySelector(".med-timing-a").checked ? "A" : "-";
+          const n = row.querySelector(".med-timing-n").checked ? "N" : "-";
+          const freq = `(${m}-${a}-${n})`;
           const time = row.querySelector(".med-timing")?.value || "";
           const end  = row.querySelector(".med-end")?.value || "";
           return name ? `${name} (${dose} ${freq}) - ${time}${end ? " until " + end : ""}` : null;
@@ -346,10 +402,13 @@ async function initPatientDetail(data, pid) {
           medications: arrayUnion(...Array.from(document.querySelectorAll("#detMedsContainer .med-row")).map(row => {
             const name = row.querySelector(".med-name").value;
             if (!name) return null;
+            const m = row.querySelector(".med-timing-m").checked ? "M" : "-";
+            const a = row.querySelector(".med-timing-a").checked ? "A" : "-";
+            const n = row.querySelector(".med-timing-n").checked ? "N" : "-";
             return { 
               name, 
               dosage: row.querySelector(".med-dosage").value, 
-              frequency: row.querySelector(".med-freq").value, 
+              frequency: `${m}-${a}-${n}`, 
               timing: row.querySelector(".med-timing")?.value || "After Food",
               endDate: row.querySelector(".med-end")?.value || "",
               active: true 
@@ -410,14 +469,30 @@ async function initPatientDetail(data, pid) {
   // Medications
   if ($("detMedList")) {
     const meds = p.medications || [];
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    
     $("detMedList").innerHTML = meds.length === 0
       ? `<div style="padding:24px; color:var(--muted); font-size:13px;">No current medications.</div>`
-      : meds.map(m => `
-          <div style="display:flex;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border)">
+      : meds.map(m => {
+          // Auto-expiry check
+          let isExpired = false;
+          if (m.endDate && m.endDate < today) {
+            isExpired = true;
+          }
+          const active = m.active !== false && !isExpired;
+          
+          return `
+          <div style="display:flex;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border); background: ${isExpired ? 'var(--surface-2)' : 'transparent'}; opacity: ${isExpired ? 0.8 : 1}">
             <span>💊</span>
-            <div><strong style="font-size:14px;">${escHtml(m.name)}</strong><br><span style="font-size:12px;color:var(--muted);">${m.dosage || ""} · ${m.frequency || ""}</span></div>
-            <span class="patient-tag ${m.active !== false ? "tag-active" : ""}" style="margin-left:auto">${m.active !== false ? "Active" : "Completed"}</span>
-          </div>`).join("");
+            <div style="flex:1">
+              <strong style="font-size:14px;">${escHtml(m.name)}</strong>
+              <br>
+              <span style="font-size:12px;color:var(--muted);">${m.dosage || ""} · ${m.frequency || ""} · ${m.timing || ""}</span>
+              ${m.endDate ? `<br><span style="font-size:10px; color:${isExpired ? 'var(--danger)' : 'var(--muted)'}">Ends: ${m.endDate} ${isExpired ? '(Completed)' : ''}</span>` : ""}
+            </div>
+            <span class="patient-tag ${active ? "tag-active" : ""}" style="margin-left:auto">${active ? "Active" : "Completed"}</span>
+          </div>`;
+      }).join("");
   }
 
   // Documents
@@ -437,6 +512,93 @@ async function initPatientDetail(data, pid) {
       </div>`).join("");
   }
 }
+
+// ── ANALYTICS RENDERING ───────────────────────────────────────
+window.renderAnalytics = function() {
+  const p = window.activePatientData;
+  if (!p || !p.vitalsHistory || p.vitalsHistory.length === 0) {
+    const container = document.getElementById("analyticsContainer");
+    if (container) {
+      container.innerHTML = `<div class="empty-state">
+        <div class="empty-icon" style="font-size: 40px;">📊</div>
+        <p style="color:var(--muted)">No health records found to generate trends.</p>
+      </div>`;
+    }
+    return;
+  }
+
+  // Clear any existing charts (Chart.js quirk with canvas reuse)
+  const containers = ['chartBP', 'chartSugar', 'chartPulse'];
+  containers.forEach(id => {
+    const canvas = document.getElementById(id);
+    if (canvas) {
+      const parent = canvas.parentElement;
+      const newCanvas = document.createElement('canvas');
+      newCanvas.id = id;
+      canvas.remove();
+      parent.appendChild(newCanvas);
+    }
+  });
+
+  // Prepare data (Sort by date if needed, though usually appended)
+  const vitals = [...p.vitalsHistory].slice(-10); // Last 10 readings for clarity
+  const labels = vitals.map(v => v.date.split(',')[0]); // Just the date part
+
+  const isDark = document.documentElement.classList.contains("dark");
+  const textColor = isDark ? '#8a9bb0' : '#6b7a8d';
+  const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
+      y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 } } }
+    }
+  };
+
+  // 1. Blood Pressure Chart
+  const systolic = vitals.map(v => parseInt(v.bp?.split('/')[0]) || 0);
+  const diastolic = vitals.map(v => parseInt(v.bp?.split('/')[1]) || 0);
+  
+  new Chart(document.getElementById('chartBP'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Systolic', data: systolic, borderColor: '#1a4a8a', backgroundColor: 'rgba(26,74,138,0.1)', fill: true, tension: 0.4 },
+        { label: 'Diastolic', data: diastolic, borderColor: '#3b9de8', backgroundColor: 'transparent', borderDash: [5, 5], tension: 0.4 }
+      ]
+    },
+    options: {
+      ...chartOptions,
+      plugins: { legend: { display: true, labels: { color: textColor, boxWidth: 12 } } }
+    }
+  });
+
+  // 2. Blood Sugar Chart
+  const sugarData = vitals.map(v => parseInt(v.sugar) || 0);
+  new Chart(document.getElementById('chartSugar'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data: sugarData, backgroundColor: 'rgba(180,83,9,0.7)', borderRadius: 4 }]
+    },
+    options: chartOptions
+  });
+
+  // 3. Pulse Chart
+  const pulseData = vitals.map(v => parseInt(v.pulse) || 0);
+  new Chart(document.getElementById('chartPulse'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{ data: pulseData, borderColor: '#c0392b', backgroundColor: 'rgba(192,57,43,0.1)', fill: true, tension: 0.4, pointRadius: 4 }]
+    },
+    options: chartOptions
+  });
+};
 
 // ── ADD PATIENT ───────────────────────────────────────────────
 function initAddPatient(data) {
@@ -596,15 +758,31 @@ async function initConsultation(data) {
       </div>
       <div class="form-group">
         <label>Dosage</label>
-        <input type="text" class="med-dosage" placeholder="e.g. 1 tablet"/>
+        <select class="med-dosage">
+          <option value="1 tablet">1 tablet</option>
+          <option value="2 tablets">2 tablets</option>
+          <option value="0.5 tablet">0.5 tablet</option>
+          <option value="1 tsp (5ml)">1 tsp (5ml)</option>
+          <option value="2 tsp (10ml)">2 tsp (10ml)</option>
+          <option value="1 injection">1 injection</option>
+          <option value="As needed">As needed</option>
+        </select>
       </div>
       <div class="form-group">
         <label>Frequency</label>
-        <input type="text" class="med-freq" placeholder="e.g. Twice daily"/>
+        <select class="med-freq">
+          <option value="Once daily (OD)">Once daily (OD)</option>
+          <option value="Twice daily (BD)">Twice daily (BD)</option>
+          <option value="Thrice daily (TD)">Thrice daily (TD)</option>
+          <option value="Four times daily (QD)">Four times daily (QD)</option>
+          <option value="Every 4 hours">Every 4 hours</option>
+          <option value="Every 6 hours">Every 6 hours</option>
+          <option value="Bedtime (HS)">Bedtime (HS)</option>
+        </select>
       </div>
       <div class="form-group">
-        <label>Duration</label>
-        <input type="text" class="med-duration" placeholder="e.g. 5 days"/>
+        <label>End Date</label>
+        <input type="date" class="med-duration" placeholder="Select end date"/>
       </div>
       <button class="med-remove" onclick="window.removeMedRow(${medCount})">×</button>`;
     container.appendChild(row);
@@ -644,9 +822,9 @@ async function initConsultation(data) {
       if (!name) return;
       const dosage    = row.querySelector(".med-dosage")?.value.trim()   || "";
       const frequency = row.querySelector(".med-freq")?.value.trim()     || "";
-      const duration  = row.querySelector(".med-duration")?.value.trim() || "";
+      const endDate   = row.querySelector(".med-duration")?.value.trim() || "";
       medications.push({
-        name, dosage, frequency, duration,
+        name, dosage, frequency, endDate,
         prescribedBy: doctorData?.identity?.fullName || "Doctor",
         active:  true,
         addedAt: new Date().toISOString()
@@ -919,8 +1097,16 @@ async function initHistory(data) {
         let updatedVisits = [...(pd.visits || [])];
         
         const vIndex = updatedVisits.findIndex(existing => {
+          // 1. Try matching by ID first (most reliable)
           if (v.id && existing.id === v.id) return true;
-          return existing.date === v.date && existing.reason === v.reason && existing.notes === v.notes && existing.diagnosis === v.diagnosis;
+          
+          // 2. Fallback to fuzzy matching with trimmed strings
+          const matchTrim = (a, b) => (String(a || "").trim() === String(b || "").trim());
+          
+          return existing.date === v.date && 
+                 matchTrim(existing.reason, v.reason) && 
+                 matchTrim(existing.notes, v.notes) && 
+                 matchTrim(existing.diagnosis, v.diagnosis);
         });
         
         if (vIndex === -1) throw new Error("Original visit record not found.");
@@ -1073,6 +1259,7 @@ function initAIChat(data, initialPatientId = null) {
         identity: selectedPatientData.identity,
         patientData: selectedPatientData.patientData,
         medications: selectedPatientData.medications,
+        vitalsHistory: selectedPatientData.vitalsHistory,
         visits: selectedPatientData.visits,
         documents: filteredDocs
       };
@@ -1095,7 +1282,7 @@ function initAIChat(data, initialPatientId = null) {
     try {
       const res = await fetch(`${API_BASE}/api/ai/chat`, {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json",  "Authorization": "Bearer " + (auth.currentUser ? await auth.currentUser.getIdToken() : "")  },
         body: JSON.stringify({
           message: text,
           doctor:  doctorPayload,
