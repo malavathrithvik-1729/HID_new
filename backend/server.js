@@ -1,8 +1,10 @@
-import express from "express";
-import cors    from "cors";
-import dotenv  from "dotenv";
-import fetch   from "node-fetch";
-import Parser  from "rss-parser";
+import express     from "express";
+import cors        from "cors";
+import dotenv      from "dotenv";
+import fetch       from "node-fetch";
+import Parser      from "rss-parser";
+import rateLimit   from "express-rate-limit";
+import admin       from "firebase-admin";
 
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -36,7 +38,7 @@ function cleanCache(cache, maxItems = 100) {
   }
 }
 
-import rateLimit from "express-rate-limit";
+
 
 const allowedOrigins = [
   "http://localhost:5500", 
@@ -64,7 +66,7 @@ const apiLimiter = rateLimit({
 });
 app.use("/api/", apiLimiter);
 
-import admin from "firebase-admin";
+
 
 const serviceAccountPath = join(__dirname, "serviceAccountKey.json");
 try {
