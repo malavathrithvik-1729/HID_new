@@ -40,3 +40,5 @@ The platform uses a robust security model:
     ```
 4.  **Frontend**:
     Use Live Server to run the main website on port 5500.
+
+**For demo you can contact me through gmail**:malavathrithvik@gmail.com
