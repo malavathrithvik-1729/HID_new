@@ -38,7 +38,11 @@ function initAIChat() {
       /* ===============================
          CALL AI BACKEND
       =============================== */
-      const res = await fetch("http://localhost:3000/api/ai/chat", {
+      const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" 
+        ? "http://127.0.0.1:3000" 
+        : "";
+      const res = await fetch(`${API_BASE}/api/ai/chat`, {
+
         method: "POST",
         headers: { "Content-Type": "application/json",  "Authorization": "Bearer " + (auth.currentUser ? await auth.currentUser.getIdToken() : "")  },
         body: JSON.stringify({ message: text })

@@ -6,7 +6,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { t, initI18n, setLang, getCurrentLang, LANGUAGES } from "./i18n.js";
 
-const API_BASE = "http://127.0.0.1:3000";
+const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" 
+  ? "http://127.0.0.1:3000" 
+  : "";
+
 const LAST_PAGE_KEY = "vmed_last_patient_page";
 
 import { vStore } from "./vStore.js";

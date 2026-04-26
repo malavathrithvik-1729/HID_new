@@ -4,7 +4,10 @@ import {
   doc, getDoc, updateDoc, arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const API_BASE = "http://127.0.0.1:3000";
+const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" 
+  ? "http://127.0.0.1:3000" 
+  : "";
+
 
 // ── DARK MODE ─────────────────────────────────────────────────
 const DARK_KEY = "vmed_dark_mode";

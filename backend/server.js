@@ -24,6 +24,8 @@ dotenv.config({ path: join(__dirname, ".env") });
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+const isNetlify = process.env.NETLIFY || process.env.CONTEXT === "production";
+
 
 // Simple server-side caching (Memory based)
 const healthCache = new Map();
@@ -68,15 +70,19 @@ app.use("/api/", apiLimiter);
 
 
 
-const serviceAccountPath = join(__dirname, "serviceAccountKey.json");
+const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
+  ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) 
+  : join(__dirname, "serviceAccountKey.json");
+
 try {
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccountPath)
+    credential: admin.credential.cert(serviceAccount)
   });
   console.log("✅ Firebase Admin initialized.");
 } catch (error) {
   console.error("❌ Failed to initialize Firebase Admin:", error.message);
 }
+
 
 async function verifyAuthToken(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -930,13 +936,10 @@ app.get("/api/donors/search", (req, res) => {
   ];
   res.json(mockDonors);
 });
+export default app;
 
-app.listen(PORT, () => {
-    console.log(`\n🤖 V-Med AI backend — http://localhost:${PORT}`);
-    console.log(`📡 Model    : ${GEMINI_MODEL}`);
-    console.log(`🌐 Endpoints:`);
-    console.log(`   - POST /api/ai/chat`);
-    console.log(`   - GET  /api/health-tips (with cache)`);
-    console.log(`   - POST /api/vitals/forecast (with cache)`);
-    console.log(`🌍 Languages: English, हिन्दी, తెలుగు\n`);
-});
+if (!isNetlify && import.meta.url === `file:///${fileURLToPath(import.meta.url).replace(/\\/g, '/')}`) {
+  app.listen(PORT, () => {
+    console.log(`🚀 V-Med AI Backend running on http://localhost:${PORT}`);
+  });
+}
