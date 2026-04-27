@@ -23,13 +23,14 @@ const filenameShim = (typeof import.meta !== 'undefined' && import.meta.url)
   : (typeof __filename !== 'undefined' ? __filename : '');
 const dirnameShim = filenameShim ? dirname(filenameShim) : (typeof __dirname !== 'undefined' ? __dirname : process.cwd());
 
+const isNetlify = process.env.NETLIFY || process.env.CONTEXT === "production";
+
 if (!isNetlify) {
   dotenv.config({ path: join(dirnameShim, ".env") });
 }
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
-const isNetlify = process.env.NETLIFY || process.env.CONTEXT === "production";
 
 
 // Simple server-side caching (Memory based)
