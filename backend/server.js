@@ -20,7 +20,9 @@ import {
 const filenameShim = fileURLToPath(import.meta.url);
 const dirnameShim = dirname(filenameShim);
 
-dotenv.config({ path: join(dirnameShim, ".env") });
+if (!isNetlify) {
+  dotenv.config({ path: join(dirnameShim, ".env") });
+}
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -73,20 +75,32 @@ app.get("/api/health", (req, res) => {
   res.json({ 
     status: "ok", 
     isNetlify,
-    firebaseInitialized: admin.apps.length > 0 
+    firebaseInitialized
   });
 });
 
 
 
-const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
-  ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) 
-  : join(dirnameShim, "serviceAccountKey.json");
-
+let firebaseInitialized = false;
 try {
+  const saString = process.env.FIREBASE_SERVICE_ACCOUNT;
+  let serviceAccount;
+  
+  if (saString) {
+    try {
+      serviceAccount = JSON.parse(saString);
+    } catch (e) {
+      console.error("❌ Invalid FIREBASE_SERVICE_ACCOUNT JSON. Using default path.");
+      serviceAccount = join(dirnameShim, "serviceAccountKey.json");
+    }
+  } else {
+    serviceAccount = join(dirnameShim, "serviceAccountKey.json");
+  }
+
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   });
+  firebaseInitialized = true;
   console.log("✅ Firebase Admin initialized.");
 } catch (error) {
   console.error("❌ Failed to initialize Firebase Admin:", error.message);
