@@ -46,7 +46,8 @@ const allowedOrigins = [
   "http://localhost:5500", 
   "http://127.0.0.1:5500", 
   "https://vmed-id.web.app", 
-  "https://vmed-id.firebaseapp.com"
+  "https://vmed-id.firebaseapp.com",
+  "https://vmed-id-platform-v1.netlify.app"
 ];
 
 app.use(cors({
@@ -67,6 +68,14 @@ const apiLimiter = rateLimit({
   message: { error: "Too many requests, please try again later." }
 });
 app.use("/api/", apiLimiter);
+
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    status: "ok", 
+    isNetlify,
+    firebaseInitialized: admin.apps.length > 0 
+  });
+});
 
 
 
