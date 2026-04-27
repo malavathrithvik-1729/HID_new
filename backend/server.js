@@ -964,8 +964,13 @@ app.get("/api/donors/search", (req, res) => {
 });
 export default app;
 
-if (!isNetlify && import.meta.url === `file:///${fileURLToPath(import.meta.url).replace(/\\/g, '/')}`) {
-  app.listen(PORT, () => {
-    console.log(`🚀 V-Med AI Backend running on http://localhost:${PORT}`);
-  });
+if (!isNetlify && typeof import.meta !== 'undefined' && import.meta.url) {
+  try {
+    const currentFilePath = fileURLToPath(import.meta.url);
+    if (currentFilePath === filenameShim) {
+      app.listen(PORT, () => {
+        console.log(`🚀 V-Med AI Backend running on http://localhost:${PORT}`);
+      });
+    }
+  } catch (e) {}
 }
