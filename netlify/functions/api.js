@@ -1,3 +1,5 @@
+import serverless from "serverless-http";
+
 export const handler = async (event, context) => {
   console.log("DEBUG: Request received");
   try {
