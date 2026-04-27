@@ -18,8 +18,10 @@ import {
   SAFETY_SETTINGS,
 } from "./ai-provider.js";
 
-const filenameShim = fileURLToPath(import.meta.url);
-const dirnameShim = dirname(filenameShim);
+const filenameShim = (typeof import.meta !== 'undefined' && import.meta.url) 
+  ? fileURLToPath(import.meta.url) 
+  : (typeof __filename !== 'undefined' ? __filename : '');
+const dirnameShim = filenameShim ? dirname(filenameShim) : (typeof __dirname !== 'undefined' ? __dirname : process.cwd());
 
 if (!isNetlify) {
   dotenv.config({ path: join(dirnameShim, ".env") });
