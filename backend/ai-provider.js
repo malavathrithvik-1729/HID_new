@@ -9,7 +9,7 @@
  * are completely provider-agnostic.
  */
 
-import fetch from "node-fetch";
+
 
 // ── SAFETY SETTINGS (Gemini-specific, ignored by OpenAI-compat providers) ────
 export const SAFETY_SETTINGS = [

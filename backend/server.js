@@ -1,7 +1,7 @@
 import express     from "express";
 import cors        from "cors";
 import dotenv      from "dotenv";
-import fetch       from "node-fetch";
+
 import Parser      from "rss-parser";
 import rateLimit   from "express-rate-limit";
 import admin       from "firebase-admin";
