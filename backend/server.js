@@ -17,10 +17,10 @@ import {
   SAFETY_SETTINGS,
 } from "./ai-provider.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const filenameShim = fileURLToPath(import.meta.url);
+const dirnameShim = dirname(filenameShim);
 
-dotenv.config({ path: join(__dirname, ".env") });
+dotenv.config({ path: join(dirnameShim, ".env") });
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -72,7 +72,7 @@ app.use("/api/", apiLimiter);
 
 const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
   ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) 
-  : join(__dirname, "serviceAccountKey.json");
+  : join(dirnameShim, "serviceAccountKey.json");
 
 try {
   admin.initializeApp({

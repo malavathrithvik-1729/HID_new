@@ -29,5 +29,7 @@ backend/serviceAccountKey.json
 
 # Temporary scripts
 update_api_calls.js
+set_netlify_env.js
+env_setup.js
 combined_code.txt
 combined_code.pdf
