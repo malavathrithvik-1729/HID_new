@@ -961,6 +961,8 @@ app.get("/api/donors/search", (req, res) => {
   ];
   res.json(mockDonors);
 });
+import serverless from "serverless-http";
+export const handler = serverless(app);
 export default app;
 
 if (!isNetlify && typeof import.meta !== 'undefined' && import.meta.url) {
