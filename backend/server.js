@@ -46,23 +46,9 @@ function cleanCache(cache, maxItems = 100) {
 
 
 
-const allowedOrigins = [
-  "http://localhost:5500", 
-  "http://127.0.0.1:5500", 
-  "https://vmed-id.web.app", 
-  "https://vmed-id.firebaseapp.com",
-  "https://vmed-id-platform-v1.netlify.app"
-];
-
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  }
-}));
+// Allow all origins for now since the API requires Bearer token authentication
+// and Netlify branch deploys create dynamic URLs.
+app.use(cors());
 
 app.use(express.json({ limit: "1mb" }));
 
@@ -966,7 +952,7 @@ import serverless from "serverless-http";
 // Add a generic error handler to ensure we always return JSON instead of HTML on crash
 app.use((err, req, res, next) => {
   console.error("Unhandled Express Error:", err);
-  res.status(500).json({ error: "Internal Server Error", detail: err.message || "Unknown error" });
+  res.status(500).json({ error: err.message || "Internal Server Error", detail: err.stack });
 });
 
 // Configure serverless-http for Netlify
