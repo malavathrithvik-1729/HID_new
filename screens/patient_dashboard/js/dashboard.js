@@ -192,13 +192,38 @@ function loadSection(btn, page) {
   loadPage(page);
 }
 
-function toggleSidebar() {
+function toggleSidebar(force) {
   const sidebar = document.getElementById("sidebar");
-  if (sidebar) {
-    vStore.set("vmed_sidebar_collapsed", sidebar.classList.contains("collapsed") ? "1" : "0", 'local');
-    sidebar.classList.toggle("collapsed");
+  const overlay = document.getElementById("sidebarOverlay");
+  if (!sidebar) return;
+
+  const isMobile = window.innerWidth <= 900;
+  if (isMobile) {
+    const shouldOpen = typeof force === "boolean" ? force : !sidebar.classList.contains("open");
+    sidebar.classList.toggle("open", shouldOpen);
+    overlay?.classList.toggle("open", shouldOpen);
+    document.body.classList.toggle("sidebar-open", shouldOpen);
+    return;
   }
+
+  const shouldCollapse = typeof force === "boolean" ? !force : !sidebar.classList.contains("collapsed");
+  sidebar.classList.toggle("collapsed", shouldCollapse);
+  sidebar.classList.remove("open");
+  overlay?.classList.remove("open");
+  document.body.classList.remove("sidebar-open");
+  vStore.set("vmed_sidebar_collapsed", shouldCollapse ? "1" : "0", 'local');
 }
+
+window.addEventListener("resize", () => {
+  const sidebar = document.getElementById("sidebar");
+  const overlay = document.getElementById("sidebarOverlay");
+  if (!sidebar) return;
+  if (window.innerWidth > 900) {
+    sidebar.classList.remove("open");
+    overlay?.classList.remove("open");
+    document.body.classList.remove("sidebar-open");
+  }
+});
 
 async function handleLogout() {
   await signOut(auth);

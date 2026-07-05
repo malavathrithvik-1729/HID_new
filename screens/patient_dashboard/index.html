@@ -160,7 +160,35 @@ body {
   background: var(--bg);
   color: var(--ink);
 }
+body.sidebar-open { overflow:hidden; }
 .app-shell { display:flex; height:100vh; width:100vw; overflow:hidden; }
+.mobile-menu-btn {
+  display:none;
+  position:fixed;
+  top:14px;
+  left:14px;
+  z-index:260;
+  width:44px;
+  height:44px;
+  border:none;
+  border-radius:12px;
+  background:var(--accent);
+  color:#fff;
+  font-size:20px;
+  box-shadow:0 10px 24px rgba(10,22,40,0.18);
+  cursor:pointer;
+}
+.sidebar-overlay {
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(10,22,40,0.45);
+  z-index:220;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .25s ease;
+}
+.sidebar-overlay.open { display:block; opacity:1; pointer-events:auto; }
 
 /* ══════════════════════════════════════════════════════════════════
    SIDEBAR
@@ -715,13 +743,64 @@ html.dark ::-webkit-scrollbar-thumb:hover { background:#3a4f68; }
    RESPONSIVE
    ══════════════════════════════════════════════════════════════════ */
 @media(max-width:900px) {
-  .section-wrap { padding:20px 16px; }
-  .grid-3,.grid-4 { grid-template-columns:repeat(2,1fr); }
+  .mobile-menu-btn { display:flex; align-items:center; justify-content:center; }
+  .sidebar-overlay { display:block; }
+  .sidebar {
+    position:fixed;
+    left:-100%;
+    top:0;
+    bottom:0;
+    width:min(82vw, 280px);
+    min-width:min(82vw, 280px);
+    z-index:240;
+    box-shadow:0 20px 60px rgba(10,22,40,0.2);
+  }
+  .sidebar.open { left:0; }
+  .sidebar.collapsed,
+  .sidebar.collapsed .nav-item,
+  .sidebar.collapsed .dark-toggle-nav,
+  .sidebar.collapsed .logout-btn {
+    width:min(82vw, 280px);
+    min-width:min(82vw, 280px);
+    justify-content:flex-start;
+    padding:11px 12px;
+  }
+  .sidebar.collapsed .brand-text,
+  .sidebar.collapsed .profile-info,
+  .sidebar.collapsed .nav-label,
+  .sidebar.collapsed .dark-toggle-nav .nav-label {
+    opacity:1;
+    width:auto;
+  }
+  .main { height:100dvh; }
+  .section-wrap { padding:18px 14px 28px; }
+  .grid-2,.grid-3,.grid-4 { grid-template-columns:1fr; }
+  .welcome-banner { padding:24px 18px; }
+  .welcome-meta { gap:8px; }
+  .welcome-tag { width:100%; justify-content:center; }
+  .card { padding:18px; }
+  .detail-row { grid-template-columns:1fr; gap:6px; }
+  .ai-input-row { flex-direction:column; }
+  .ai-input-row input, .ai-send-btn { width:100%; }
+  .modal-box { padding:24px 18px; margin:0 12px; }
+  .modal-actions { flex-direction:column-reverse; }
+  .modal-actions button { width:100%; }
 }
 @media(max-width:600px) {
-  .sidebar { position:fixed; }
-  .grid-2,.grid-3,.grid-4 { grid-template-columns:1fr; }
+  .app-shell { height:100dvh; }
+  .sidebar { width:86vw; max-width:300px; min-width:86vw; }
+  .sidebar.collapsed,
+  .sidebar.collapsed .nav-item,
+  .sidebar.collapsed .dark-toggle-nav,
+  .sidebar.collapsed .logout-btn {
+    width:86vw;
+    max-width:300px;
+    min-width:86vw;
+  }
   .section-wrap { padding:16px 12px; }
+  .page-title { font-size:26px; }
+  .page-sub { font-size:13px; }
+  .mobile-menu-btn { top:12px; left:12px; width:42px; height:42px; }
 }
 </style>
 
@@ -733,6 +812,8 @@ protectRoute("patient");
 </head>
 
 <body>
+<button class="mobile-menu-btn" onclick="toggleSidebar(true)" aria-label="Open menu">☰</button>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar(false)"></div>
 <div class="app-shell">
 
   <!-- ── SIDEBAR ──────────────────────────────────────────────── -->

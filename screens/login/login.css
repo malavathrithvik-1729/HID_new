@@ -10,11 +10,12 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 20px;
 }
 
 .login-container {
   background: #ffffff;
-  width: 360px;
+  width: min(100%, 360px);
   padding: 28px;
   border-radius: 14px;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
@@ -79,4 +80,19 @@ button {
 
 button:hover {
   background: #203a43;
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: 16px;
+  }
+
+  .login-container {
+    padding: 22px 16px;
+  }
+
+  button {
+    padding: 11px;
+    font-size: 14px;
+  }
 }
