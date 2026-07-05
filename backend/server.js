@@ -73,15 +73,21 @@ let firebaseInitialized = false;
 try {
   const saString = process.env.FIREBASE_SERVICE_ACCOUNT;
   let serviceAccount;
-  
+
   if (saString) {
     try {
-      serviceAccount = JSON.parse(saString);
+      // Netlify sometimes double-escapes \n to \\n in the private key.
+      // Fix this by replacing literal \\n with real newlines before parsing.
+      const fixedString = saString.replace(/\\n/g, '\n');
+      serviceAccount = JSON.parse(fixedString);
+      console.log("✅ Parsed FIREBASE_SERVICE_ACCOUNT from environment.");
     } catch (e) {
-      console.error("❌ Invalid FIREBASE_SERVICE_ACCOUNT JSON. Using default path.");
+      console.error("❌ Invalid FIREBASE_SERVICE_ACCOUNT JSON:", e.message);
+      console.error("   Raw value starts with:", saString.substring(0, 80));
       serviceAccount = join(dirnameShim, "serviceAccountKey.json");
     }
   } else {
+    console.warn("⚠️ FIREBASE_SERVICE_ACCOUNT not set. Falling back to serviceAccountKey.json");
     serviceAccount = join(dirnameShim, "serviceAccountKey.json");
   }
 
@@ -96,6 +102,9 @@ try {
 
 
 async function verifyAuthToken(req, res, next) {
+  if (!firebaseInitialized) {
+    return res.status(503).json({ error: "Server misconfigured: Firebase Admin SDK not initialized. Check FIREBASE_SERVICE_ACCOUNT env var on Netlify." });
+  }
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ error: "Unauthorized. Missing or invalid Authorization header." });
