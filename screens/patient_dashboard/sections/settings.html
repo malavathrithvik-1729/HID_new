@@ -137,7 +137,7 @@
   <div class="premium-modal-box">
     <div class="modal-header">
       <h3 id="ecModalTitle">Add emergency contact</h3>
-      <button onclick="document.getElementById('ecModal').classList.remove('open')" class="modal-close-btn">×</button>
+      <button onclick="window.closeEmergencyContactModal()" class="modal-close-btn">×</button>
     </div>
     <div class="modal-body">
       <div class="input-group">
@@ -174,7 +174,7 @@
       <div id="ecError" style="display:none;font-size:13px;color:var(--danger);background:var(--danger-bg);padding:12px 16px;border-radius:10px;margin-bottom:20px;border:1px solid rgba(220,38,38,0.2);"></div>
       <div style="display:flex;gap:12px">
         <button id="ecSaveBtn" class="btn-premium" style="flex:1;">Save contact</button>
-        <button class="btn-secondary" style="flex:1;" onclick="document.getElementById('ecModal').classList.remove('open')">Cancel</button>
+        <button class="btn-secondary" style="flex:1;" onclick="window.closeEmergencyContactModal()">Cancel</button>
       </div>
     </div>
   </div>

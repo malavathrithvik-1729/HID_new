@@ -21,6 +21,12 @@ window.loadPage = loadPage;
 window.loadSection = loadSection;
 window.toggleSidebar = toggleSidebar;
 window.handleLogout = handleLogout;
+window.closeEmergencyContactModal = function () {
+  const modal = document.getElementById("ecModal");
+  if (!modal) return;
+  modal.classList.remove("open");
+  modal.style.display = "none";
+};
 
 // Multi-lingual support helpers
 
@@ -1096,6 +1102,7 @@ function initSettings(data) {
       if (ecAltPhone) ecAltPhone.value = c.altPhone || "";
     }
 
+    modal.classList.add("open");
     modal.style.display = "flex";
 
     const freshSaveBtn = saveBtn.cloneNode(true);
@@ -1135,7 +1142,7 @@ function initSettings(data) {
         await updateDoc(userRef, { emergencyContacts: updatedList });
         contacts = updatedList;
         renderContacts();
-        modal.style.display = "none";
+        window.closeEmergencyContactModal();
         showToast(editIndex >= 0 ? t("settings.contactUpdated") : t("settings.contactAdded"));
       } catch (err) {
         console.error("EC save:", err);
@@ -1180,7 +1187,7 @@ function initSettings(data) {
   window._ecDelete = (i) => deleteContact(i);
   document.getElementById("addContactBtn")?.addEventListener("click", () => openModal(-1));
   document.getElementById("ecModal")?.addEventListener("click", function (e) {
-    if (e.target === this) this.style.display = "none";
+    if (e.target === this) window.closeEmergencyContactModal();
   });
 
   renderContacts();
