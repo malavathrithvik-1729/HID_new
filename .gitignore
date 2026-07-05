@@ -6,6 +6,12 @@ node_modules/
 .firebase/
 firebase-debug.log
 firestore.rules
+firestore.indexes.json
+
+# Netlify
+.netlify/
+netlify/
+netlify.toml
 
 # OS
 .DS_Store
