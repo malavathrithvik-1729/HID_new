@@ -99,9 +99,12 @@ try {
 
   if (saString) {
     try {
-      // Netlify sometimes double-escapes \n to \\n in the private key.
-      // Fix this by replacing literal \\n with real newlines before parsing.
-      const fixedString = saString.replace(/\\n/g, '\n');
+      // Netlify may store real newline characters (\n control char) inside
+      // the JSON string, which breaks JSON.parse. We escape them back.
+      const fixedString = saString
+        .replace(/\r\n/g, '\\n')   // Windows CRLF → escaped \n
+        .replace(/\n/g, '\\n')     // real LF → escaped \n
+        .replace(/\r/g, '\\n');    // stray CR → escaped \n
       serviceAccount = JSON.parse(fixedString);
       console.log("✅ Parsed FIREBASE_SERVICE_ACCOUNT from environment.");
     } catch (e) {
