@@ -67,6 +67,29 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// TEMPORARY debug route — remove after fixing the env var issue
+app.get("/api/debug-env", (req, res) => {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT || "";
+  let parseError = null;
+  let parseOk = false;
+  try {
+    JSON.parse(raw.replace(/\\n/g, '\n'));
+    parseOk = true;
+  } catch(e) {
+    parseError = e.message;
+  }
+  res.json({
+    hasVar: !!raw,
+    length: raw.length,
+    first100: raw.substring(0, 100),
+    last50: raw.substring(raw.length - 50),
+    startsWithBrace: raw.trimStart().startsWith("{"),
+    parseOk,
+    parseError,
+    firebaseInitialized
+  });
+});
+
 
 
 let firebaseInitialized = false;
