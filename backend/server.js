@@ -108,7 +108,9 @@ async function verifyAuthToken(req, res, next) {
     next();
   } catch (error) {
     console.error("❌ Token verification failed:", error.message);
-    return res.status(401).json({ error: "Unauthorized. Invalid or expired token." });
+    // If the app wasn't initialized, error.message will be "The default Firebase app does not exist."
+    // We send this exact message so the developer knows they forgot to add FIREBASE_SERVICE_ACCOUNT.
+    return res.status(401).json({ error: `Unauthorized. ${error.message}` });
   }
 }
 
