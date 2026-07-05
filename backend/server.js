@@ -962,7 +962,19 @@ app.get("/api/donors/search", (req, res) => {
   res.json(mockDonors);
 });
 import serverless from "serverless-http";
-export const handler = serverless(app);
+
+// Add a generic error handler to ensure we always return JSON instead of HTML on crash
+app.use((err, req, res, next) => {
+  console.error("Unhandled Express Error:", err);
+  res.status(500).json({ error: "Internal Server Error", detail: err.message || "Unknown error" });
+});
+
+// Configure serverless-http for Netlify
+// Netlify rewrites /api/* to /.netlify/functions/api/*
+// By setting basePath, serverless-http strips it so Express sees the correct /api/* route.
+export const handler = serverless(app, {
+  basePath: '/.netlify/functions'
+});
 export default app;
 
 if (!isNetlify && typeof import.meta !== 'undefined' && import.meta.url) {
