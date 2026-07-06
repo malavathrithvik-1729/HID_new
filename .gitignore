@@ -7,6 +7,7 @@ node_modules/
 # Firebase
 .firebase/
 firebase-debug.log
+firestore.rules
 
 # Netlify
 .netlify/
@@ -36,6 +37,20 @@ serviceAccountKey.json
 backend/serviceAccountKey.json
 backend/.env
 backend/*.env
+
+# Google Cloud & Firebase JSON Project Credentials
+vmed-id-*.json
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!firebase.json
+!firestore.indexes.json
+
+# Archive / Deployment Bundles
+*.zip
+deploy-*.json
+deploy-*.zip
 
 # Temporary scripts
 update_api_calls.js
