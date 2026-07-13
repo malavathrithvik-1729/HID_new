@@ -155,7 +155,7 @@ app.use("/api/", verifyAuthToken);
 // Providers are tried in order. If a provider responds with 429, the
 // next provider in the chain is tried automatically.
 
-const _geminiKey      = process.env.GEMINI_API_KEY;
+const _geminiKey      = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 const _groqKey        = process.env.GROQ_API_KEY;
 const _openRouterKey  = process.env.OPENROUTER_API_KEY;
 const GEMINI_MODEL    = "gemini-2.0-flash";
@@ -164,9 +164,10 @@ const _providers = [];
 
 if (_geminiKey) {
   _providers.push(new GeminiProvider(_geminiKey, GEMINI_MODEL));
-  console.log(`✅ Gemini provider ready (model: ${GEMINI_MODEL}, key: ...${_geminiKey.slice(-6)})`);
+  const keySource = process.env.GEMINI_API_KEY ? "GEMINI_API_KEY" : "GOOGLE_API_KEY";
+  console.log(`✅ Gemini provider ready (model: ${GEMINI_MODEL}, source: ${keySource}, key: ...${_geminiKey.slice(-6)})`);
 } else {
-  console.warn("⚠️  GEMINI_API_KEY missing — Gemini provider skipped.");
+  console.warn("⚠️  GEMINI_API_KEY / GOOGLE_API_KEY missing — Gemini provider skipped.");
 }
 
 if (_groqKey) {
