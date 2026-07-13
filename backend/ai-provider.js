@@ -323,20 +323,27 @@ export class AIProvider {
         continue;
       }
 
-      // Non-retriable error (400, 401, 403...) — return immediately, don't failover
+      // Auth errors (401/403) — the key for THIS provider is bad, but
+      // other providers have independent keys, so try the next one.
+      if (result.status === 401 || result.status === 403) {
+        console.warn(`🔑 [${provider.name}] Auth error (${result.status}): ${result.error}. Trying next provider...`);
+        continue;
+      }
+
+      // Non-retriable request error (400) — return immediately, don't failover
       console.error(`❌ [${provider.name}] Error ${result.status}: ${result.error}`);
       return { ...result, provider: provider.name };
     }
 
     // All providers exhausted
-    console.error("❌ All AI providers exhausted or rate-limited.");
+    console.error("❌ All AI providers exhausted (rate-limited or auth failed).");
     return {
       ok:          false,
-      status:      429,
+      status:      503,
       text:        null,
       finishReason: null,
       raw:         {},
-      error:       "All AI providers are currently rate-limited. Please try again in a moment.",
+      error:       "All AI providers failed. Please check API keys or try again in a moment.",
       provider:    "none",
     };
   }
