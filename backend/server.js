@@ -9,6 +9,10 @@ import admin       from "firebase-admin";
 
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const pdfParse = require("pdf-parse");
 
 import {
   AIProvider,
@@ -784,10 +788,23 @@ app.post("/api/ai/extract", async (req, res) => {
         const buffer = await downloadRes.arrayBuffer();
         const detectedMime = downloadRes.headers.get("content-type") || "application/pdf";
         
-        // Convert to base64 for Gemini
-        contentData = Buffer.from(buffer).toString("base64");
-        mimeType = detectedMime;
-        extractionPrompt = "Analyze this medical document (PDF/Image). Extract the patient's condition, laboratory results, and doctor's impressions. Provide a concise, structured medical summary.";
+        if (detectedMime.includes("pdf")) {
+            try {
+                console.log("📄 PDF detected, parsing text locally...");
+                const pdfData = await pdfParse(Buffer.from(buffer));
+                contentData = pdfData.text;
+                mimeType = "text/plain";
+            } catch (err) {
+                console.error("⚠️ PDF parsing failed, falling back to binary:", err);
+                contentData = Buffer.from(buffer).toString("base64");
+                mimeType = detectedMime;
+            }
+        } else {
+            contentData = Buffer.from(buffer).toString("base64");
+            mimeType = detectedMime;
+        }
+        
+        extractionPrompt = "Analyze this medical document. Extract the patient's condition, laboratory results, and doctor's impressions. Provide a concise, structured medical summary.";
     }
 
     // 3. Send to AI Provider for Extraction
