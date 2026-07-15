@@ -19,92 +19,13 @@ export const SAFETY_SETTINGS = [
   { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
 ];
 
-// ── GEMINI PROVIDER ───────────────────────────────────────────────────────────
-export class GeminiProvider {
-  /**
-   * @param {string} apiKey
-   * @param {string} model  e.g. "gemini-2.0-flash"
-   */
-  constructor(apiKey, model = "gemini-2.0-flash") {
-    this.name    = "Gemini";
-    this.apiKey  = apiKey;
-    this.model   = model;
-  }
-
-  get _url() {
-    return `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
-  }
-
-  /**
-   * Build the Gemini `contents` array from the canonical chat format.
-   *
-   * @param {Array}    history         [{role:"user"|"model", parts:[{text}]}]
-   * @param {string}   userMessage     The final user message for this turn
-   */
-  buildContents(history = [], userMessage) {
-    return [
-      ...history.map(h => ({
-        role:  h.role === "user" ? "user" : "model",
-        parts: [{ text: String(h.text || h.parts?.[0]?.text || "") }]
-      })),
-      { role: "user",  parts: [{ text: userMessage }] },
-    ];
-  }
-
-  /**
-   * Build the Gemini system_instruction object.
-   *
-   * @param {string} systemPrompt
-   * @param {string} openingAck
-   */
-  buildSystemInstruction(systemPrompt, openingAck) {
-    return {
-      role: "system",
-      parts: [{ text: `${systemPrompt}\n\nAcknowledgement: ${openingAck}` }]
-    };
-  }
-
-  /**
-   * Call Gemini generateContent.
-   *
-   * @param {object}  opts
-   * @param {Array}   opts.contents          Gemini-format contents array
-   * @param {object}  opts.generationConfig
-   * @param {Array}   opts.safetySettings
-   * @returns {Promise<ProviderResult>}
-   */
-  async call({ contents, systemInstruction, generationConfig, safetySettings }) {
-    let resp, data;
-    try {
-      const body = { contents, generationConfig, safetySettings };
-      if (systemInstruction) body.system_instruction = systemInstruction;
-
-      resp = await fetch(this._url, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(body),
-      });
-      data = await resp.json();
-    } catch (e) {
-      return { ok: false, status: 0, text: null, finishReason: null, error: e.message };
-    }
-
-    const candidate    = data.candidates?.[0];
-    const text         = candidate?.content?.parts?.[0]?.text ?? null;
-    const finishReason = candidate?.finishReason ?? null;
-    const errCode      = data.error?.code  || (resp.ok ? null : resp.status);
-    const errMsg       = data.error?.message || null;
-
-    return {
-      ok:          resp.ok && !data.error,
-      status:      errCode ?? resp.status,
-      text,
-      finishReason,
-      raw:         data,
-      error:       errMsg,
-    };
-  }
-}
+// ── SAFETY SETTINGS (Gemini-specific, ignored by OpenAI-compat providers) ────
+export const SAFETY_SETTINGS = [
+  { category: "HARM_CATEGORY_HARASSMENT",        threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+  { category: "HARM_CATEGORY_HATE_SPEECH",       threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+  { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+  { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+];
 
 // ── GROQ PROVIDER (OpenAI-compatible) ─────────────────────────────────────────
 export class GroqProvider {
@@ -188,70 +109,7 @@ export class GroqProvider {
   }
 }
 
-// ── OPENROUTER PROVIDER (OpenAI-compatible free-tier) ─────────────────────────
-export class OpenRouterProvider {
-  /**
-   * @param {string} apiKey
-   * @param {string} model   e.g. "meta-llama/llama-3.3-70b-instruct:free"
-   */
-  constructor(apiKey, model = "meta-llama/llama-3.3-70b-instruct:free") {
-    this.name   = "OpenRouter";
-    this.apiKey = apiKey;
-    this.model  = model;
-    this._url   = "https://openrouter.ai/api/v1/chat/completions";
-  }
 
-  _buildMessages(systemPrompt, history = [], userMessage) {
-    const messages = [];
-    if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
-    for (const h of history) {
-      const role    = h.role === "user" ? "user" : "assistant";
-      const content = h.text || h.parts?.[0]?.text || "";
-      if (content) messages.push({ role, content });
-    }
-    messages.push({ role: "user", content: userMessage });
-    return messages;
-  }
-
-  async call({ systemPrompt, history = [], userMessage, generationConfig = {} }) {
-    const messages = this._buildMessages(systemPrompt, history, userMessage);
-
-    let resp, data;
-    try {
-      resp = await fetch(this._url, {
-        method:  "POST",
-        headers: {
-          "Content-Type":  "application/json",
-          "Authorization": `Bearer ${this.apiKey}`,
-          "HTTP-Referer":  "https://vmed-id.app",
-          "X-Title":       "V-Med ID",
-        },
-        body: JSON.stringify({
-          model:       this.model,
-          messages,
-          temperature: generationConfig.temperature    ?? 0.7,
-          max_tokens:  generationConfig.maxOutputTokens ?? 4096,
-        }),
-      });
-      data = await resp.json();
-    } catch (e) {
-      return { ok: false, status: 0, text: null, finishReason: null, error: e.message };
-    }
-
-    const text         = data.choices?.[0]?.message?.content ?? null;
-    const finishReason = data.choices?.[0]?.finish_reason    ?? null;
-    const errMsg       = data.error?.message ?? null;
-
-    return {
-      ok:          resp.ok && !data.error,
-      status:      resp.status,
-      text,
-      finishReason,
-      raw:         data,
-      error:       errMsg,
-    };
-  }
-}
 
 // ── AI PROVIDER ORCHESTRATOR ─────────────────────────────────────────────────
 /**
@@ -301,16 +159,7 @@ export class AIProvider {
    */
   async chat({ systemPrompt, openingAck = "Understood.", history = [], userMessage, generationConfig = {}, safetySettings = [] }) {
     for (const provider of this.providers) {
-      let result;
-
-      if (provider instanceof GeminiProvider) {
-        const contents = provider.buildContents(history, userMessage);
-        const systemInstruction = provider.buildSystemInstruction(systemPrompt, openingAck);
-        result = await provider.call({ contents, systemInstruction, generationConfig, safetySettings });
-      } else {
-        // OpenAI-compatible provider (Groq, OpenRouter)
-        result = await provider.call({ systemPrompt, history, userMessage, generationConfig });
-      }
+      let result = await provider.call({ systemPrompt, history, userMessage, generationConfig });
 
       if (result.ok) {
         console.log(`✅ [${provider.name}] responded successfully.`);

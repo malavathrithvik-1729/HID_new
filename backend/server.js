@@ -12,9 +12,7 @@ import { dirname, join } from "path";
 
 import {
   AIProvider,
-  GeminiProvider,
   GroqProvider,
-  OpenRouterProvider,
   SAFETY_SETTINGS,
 } from "./ai-provider.js";
 
@@ -155,37 +153,15 @@ app.use("/api/", verifyAuthToken);
 // Providers are tried in order. If a provider responds with 429, the
 // next provider in the chain is tried automatically.
 
-const _geminiKey      = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 const _groqKey        = process.env.GROQ_API_KEY;
-const _openRouterKey  = process.env.OPENROUTER_API_KEY;
-const GEMINI_MODEL    = "gemini-2.0-flash";
 
 const _providers = [];
 
-if (_geminiKey) {
-  _providers.push(new GeminiProvider(_geminiKey, GEMINI_MODEL));
-  const keySource = process.env.GEMINI_API_KEY ? "GEMINI_API_KEY" : "GOOGLE_API_KEY";
-  console.log(`✅ Gemini provider ready (model: ${GEMINI_MODEL}, source: ${keySource}, key: ...${_geminiKey.slice(-6)})`);
-} else {
-  console.warn("⚠️  GEMINI_API_KEY / GOOGLE_API_KEY missing — Gemini provider skipped.");
-}
-
 if (_groqKey) {
   _providers.push(new GroqProvider(_groqKey));
-  console.log(`✅ Groq provider ready (fallback, key: ...${_groqKey.slice(-6)})`);
+  console.log(`✅ Groq provider ready (primary, key: ...${_groqKey.slice(-6)})`);
 } else {
-  console.log("ℹ️  GROQ_API_KEY not set — Groq fallback disabled.");
-}
-
-if (_openRouterKey) {
-  _providers.push(new OpenRouterProvider(_openRouterKey));
-  console.log(`✅ OpenRouter provider ready (tertiary fallback, key: ...${_openRouterKey.slice(-6)})`);
-} else {
-  console.log("ℹ️  OPENROUTER_API_KEY not set — OpenRouter fallback disabled.");
-}
-
-if (_providers.length === 0) {
-  console.error("❌ FATAL: No AI providers configured. Set at least GEMINI_API_KEY in .env");
+  console.error("❌ FATAL: GROQ_API_KEY not set. AI features will not work.");
 }
 
 /**
@@ -194,9 +170,6 @@ if (_providers.length === 0) {
  * Use aiProvider.generate() for single-turn structured outputs.
  */
 const aiProvider = new AIProvider(_providers);
-
-// Helper for legacy/multimodal calls that bypass the provider chain
-const getGeminiUrl = () => `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${_geminiKey}`;
 
 
 // --- GOOGLE DRIVE HELPERS ---
@@ -470,7 +443,7 @@ ${docsText}
 
 // ── HEALTH CHECK ──────────────────────────────────────────────────
 app.get("/", (req, res) => {
-  res.json({ status: "ok", model: GEMINI_MODEL, service: "V-Med AI Backend" });
+  res.json({ status: "ok", provider: "Groq", service: "V-Med AI Backend" });
 });
 
 // ── HEALTH TIPS ENDPOINT ──────────────────────────────────────────
@@ -817,37 +790,21 @@ app.post("/api/ai/extract", async (req, res) => {
         extractionPrompt = "Analyze this medical document (PDF/Image). Extract the patient's condition, laboratory results, and doctor's impressions. Provide a concise, structured medical summary.";
     }
 
-    // 3. Send to Gemini for Extraction
-    const parts = [{ text: extractionPrompt }];
+    // 3. Send to AI Provider for Extraction
+    let prompt = extractionPrompt;
     if (mimeType === "text/plain") {
-        parts.push({ text: `DOCUMENT CONTENT:\n${contentData}` });
+        prompt += `\n\nDOCUMENT CONTENT:\n${contentData}`;
     } else {
-        parts.push({
-            inlineData: {
-                mimeType: mimeType,
-                data: contentData
-            }
-        });
+        prompt += `\n\n[Note: Binary/Image extraction is limited via standard text providers without vision. Raw base64 data follows, do your best to analyze if possible, else state limitations.]\n${contentData.substring(0, 1000)}...`;
     }
 
-    const aiRes = await fetch(getGeminiUrl(), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
-        safetySettings: SAFETY_SETTINGS
-      })
-    });
+    const aiRes = await aiProvider.generate(prompt, { temperature: 0.2, maxOutputTokens: 2048 });
 
-    const data = await aiRes.json();
-    const summary = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!summary) {
-        throw new Error(data.error?.message || "Gemini failed to generate extraction summary.");
+    if (!aiRes.ok || !aiRes.text) {
+        throw new Error(aiRes.error || "AI failed to generate extraction summary.");
     }
 
-    res.json({ summary: summary.trim() });
+    res.json({ summary: aiRes.text.trim() });
 
   } catch (error) {
     console.error("Extraction error:", error);
