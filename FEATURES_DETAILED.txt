@@ -1,0 +1,126 @@
+V‑Med ID — Detailed Feature List
+
+1) Unified Medical Identity (V‑Med ID)
+- Purpose: Provide a stable, human-friendly identifier that maps to a secure Firebase account and enables lookup prior to authentication.
+- Components: `vmedIndex` Firestore collection (public read), V‑Med ID generator in `js/app.js`, login helper `js/auth.js` (`loginWithVMEDId`).
+- Data flow: Signup creates `vmedIndex/{vmedId}` → Login resolves vmedId to email → Firebase Auth signInWithEmailAndPassword.
+- Security: `vmedIndex` is readable but write-restricted by Firestore rules to prevent spoofing; role field immutability is enforced.
+
+2) Authentication & Access Control
+- Auth: Firebase Email/Password; ID tokens used for backend authorization.
+- Route protection: `js/routeGuard.js` validates token and role on page load; redirects unauthorized users.
+- RBAC: Roles = Patient, Doctor, Government. Firestore rules and frontend guard together enforce permission boundaries.
+
+3) Patient Dashboard (comprehensive)
+- Overview: Consolidated SPA in `screens/patient_dashboard/index.html` with `dashboard.js`.
+- Sections: home, vitals, medications, visits, documents, family, SOS, blood donor, settings, AI chat.
+- Data sources: `users/{uid}` profile, `medical_records`, vitals history arrays in user doc.
+- Key interactions:
+  * Add/Update vitals: `addVital()` writes to user doc arrays; triggers listeners for realtime updates.
+  * Medications: CRUD with Firestore arrayUnion/arrayRemove operations.
+  * Documents: Upload UI stores metadata (file storage reference or base64 link) in `documents` array.
+- UX/Offline: Client caching via `vStore.js` and localStorage to reduce reads and provide quick UI responses.
+
+4) Doctor Dashboard (clinical workflows)
+- Purpose: Manage linked patients, consultations, records, and AI-assisted decision support.
+- Pages: patient list, add patient, consultation editor, upload docs, patient detail, history, AI support.
+- Features:
+  * Link/unlink patients: doctor writes reference in patient profile (requires patient consent/security checks).
+  * Consultation recording: structured notes, prescriptions, and attachments stored in `users/{patientUid}/consultations` or user doc fields.
+  * Real-time sync: doctors see updates immediately with Firestore listeners.
+- Security & audit: Writes validated by rules (only doctors may append consultation entries); recommend server-side audit logging for sensitive edits.
+
+5) Government Dashboard (public health)
+- Focus: Aggregate analytics, outbreak tracking, vaccination stats, and registered providers.
+- Data: Aggregations derived from Firestore (via cloud function or backend endpoints) to avoid exposing individual PII.
+- Access: Government role has read privileges for aggregated and many profile fields; detailed PII access is controlled by rules and policy.
+
+6) AI Capabilities (chat, analysis, forecasting)
+- Providers: Primary = Gemini (structured output, safety filters); Fallback = Groq (latency/429 recovery); optional OpenRouter compatibility.
+- Engine: `backend/ai-provider.js` orchestrates provider selection, retries, exponential backoff, and caching.
+- Use cases:
+  * Chat assistant: conversational health guidance; context includes user vitals and history.
+  * Health analysis: diagnostic hints, red-flag detection, and recommended actions (non-diagnostic; disclaimers required).
+  * Forecasting: short-term vital sign trend forecasts using time series analysis plus model output.
+- Safety & Privacy:
+  * Input sanitization before sending to provider.
+  * Gemini safety settings block medium+ harmful content.
+  * Remove or pseudonymize PII in prompts where possible; keep raw PII out of third-party logs when required.
+- API: frontend POSTs to `/api/chat` with message, history, and patientData; backend verifies token then calls providers.
+
+7) API & Backend Services
+- Core endpoints: `/api/health`, `/api/chat`, `/api/forecast`, `/api/health-analysis`, `/api/news`.
+- Middleware: Token verification (Firebase Admin), CORS whitelist, JSON body parsing, rate limiting (`express-rate-limit`).
+- Caches: In-memory caches (healthCache, forecastCache, chatCache) reduce repeated model calls.
+- Error handling: 429 handling, provider fallback to Groq, structured error responses to the client.
+
+8) Data Model & Firestore Design
+- Primary documents: `users/{uid}`, `vmedIndex/{vmedId}`, `medical_records/{recordId}` (or nested under users), supplementary collections for consultations/visits.
+- Arrays & sub-objects: `vitalsHistory`, `medications`, `documents`, `visits`, `familyMembers`, `linkedDoctors`.
+- Indexing: `firestore.indexes.json` includes common composite indexes for queries (patients by doctor, visits by date).
+- Rules: `firestore.rules` enforces ownership, role checks, and immutability constraints (e.g., role cannot be changed by user).
+
+9) Realtime Sync & Offline Considerations
+- Real-time: Firestore listeners update UI immediately on backend writes.
+- Offline: Client caching reduces reads; writes use optimistic updates via local state then commit to Firestore.
+- Conflict resolution: Firestore last-write-wins; recommend documenting conflict policies and adding server-side merging for critical records.
+
+10) Emergency (SOS) & Notifications
+- SOS: One-click alerts from patient UI (`sos.html`) that notify family, linked doctors, and nearby hospitals (via geolocation if enabled).
+- Delivery: Could use push notifications or SMS via external provider; current code triggers Firestore writes for downstream listeners or cloud functions.
+- Safety: Ensure user consent for location sharing; protect SOS endpoints with rate-limits to avoid abuse.
+
+11) Blood Donor Registry & Community Features
+- Registry: Patients can register as donors in `blood_donor` section; entries include blood group, availability, and contact preferences.
+- Search: Doctors and patients can search donors by location and blood type (client-side filtering or backend index query).
+- Privacy: Donor contact info visibility controlled by user settings and rules.
+
+12) Documents & Media Management
+- Uploads: UI allows uploading medical documents; metadata stored in user doc arrays; actual large files should be stored in Cloud Storage (recommended) with references in Firestore.
+- Versioning: Document entries include timestamp and uploader role; recommend adding version IDs for audit and rollback.
+
+13) Internationalization (i18n)
+- Languages: English (`lang/en.json`), Hindi (`lang/hi.json`), Telugu (`lang/te.json`).
+- Implementation: `i18n.js` performs simple key → translated string replacement across sections; language pref persisted in localStorage.
+- UX: Date/number formatting and RTL/support considerations should be added if expanding languages.
+
+14) Onboarding & Signup Flow
+- Role selection page → role-specific forms (`signup_patient.html` / `signup_doctor.html`) → `signupUser()` (Auth) → `save[Role]Application()` writes profile and `vmedIndex` entry.
+- Identity fields: Name, DOB, Aadhaar/ABHA IDs, gender, blood group, occupation, emergency contacts.
+- Doctor verification: Doctor registrations capture license and specialization; recommend an admin verification step before granting full doctor privileges.
+
+15) Login Flow & Account Recovery
+- VMED login: `loginWithVMEDId()` resolves to email → `signInWithEmailAndPassword`.
+- Recovery: Standard Firebase password reset flows apply; consider OTP flows in `screens/login/otp.html` for alternate recovery.
+
+16) Monitoring, Logging & Audit
+- Recommendations: Server-side audit logs for critical actions (doctor updates, SOS triggers, role changes); monitor AI usage and quota consumption.
+- Alerts: Rate-limit alerts and provider error monitoring; track 429s and fallback frequency.
+
+17) Performance & Cost Controls
+- Rate limiting of API to control AI billings (`express-rate-limit`).
+- Caching of AI results to cut duplicate model calls.
+- Minimize unnecessary Firestore reads by bundling and client caching.
+
+18) Deployment & CI Considerations
+- Backend: packaged for Netlify Functions via `serverless-http` (see `netlify/functions/`).
+- Frontend: static site deployable to Firebase Hosting.
+- Secrets: Service account and provider API keys loaded via `.env` or platform secrets; never commit `serviceAccountKey.json` to public repos.
+
+19) Privacy, Compliance & Data Retention
+- PII handling: Minimize sending raw identifiers to third-party AI providers; pseudonymize when possible.
+- Retention: Define retention policy for medical records, logs, and AI transcripts.
+- Consent: Explicit consent required for sharing location and for contacting donors or family.
+
+20) Extensibility & Future Enhancements
+- Add server-side scheduled jobs (cloud functions) for analytics, alerts, and data aggregation.
+- Add role verification workflow for doctors (manual or automated license checks).
+- Add push notifications, SMS gateway, or email services for alerts and reminders.
+- Implement more granular audit trails and role-based reporting for government users.
+
+Notes & Quick References
+- Key frontend files: `js/app.js`, `js/auth.js`, `js/firebase.js`, `js/routeGuard.js`, `screens/patient_dashboard/`.
+- Backend: `backend/server.js`, `backend/ai-provider.js`, `netlify/functions/`.
+- Config: `firebase.json`, `firestore.rules`, `firestore.indexes.json`, `netlify.toml`.
+
+End of FEATURES_DETAILED.txt

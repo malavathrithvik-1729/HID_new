@@ -376,6 +376,31 @@ async function initPatientDetail(data, pid) {
     cont.appendChild(div);
   };
 
+  const getMedicationRowDetails = (row) => {
+    const name = row.querySelector(".med-name")?.value?.trim() || "";
+    const dose = row.querySelector(".med-dosage")?.value?.trim() || "";
+    const medFreq = row.querySelector(".med-freq")?.value?.trim() || "";
+    const timingEl = row.querySelector(".med-timing");
+    const endEl = row.querySelector(".med-end");
+    const mEl = row.querySelector(".med-timing-m");
+    const aEl = row.querySelector(".med-timing-a");
+    const nEl = row.querySelector(".med-timing-n");
+
+    const hasTimingCheckboxes = Boolean(mEl && aEl && nEl);
+    const m = hasTimingCheckboxes && mEl.checked ? "M" : "-";
+    const a = hasTimingCheckboxes && aEl.checked ? "A" : "-";
+    const n = hasTimingCheckboxes && nEl.checked ? "N" : "-";
+    const frequencyText = hasTimingCheckboxes ? `(${m}-${a}-${n})` : medFreq;
+
+    return {
+      name,
+      dose,
+      frequencyText,
+      timing: timingEl?.value || "",
+      end: endEl?.value || ""
+    };
+  };
+
   if ($("btnSaveConsultDetail")) {
     $("btnSaveConsultDetail").onclick = async () => {
       const btn = $("btnSaveConsultDetail");
@@ -386,15 +411,8 @@ async function initPatientDetail(data, pid) {
         notes:     $("detVisitNotes").value,
         date:      new Date().toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" }),
         prescriptions: Array.from(document.querySelectorAll("#detMedsContainer .med-row")).map(row => {
-          const name = row.querySelector(".med-name").value;
-          const dose = row.querySelector(".med-dosage").value;
-          const m = row.querySelector(".med-timing-m").checked ? "M" : "-";
-          const a = row.querySelector(".med-timing-a").checked ? "A" : "-";
-          const n = row.querySelector(".med-timing-n").checked ? "N" : "-";
-          const freq = `(${m}-${a}-${n})`;
-          const time = row.querySelector(".med-timing")?.value || "";
-          const end  = row.querySelector(".med-end")?.value || "";
-          return name ? `${name} (${dose} ${freq}) - ${time}${end ? " until " + end : ""}` : null;
+          const { name, dose, frequencyText, timing, end } = getMedicationRowDetails(row);
+          return name ? `${name} (${dose}${frequencyText ? ` ${frequencyText}` : ""})${timing ? ` - ${timing}` : ""}${end ? " until " + end : ""}` : null;
         }).filter(Boolean)
       };
       if (!consultData.reason) { alert("Reason is required"); return; }
@@ -403,17 +421,14 @@ async function initPatientDetail(data, pid) {
         await updateDoc(doc(db, "users", pid), {
           visits: arrayUnion(consultData),
           medications: arrayUnion(...Array.from(document.querySelectorAll("#detMedsContainer .med-row")).map(row => {
-            const name = row.querySelector(".med-name").value;
+            const { name, dose, frequencyText, timing, end } = getMedicationRowDetails(row);
             if (!name) return null;
-            const m = row.querySelector(".med-timing-m").checked ? "M" : "-";
-            const a = row.querySelector(".med-timing-a").checked ? "A" : "-";
-            const n = row.querySelector(".med-timing-n").checked ? "N" : "-";
             return { 
               name, 
-              dosage: row.querySelector(".med-dosage").value, 
-              frequency: `${m}-${a}-${n}`, 
-              timing: row.querySelector(".med-timing")?.value || "After Food",
-              endDate: row.querySelector(".med-end")?.value || "",
+              dosage: dose, 
+              frequency: frequencyText || "As needed", 
+              timing: timing || "After Food",
+              endDate: end,
               active: true 
             };
           }).filter(Boolean))
