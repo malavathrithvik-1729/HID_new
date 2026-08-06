@@ -101,18 +101,28 @@ try {
 
   if (saString) {
     try {
-      // Netlify may store real newline characters (\n control char) inside
-      // the JSON string, which breaks JSON.parse. We escape them back.
-      const fixedString = saString
-        .replace(/\r\n/g, '\\n')   // Windows CRLF → escaped \n
-        .replace(/\n/g, '\\n')     // real LF → escaped \n
-        .replace(/\r/g, '\\n');    // stray CR → escaped \n
-      serviceAccount = JSON.parse(fixedString);
+      const trimmedString = saString.trim();
+      serviceAccount = JSON.parse(trimmedString);
       console.log("✅ Parsed FIREBASE_SERVICE_ACCOUNT from environment.");
     } catch (e) {
-      console.error("❌ Invalid FIREBASE_SERVICE_ACCOUNT JSON:", e.message);
-      console.error("   Raw value starts with:", saString.substring(0, 80));
-      serviceAccount = join(dirnameShim, "serviceAccountKey.json");
+      try {
+        const fixedPrivateKey = saString.replace(
+          /("private_key"\s*:\s*")( [\s\S]*?)(")/m,
+          (_match, prefix, keyBody, suffix) => {
+            const escaped = keyBody
+              .replace(/\r\n/g, '\n')
+              .replace(/\n/g, '\\n')
+              .replace(/\r/g, '\\n');
+            return `${prefix}${escaped}${suffix}`;
+          }
+        );
+        serviceAccount = JSON.parse(fixedPrivateKey);
+        console.log("✅ Parsed FIREBASE_SERVICE_ACCOUNT from environment after escaping private_key newlines.");
+      } catch (innerError) {
+        console.error("❌ Invalid FIREBASE_SERVICE_ACCOUNT JSON:", innerError.message);
+        console.error("   Raw value starts with:", saString.substring(0, 80));
+        serviceAccount = join(dirnameShim, "serviceAccountKey.json");
+      }
     }
   } else {
     console.warn("⚠️ FIREBASE_SERVICE_ACCOUNT not set. Falling back to serviceAccountKey.json");
