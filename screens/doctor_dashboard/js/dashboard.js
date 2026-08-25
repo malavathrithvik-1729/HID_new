@@ -1,12 +1,149 @@
 import { auth, db } from "../../../js/firebase.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
-  doc, getDoc, updateDoc, arrayUnion
+  doc, getDoc, updateDoc, arrayUnion, collection, query, where, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { decryptData } from "../../../js/security.js";
 
 const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" 
   ? "http://127.0.0.1:3000" 
   : "";
+
+let html5QrScanner = null;
+
+window.openQrScanner = function () {
+  const modal = document.getElementById("cameraQrModal");
+  if (!modal) return;
+  modal.style.display = "flex";
+
+  if (typeof Html5Qrcode !== "undefined") {
+    html5QrScanner = new Html5Qrcode("qrReader");
+    html5QrScanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      async (decodedText) => {
+        console.log("📷 QR Scanned Code:", decodedText);
+        let decrypted = await decryptData(decodedText);
+        if (!decrypted && decodedText.includes("VMED-")) {
+          // Plain text fallback if legacy QR code
+          decrypted = { vmedId: decodedText.match(/VMED-[a-z]-[a-z0-9]+-\d+/i)?.[0] };
+        }
+
+        if (decrypted && decrypted.vmedId) {
+          window.closeQrScannerModal();
+          alert(`✅ QR Decrypted Successfully!\nPatient V-Med ID: ${decrypted.vmedId}\nName: ${decrypted.fullName || 'N/A'}\nBlood Group: ${decrypted.bloodGroup || 'N/A'}\n\nAccess granted without OTP!`);
+          
+          // Select patient directly in UI
+          const input = document.getElementById("patientVmedInput") || document.getElementById("searchVmedId");
+          if (input) {
+            input.value = decrypted.vmedId;
+            const btn = document.getElementById("btnSearchPatient") || document.getElementById("btnAddPatientConfirm");
+            if (btn) btn.click();
+          }
+        } else {
+          alert("Invalid or corrupted QR Code. Could not decrypt V-Med patient payload.");
+        }
+      },
+      (error) => {}
+    ).catch(e => console.warn("Camera QR Error:", e));
+  } else {
+    alert("Html5Qrcode scanner library is loading. Please try again in a moment.");
+  }
+};
+
+window.closeQrScannerModal = function () {
+  const modal = document.getElementById("cameraQrModal");
+  if (modal) modal.style.display = "none";
+  if (html5QrScanner) {
+    html5QrScanner.stop().then(() => html5QrScanner.clear()).catch(() => {});
+    html5QrScanner = null;
+  }
+};
+
+window.requestPatientOtp = async function (vmedId, actionName, onVerified) {
+  try {
+    const res = await fetch(`${API_BASE}/api/otp/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (auth.currentUser ? await auth.currentUser.getIdToken() : "") },
+      body: JSON.stringify({ vmedId, action: actionName })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to generate OTP");
+
+    const modal = document.getElementById("doctorOtpModal");
+    const input = document.getElementById("doctorOtpInput");
+    const errEl = document.getElementById("doctorOtpError");
+    const verifyBtn = document.getElementById("doctorOtpVerifyBtn");
+
+    if (input) input.value = "";
+    if (errEl) errEl.style.display = "none";
+    if (modal) modal.style.display = "flex";
+
+    // Simulate OTP alert on patient screen / demo log
+    console.log(`🔔 DEMO OTP for ${vmedId}: ${data.code}`);
+    alert(`[DEMO NOTIFICATION] OTP sent to patient: ${data.code}`);
+
+    verifyBtn.onclick = async () => {
+      const code = input.value.trim();
+      if (!code || code.length !== 6) {
+        errEl.textContent = "Please enter 6 digits.";
+        errEl.style.display = "block";
+        return;
+      }
+      verifyBtn.disabled = true;
+      verifyBtn.textContent = "Verifying...";
+
+      try {
+        const vRes = await fetch(`${API_BASE}/api/otp/verify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (auth.currentUser ? await auth.currentUser.getIdToken() : "") },
+          body: JSON.stringify({ vmedId, code })
+        });
+        const vData = await vRes.json();
+
+        if (!vRes.ok || !vData.success) {
+          errEl.textContent = vData.error || "Invalid OTP.";
+          errEl.style.display = "block";
+          verifyBtn.disabled = false;
+          verifyBtn.textContent = "Verify & Proceed";
+          return;
+        }
+
+        modal.style.display = "none";
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = "Verify & Proceed";
+        if (typeof onVerified === "function") onVerified();
+      } catch (e) {
+        errEl.textContent = e.message;
+        errEl.style.display = "block";
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = "Verify & Proceed";
+      }
+    };
+  } catch (e) {
+    alert("OTP Error: " + e.message);
+  }
+};
+
+// ── REAL-TIME EMERGENCY SOS LISTENER FOR DOCTOR ─────────────────────
+(function initDoctorSosListener() {
+  try {
+    const q = query(collection(db, "sos_alerts"), where("status", "==", "ACTIVE"));
+    onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const alertDoc = snapshot.docs[0].data();
+        const banner = document.getElementById("doctorSosBanner");
+        const details = document.getElementById("doctorSosDetails");
+        if (banner && details) {
+          details.textContent = `Patient: ${alertDoc.vmedId || 'Unknown'} | Location: ${alertDoc.location || 'Near clinic'}`;
+          banner.style.display = "flex";
+        }
+      }
+    });
+  } catch (e) {
+    console.warn("Realtime SOS listener failed:", e);
+  }
+})();
 
 
 // ── DARK MODE ─────────────────────────────────────────────────
@@ -95,9 +232,22 @@ function loadSection(btn, page, arg = null) {
   loadPage(page, arg);
 }
 
-function toggleSidebar() {
-  document.getElementById("sidebar").classList.toggle("collapsed");
+function toggleSidebar(force) {
+  const sidebar = document.getElementById("sidebar");
+  const overlay = document.getElementById("sidebarOverlay");
+  if (!sidebar) return;
+
+  const isMobile = window.innerWidth <= 900;
+  if (isMobile) {
+    const shouldOpen = typeof force === "boolean" ? force : !sidebar.classList.contains("open");
+    sidebar.classList.toggle("open", shouldOpen);
+    overlay?.classList.toggle("open", shouldOpen);
+    if (overlay) overlay.style.display = shouldOpen ? "block" : "none";
+    return;
+  }
+  sidebar.classList.toggle("collapsed");
 }
+window.toggleSidebar = toggleSidebar;
 
 async function handleLogout() {
   await signOut(auth);
@@ -416,26 +566,30 @@ async function initPatientDetail(data, pid) {
         }).filter(Boolean)
       };
       if (!consultData.reason) { alert("Reason is required"); return; }
-      btn.disabled = true;
-      try {
-        await updateDoc(doc(db, "users", pid), {
-          visits: arrayUnion(consultData),
-          medications: arrayUnion(...Array.from(document.querySelectorAll("#detMedsContainer .med-row")).map(row => {
-            const { name, dose, frequencyText, timing, end } = getMedicationRowDetails(row);
-            if (!name) return null;
-            return { 
-              name, 
-              dosage: dose, 
-              frequency: frequencyText || "As needed", 
-              timing: timing || "After Food",
-              endDate: end,
-              active: true 
-            };
-          }).filter(Boolean))
-        });
-        msg.className = "alert success"; msg.textContent = "Consultation saved!"; msg.style.display = "block";
-        setTimeout(() => loadPage("patient_detail", pid), 1000);
-      } catch (e) { btn.disabled = false; alert(e.message); }
+
+      const patientVmed = p.vmedId || "PATIENT";
+      window.requestPatientOtp(patientVmed, "Add Consultation & Prescriptions", async () => {
+        btn.disabled = true;
+        try {
+          await updateDoc(doc(db, "users", pid), {
+            visits: arrayUnion(consultData),
+            medications: arrayUnion(...Array.from(document.querySelectorAll("#detMedsContainer .med-row")).map(row => {
+              const { name, dose, frequencyText, timing, end } = getMedicationRowDetails(row);
+              if (!name) return null;
+              return { 
+                name, 
+                dosage: dose, 
+                frequency: frequencyText || "As needed", 
+                timing: timing || "After Food",
+                endDate: end,
+                active: true 
+              };
+            }).filter(Boolean))
+          });
+          msg.className = "alert success"; msg.textContent = "Consultation saved!"; msg.style.display = "block";
+          setTimeout(() => loadPage("patient_detail", pid), 1000);
+        } catch (e) { btn.disabled = false; alert(e.message); }
+      });
     };
   }
 
@@ -456,13 +610,17 @@ async function initPatientDetail(data, pid) {
         addedBy: data.identity?.fullName || "Doctor"
       };
       if (!docData.title || !docData.externalUrl) { alert("Title and URL required"); return; }
-      btn.disabled = true;
-      try {
-        await updateDoc(doc(db, "users", pid), { documents: arrayUnion(docData) });
-        const msg = $("addDocDetMsg");
-        if (msg) { msg.className = "alert success"; msg.textContent = "Verified document added!"; msg.style.display = "block"; }
-        setTimeout(() => loadPage("patient_detail", pid), 1000);
-      } catch (e) { btn.disabled = false; alert(e.message); }
+
+      const patientVmed = p.vmedId || "PATIENT";
+      window.requestPatientOtp(patientVmed, "Upload Clinical Document", async () => {
+        btn.disabled = true;
+        try {
+          await updateDoc(doc(db, "users", pid), { documents: arrayUnion(docData) });
+          const msg = $("addDocDetMsg");
+          if (msg) { msg.className = "alert success"; msg.textContent = "Verified document added!"; msg.style.display = "block"; }
+          setTimeout(() => loadPage("patient_detail", pid), 1000);
+        } catch (e) { btn.disabled = false; alert(e.message); }
+      });
     };
   }
 
@@ -674,45 +832,46 @@ function initAddPatient(data) {
 
   addBtn?.addEventListener("click", async () => {
     if (!foundPatientId || !foundPatient) { showMsg("error", "Please search for a patient first."); return; }
-    addBtn.disabled    = true;
-    addBtn.textContent = "Linking…";
-    try {
-      const doctorId   = window.currentDoctorId;
-      const doctorData = window.currentDoctorData;
-      const doctorName = doctorData?.identity?.fullName          || "Unknown Doctor";
-      const doctorSpec = doctorData?.doctorData?.specializations || "";
+    
+    const pVmed = foundPatient.vmedId || "PATIENT";
+    window.requestPatientOtp(pVmed, "Add Patient to Doctor Panel", async () => {
+      addBtn.disabled    = true;
+      addBtn.textContent = "Linking…";
+      try {
+        const doctorId   = window.currentDoctorId;
+        const doctorData = window.currentDoctorData;
+        const doctorName = doctorData?.identity?.fullName          || "Unknown Doctor";
+        const doctorSpec = doctorData?.doctorData?.specializations || "";
 
-      // ── Doctor doc: add patient UID to linkedPatients (plain string array) ──
-      await updateDoc(doc(db, "users", doctorId), {
-        linkedPatients: arrayUnion(foundPatientId)
-      });
+        // ── Doctor doc: add patient UID to linkedPatients (plain string array) ──
+        await updateDoc(doc(db, "users", doctorId), {
+          linkedPatients: arrayUnion(foundPatientId)
+        });
 
-      // ── Patient doc: add doctor object AND plain string ID ──────────────────
-      // linkedDoctorIds (string array) is what Firestore rules check via
-      // resource.data.linkedDoctorIds.hasAny([doctorUid]) — zero extra get() calls.
-      // linkedDoctors (object array) is for display purposes in the patient dashboard.
-      await updateDoc(doc(db, "users", foundPatientId), {
-        linkedDoctors: arrayUnion({
-          doctorId, doctorName, doctorSpec,
-          addedAt: new Date().toISOString()
-        }),
-        linkedDoctorIds: arrayUnion(doctorId)   // ← CRITICAL: rules depend on this field
-      });
+        // ── Patient doc: add doctor object AND plain string ID ──────────────────
+        await updateDoc(doc(db, "users", foundPatientId), {
+          linkedDoctors: arrayUnion({
+            doctorId, doctorName, doctorSpec,
+            addedAt: new Date().toISOString()
+          }),
+          linkedDoctorIds: arrayUnion(doctorId)   // ← CRITICAL: rules depend on this field
+        });
 
-      // Update in-memory cache so patient count reflects immediately
-      if (!window.currentDoctorData.linkedPatients) window.currentDoctorData.linkedPatients = [];
-      window.currentDoctorData.linkedPatients.push(foundPatientId);
+        // Update in-memory cache so patient count reflects immediately
+        if (!window.currentDoctorData.linkedPatients) window.currentDoctorData.linkedPatients = [];
+        window.currentDoctorData.linkedPatients.push(foundPatientId);
 
-      showMsg("success", `${foundPatient.identity?.fullName} has been added to your patient list!`);
-      document.getElementById("foundPatientCard").style.display = "none";
-      document.getElementById("searchVmedId").value = "";
-      foundPatient = null; foundPatientId = null;
-    } catch (e) {
-      showMsg("error", "Failed to link patient: " + e.message);
-    } finally {
-      addBtn.disabled    = false;
-      addBtn.textContent = "Confirm & Add Patient";
-    }
+        showMsg("success", `${foundPatient.identity?.fullName} has been added to your patient list!`);
+        document.getElementById("foundPatientCard").style.display = "none";
+        document.getElementById("searchVmedId").value = "";
+        foundPatient = null; foundPatientId = null;
+      } catch (e) {
+        showMsg("error", "Failed to link patient: " + e.message);
+      } finally {
+        addBtn.disabled    = false;
+        addBtn.textContent = "Confirm & Add Patient";
+      }
+    });
   });
 }
 

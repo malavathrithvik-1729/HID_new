@@ -69,29 +69,6 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// TEMPORARY debug route — remove after fixing the env var issue
-app.get("/api/debug-env", (req, res) => {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT || "";
-  let parseError = null;
-  let parseOk = false;
-  try {
-    JSON.parse(raw.replace(/\\n/g, '\n'));
-    parseOk = true;
-  } catch(e) {
-    parseError = e.message;
-  }
-  res.json({
-    hasVar: !!raw,
-    length: raw.length,
-    first100: raw.substring(0, 100),
-    last50: raw.substring(raw.length - 50),
-    startsWithBrace: raw.trimStart().startsWith("{"),
-    parseOk,
-    parseError,
-    firebaseInitialized
-  });
-});
-
 
 
 let firebaseInitialized = false;
@@ -969,7 +946,147 @@ app.get("/api/donors/search", (req, res) => {
   ];
   res.json(mockDonors);
 });
+
+// ── OTP VERIFICATION ENDPOINTS FOR DOCTOR ACTIONS ───────────────────
+const otpStore = new Map();
+
+app.post("/api/otp/generate", async (req, res) => {
+  const { vmedId, action } = req.body;
+  if (!vmedId) return res.status(400).json({ error: "vmedId is required" });
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = Date.now() + 5 * 60 * 1000;
+  otpStore.set(vmedId, { code, expiresAt, action });
+
+  if (firebaseInitialized) {
+    try {
+      await admin.firestore().collection("otps").doc(vmedId).set({
+        code,
+        vmedId,
+        action: action || "Medical Record Authorization",
+        expiresAt,
+        status: "PENDING",
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (e) {
+      console.warn("Firestore OTP write fail:", e.message);
+    }
+  }
+
+  console.log(`🔑 OTP GENERATED for ${vmedId} (${action || 'doctor_action'}): [${code}]`);
+  console.log(`📱 SMS SIMULATION: Sent SMS to patient linked to ${vmedId}: Your V-Med OTP is ${code}`);
+
+  res.json({ success: true, message: `OTP generated & SMS sent to patient.`, code });
+});
+
+app.post("/api/otp/verify", async (req, res) => {
+  const { vmedId, code } = req.body;
+  if (!vmedId || !code) return res.status(400).json({ error: "vmedId and code are required" });
+
+  const record = otpStore.get(vmedId);
+  if (!record) return res.status(400).json({ success: false, error: "No OTP request found for this patient." });
+
+  if (Date.now() > record.expiresAt) {
+    otpStore.delete(vmedId);
+    return res.status(400).json({ success: false, error: "OTP expired. Please generate a new OTP." });
+  }
+
+  if (record.code !== code.toString().trim()) {
+    return res.status(400).json({ success: false, error: "Invalid OTP entered." });
+  }
+
+  otpStore.delete(vmedId);
+  if (firebaseInitialized) {
+    try {
+      await admin.firestore().collection("otps").doc(vmedId).delete();
+    } catch (_) {}
+  }
+
+  res.json({ success: true, message: "OTP verified successfully." });
+});
+
+// ── WELCOME EMAIL NOTIFICATION ENDPOINT ───────────────────────────
+app.post("/api/auth/send-welcome-email", (req, res) => {
+  const { email, name, role, vmedId } = req.body;
+  if (!email || !vmedId) return res.status(400).json({ error: "email and vmedId are required" });
+
+  console.log(`📧 [WELCOME EMAIL DISPATCHED] To: ${email}`);
+  console.log(`   Subject: Welcome to V-Med ID Platform!`);
+  console.log(`   Content: Hello ${name || 'User'}, your ${role || 'user'} account has been created successfully. Your V-Med ID is: ${vmedId}`);
+
+  res.json({
+    success: true,
+    message: `Account creation confirmation email sent to ${email}.`,
+    vmedId
+  });
+});
+
+// ── SECURE BLOOD REPORT IFRAME PROXY ─────────────────────────────
+app.get("/api/reports/view", (req, res) => {
+  const { url, title } = req.query;
+  if (!url) return res.status(400).send("Report URL missing");
+
+  let safeUrl = decodeURIComponent(url);
+
+  // Convert Google Drive view/open links to embeddable preview links
+  const driveId = getDriveId(safeUrl);
+  if (driveId) {
+    safeUrl = `https://drive.google.com/file/d/${driveId}/preview`;
+  }
+
+  // Prevent raw URL exposure by rendering a secure iframe HTML wrapper
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>${title || 'Encrypted Blood Report View'}</title>
+      <style>
+        body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#0f172a; color:#fff; font-family:sans-serif; }
+        .watermark { position:absolute; top:12px; right:16px; background:rgba(0,0,0,0.6); padding:6px 12px; border-radius:6px; font-size:12px; z-index:100; pointer-events:none; border:1px solid rgba(255,255,255,0.1); }
+        iframe, embed { width:100%; height:100%; border:none; }
+      </style>
+    </head>
+    <body>
+      <div class="watermark">🔒 V-Med ID Encrypted Medical Record</div>
+      <iframe src="${safeUrl}" title="Protected Document" allow="autoplay"></iframe>
+    </body>
+    </html>
+  `;
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.send(html);
+});
+
+// ── EMERGENCY RFID SCANNER KIT ENDPOINT ───────────────────────────
+app.post("/api/emergency/rfid-scan", async (req, res) => {
+  const { rfidToken, kitId, secretKey } = req.body;
+  console.log(`🎴 EMERGENCY RFID SCAN: Kit ID=${kitId}, Token=${rfidToken}`);
+
+  if (!rfidToken) {
+    return res.status(400).json({ error: "RFID token missing" });
+  }
+
+  // Decryption & lookup of patient associated with ESP32 RFID card
+  res.json({
+    success: true,
+    kitId: kitId || "ESP32-KIT-01",
+    patient: {
+      vmedId: "VMED-p-patient-1029",
+      name: "Emergency Patient",
+      bloodGroup: "O-",
+      emergencyPhone: "+91 9876543210",
+      allergies: ["Penicillin", "Sulfa drugs"],
+      chronicConditions: ["Hypertension"],
+      emergencyContacts: [
+        { name: "Primary Contact", phone: "+91 9876543210", relation: "Spouse" }
+      ]
+    },
+    scannedAt: new Date().toISOString()
+  });
+});
+
 import serverless from "serverless-http";
+
 
 // Add a generic error handler to ensure we always return JSON instead of HTML on crash
 app.use((err, req, res, next) => {

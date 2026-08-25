@@ -918,6 +918,31 @@ protectRoute("patient");
 
 </div>
 
+<!-- Patient Active OTP Authorization Alert Banner -->
+<div id="patientOtpBanner" style="display:none; position:fixed; top:20px; right:20px; z-index:9999; background:#16a34a; color:#fff; padding:16px 24px; border-radius:14px; box-shadow:0 10px 30px rgba(22,163,74,0.4); align-items:center; gap:16px; animation:slideDown 0.4s ease;">
+  <div style="font-size:28px;">🔔</div>
+  <div>
+    <strong style="font-size:15px; display:block;">DOCTOR AUTHORIZATION REQUESTED</strong>
+    <span style="font-size:13px; opacity:0.9;">Your V-Med 6-Digit OTP is: <strong id="patientOtpDisplay" style="font-size:18px; letter-spacing:2px; background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:6px;">------</strong> (SMS Sent)</span>
+  </div>
+  <button onclick="document.getElementById('patientOtpBanner').style.display='none'" style="background:rgba(255,255,255,0.2); border:none; color:#fff; padding:6px 12px; border-radius:8px; cursor:pointer; font-weight:bold;">Dismiss</button>
+</div>
+
+<!-- Secure Report IFrame Viewer Modal -->
+<div id="reportViewerModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.85); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.15); border-radius:16px; width:90%; max-width:900px; height:85vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+    <div style="padding:16px 24px; background:#0f172a; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:space-between;">
+      <h3 id="reportViewerTitle" style="color:#fff; margin:0; font-size:18px; font-weight:600; display:flex; align-items:center; gap:8px;">
+        <span>📄</span> Encrypted Medical Record
+      </h3>
+      <button onclick="document.getElementById('reportViewerModal').style.display='none'; document.getElementById('reportIframe').src='';" style="background:rgba(255,255,255,0.1); border:none; color:#fff; padding:6px 14px; border-radius:8px; cursor:pointer; font-weight:600;">✕ Close</button>
+    </div>
+    <div style="flex:1; background:#000; position:relative;">
+      <iframe id="reportIframe" src="" style="width:100%; height:100%; border:none;" title="Secure Document Viewer"></iframe>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 <script type="module" src="js/userData.js"></script>

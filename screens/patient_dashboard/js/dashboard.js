@@ -2,9 +2,11 @@ import { auth } from "../../../js/firebase.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { db } from "../../../js/firebase.js";
 import {
-  doc, updateDoc, getDoc, arrayUnion
+  doc, updateDoc, getDoc, setDoc, arrayUnion, onSnapshot, collection, query, where, getDocs
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { t, initI18n, setLang, getCurrentLang, LANGUAGES } from "./i18n.js";
+import { generatePatientQRPayload } from "../../../js/security.js";
+import { syncHealthScore } from "../../../js/healthScore.js";
 
 const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost" 
   ? "http://127.0.0.1:3000" 
@@ -27,6 +29,75 @@ window.closeEmergencyContactModal = function () {
   modal.classList.remove("open");
   modal.style.display = "none";
 };
+
+window.openReportIframe = function (url, title = "Medical Report") {
+  const modal = document.getElementById("reportViewerModal");
+  const iframe = document.getElementById("reportIframe");
+  const titleEl = document.getElementById("reportViewerTitle");
+  if (!modal || !iframe) return;
+
+  if (titleEl) titleEl.textContent = `📄 ${title}`;
+  const proxyUrl = `${API_BASE}/api/reports/view?url=${encodeURIComponent(url || 'about:blank')}&title=${encodeURIComponent(title)}`;
+  iframe.src = proxyUrl;
+  modal.style.display = "flex";
+};
+
+async function checkMedicationCourseCompletion(userData) {
+  if (!userData || !userData.medications || !auth.currentUser) return;
+  const now = new Date();
+  let updated = false;
+
+  const meds = userData.medications.map(m => {
+    if (m.status !== "completed" && m.active !== false && m.startDate) {
+      const start = new Date(m.startDate);
+      const days = parseInt(m.duration, 10) || 7;
+      const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+
+      if (now > end) {
+        updated = true;
+        return { ...m, active: false, status: "completed", completedAt: new Date().toISOString() };
+      }
+    }
+    return m;
+  });
+
+  if (updated) {
+    try {
+      await updateDoc(doc(db, "users", auth.currentUser.uid), { medications: meds });
+      userData.medications = meds;
+      console.log("✅ Auto-completed expired medication courses.");
+    } catch (e) {
+      console.warn("Medication auto-completion sync error:", e);
+    }
+  }
+}
+
+let otpUnsub = null;
+function listenForPatientOtps(vmedId) {
+  if (!vmedId || otpUnsub) return;
+  try {
+    const otpRef = doc(db, "otps", vmedId);
+    otpUnsub = onSnapshot(otpRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.code && data.expiresAt > Date.now()) {
+          const banner = document.getElementById("patientOtpBanner");
+          const display = document.getElementById("patientOtpDisplay");
+          if (banner && display) {
+            display.textContent = data.code;
+            banner.style.display = "flex";
+          }
+        }
+      } else {
+        const banner = document.getElementById("patientOtpBanner");
+        if (banner) banner.style.display = "none";
+      }
+    });
+  } catch (e) {
+    console.warn("OTP listener setup fail:", e);
+  }
+}
+
 
 // Multi-lingual support helpers
 
@@ -160,6 +231,15 @@ async function loadPage(pageName) {
       if (isOffline) {
         const syncTime = vStore.get("vmed_last_sync", 'local');
         document.getElementById("offlineSyncTime").textContent = syncTime ? new Date(syncTime).toLocaleString() : "Unknown";
+      }
+    }
+
+    // Run automatic background synchronization routines
+    if (data) {
+      checkMedicationCourseCompletion(data);
+      if (data.vmedId) listenForPatientOtps(data.vmedId);
+      if (window.currentUserId && !isOffline) {
+        syncHealthScore(window.currentUserId, data);
       }
     }
 
@@ -413,10 +493,30 @@ function initHome(data) {
   const vmedId = data.vmedId || "UNKNOWN";
   const fullName = data.identity?.fullName || "Patient";
   const blood = data.patientData?.bloodGroup || "";
-  const qrText = `V-Med ID: ${vmedId} | Patient: ${fullName}` + (blood ? ` | Blood: ${blood}` : "");
+  const emPhone = data.contact?.phone || data.emergencyContacts?.[0]?.phone || "";
+  
+  // Encrypt payload so only Doctor Dashboard scanner / ESP32 RFID kit can decrypt and read details
+  generatePatientQRPayload(vmedId, fullName, blood, emPhone).then(encryptedPayload => {
+    const qrText = encryptedPayload;
+    const qrUrl = s => `https://api.qrserver.com/v1/create-qr-code/?size=${s}x${s}&data=${encodeURIComponent(qrText)}&color=0a1628&bgcolor=ffffff&margin=4&format=png`;
+    const qrFallbackUrl = s => `https://chart.googleapis.com/chart?cht=qr&chs=${s}x${s}&chl=${encodeURIComponent(qrText)}&chco=0a1628`;
 
-  const qrUrl = s => `https://api.qrserver.com/v1/create-qr-code/?size=${s}x${s}&data=${encodeURIComponent(qrText)}&color=0a1628&bgcolor=ffffff&margin=4&format=png`;
-  const qrFallbackUrl = s => `https://chart.googleapis.com/chart?cht=qr&chs=${s}x${s}&chl=${encodeURIComponent(qrText)}&chco=0a1628`;
+    const smallImg = $("homeQrImg");
+    if (smallImg) {
+      smallImg.src = qrUrl(150);
+      smallImg.onerror = function () {
+        this.onerror = function () {
+          this.style.display = "none";
+          if (this.parentElement) this.parentElement.innerHTML = `<div style="font-size:10px;color:#0a1628;word-break:break-all;text-align:center;padding:4px;line-height:1.4">${vmedId}</div>`;
+        };
+        this.src = qrFallbackUrl(150);
+      };
+    }
+    const bigImg = $("modalQrImg");
+    if (bigImg) {
+      bigImg.src = qrUrl(260);
+    }
+  });
 
   if ($("homeQrVmedId")) $("homeQrVmedId").textContent = vmedId;
   if ($("qrModalVmedId")) $("qrModalVmedId").textContent = vmedId;
@@ -611,9 +711,9 @@ function initDocuments(data) {
         ${d.description ? `<p style="font-size:13px; color:var(--muted); line-height:1.5; background:var(--surface-2); padding:10px; border-radius:8px; border:1px solid var(--border)">${escHtml(d.description)}</p>` : ""}
         
         <div style="display:flex; gap:10px; margin-top:4px; align-items:center;">
-          <a href="${d.externalUrl}" target="_blank" class="btn-primary" style="font-size:12px; padding:8px 20px; text-decoration:none; display:flex; align-items:center; gap:6px; background:var(--accent); border:none; border-radius:8px; color:#fff; font-weight:600; transition:opacity 0.2s;">
-            👁️ View Clinical Record
-          </a>
+          <button onclick="window.openReportIframe('${d.externalUrl || d.url || ''}', '${escHtml(d.title)}')" class="btn-primary" style="font-size:12px; padding:8px 20px; text-decoration:none; display:flex; align-items:center; gap:6px; background:var(--accent); border:none; border-radius:8px; color:#fff; font-weight:600; cursor:pointer; transition:opacity 0.2s;">
+            👁️ View Clinical Record (Encrypted IFrame)
+          </button>
           ${isVerified ? `
             <div style="font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px; margin-left:auto; opacity:0.6;">
               🔒 CLINICAL DATA LOCKED

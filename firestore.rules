@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function getRole() {
+      return isAuthenticated() ? getUserData().role : null;
+    }
+
+    function isDoctor() {
+      return getRole() == 'doctor';
+    }
+
+    function isGovernment() {
+      return getRole() == 'government';
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isOwner(userId) || isDoctor() || isGovernment();
+      allow delete: if false;
+    }
+
+    // Public V-Med Index (for login & lookup)
+    match /vmedIndex/{vmedId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Emergency SOS Alerts
+    match /sos_alerts/{alertId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Family Links & Link Requests
+    match /familyRequests/{requestId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // OTP Verification Storage
+    match /otps/{vmedId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Medical Records / Documents
+    match /medical_records/{recordId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (isDoctor() || isGovernment());
+    }
+  }
+}

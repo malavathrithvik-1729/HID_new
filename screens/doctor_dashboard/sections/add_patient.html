@@ -16,7 +16,10 @@
         placeholder="e.g. VMED-p-priya-2847"
         style="font-family:monospace;font-size:15px;letter-spacing:.5px"/>
     </div>
-    <button class="btn-primary" id="searchPatientBtn" style="width:100%">Search Patient</button>
+    <button class="btn-primary" onclick="window.openQrScanner()" style="width:100%; background:#16a34a; margin-bottom:12px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px;">
+      📷 Scan Patient Encrypted QR Code (Instant OTP Bypass)
+    </button>
+    <button class="btn-primary" id="searchPatientBtn" style="width:100%">Search Patient Manually</button>
   </div>
 
   <!-- Found patient preview -->
