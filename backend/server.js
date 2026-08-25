@@ -117,6 +117,12 @@ try {
 
 
 async function verifyAuthToken(req, res, next) {
+  // Allow public iframe viewer & onboarding endpoints without Bearer token
+  const publicPaths = ["/api/health", "/api/reports/view", "/api/auth/send-welcome-email", "/api/emergency/rfid-scan"];
+  if (publicPaths.some(p => req.originalUrl.startsWith(p) || req.path.startsWith(p))) {
+    return next();
+  }
+
   if (!firebaseInitialized) {
     return res.status(503).json({ error: "Server misconfigured: Firebase Admin SDK not initialized. Check FIREBASE_SERVICE_ACCOUNT env var on Netlify." });
   }
@@ -132,8 +138,6 @@ async function verifyAuthToken(req, res, next) {
     next();
   } catch (error) {
     console.error("❌ Token verification failed:", error.message);
-    // If the app wasn't initialized, error.message will be "The default Firebase app does not exist."
-    // We send this exact message so the developer knows they forgot to add FIREBASE_SERVICE_ACCOUNT.
     return res.status(401).json({ error: `Unauthorized. ${error.message}` });
   }
 }

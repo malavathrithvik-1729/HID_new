@@ -495,11 +495,13 @@ function initHome(data) {
   const blood = data.patientData?.bloodGroup || "";
   const emPhone = data.contact?.phone || data.emergencyContacts?.[0]?.phone || "";
   
+  let qrUrl = s => `https://api.qrserver.com/v1/create-qr-code/?size=${s}x${s}&data=${encodeURIComponent(vmedId)}&color=0a1628&bgcolor=ffffff&margin=4&format=png`;
+  let qrFallbackUrl = s => `https://chart.googleapis.com/chart?cht=qr&chs=${s}x${s}&chl=${encodeURIComponent(vmedId)}&chco=0a1628`;
+
   // Encrypt payload so only Doctor Dashboard scanner / ESP32 RFID kit can decrypt and read details
   generatePatientQRPayload(vmedId, fullName, blood, emPhone).then(encryptedPayload => {
-    const qrText = encryptedPayload;
-    const qrUrl = s => `https://api.qrserver.com/v1/create-qr-code/?size=${s}x${s}&data=${encodeURIComponent(qrText)}&color=0a1628&bgcolor=ffffff&margin=4&format=png`;
-    const qrFallbackUrl = s => `https://chart.googleapis.com/chart?cht=qr&chs=${s}x${s}&chl=${encodeURIComponent(qrText)}&chco=0a1628`;
+    qrUrl = s => `https://api.qrserver.com/v1/create-qr-code/?size=${s}x${s}&data=${encodeURIComponent(encryptedPayload)}&color=0a1628&bgcolor=ffffff&margin=4&format=png`;
+    qrFallbackUrl = s => `https://chart.googleapis.com/chart?cht=qr&chs=${s}x${s}&chl=${encodeURIComponent(encryptedPayload)}&chco=0a1628`;
 
     const smallImg = $("homeQrImg");
     if (smallImg) {
@@ -532,18 +534,6 @@ function initHome(data) {
 
   const closeBtn2 = $("closeQrBtn");
   if (closeBtn2) closeBtn2.textContent = t("home.closeBtn");
-
-  const smallImg = $("homeQrImg");
-  if (smallImg) {
-    smallImg.src = qrUrl(150);
-    smallImg.onerror = function () {
-      this.onerror = function () {
-        this.style.display = "none";
-        if (this.parentElement) this.parentElement.innerHTML = `<div style="font-size:10px;color:#0a1628;word-break:break-all;text-align:center;padding:4px;line-height:1.4">${vmedId}</div>`;
-      };
-      this.src = qrFallbackUrl(150);
-    };
-  }
 
   const modal = $("qrFullModal");
   const bigImg = $("modalQrImg");

@@ -3,7 +3,7 @@
  * Evaluates vitals, active medications, visit frequency, and risk factors.
  */
 import { db } from "./firebase.js";
-import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 export function calculateHealthScore(userProfile) {
   let score = 100;
@@ -92,10 +92,11 @@ export async function syncHealthScore(userId, userProfile) {
   if (!userId || !userProfile) return null;
   const scoreData = calculateHealthScore(userProfile);
   try {
+    if (userProfile) userProfile.healthScore = scoreData;
     const userRef = doc(db, "users", userId);
-    await updateDoc(userRef, { healthScore: scoreData });
-  } catch (e) {
-    console.warn("Health score sync skipped or failed:", e);
+    await setDoc(userRef, { healthScore: scoreData }, { merge: true });
+  } catch (_) {
+    // Silently ignore if rules or offline mode prevent write
   }
   return scoreData;
 }
