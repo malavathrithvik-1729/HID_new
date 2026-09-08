@@ -61,12 +61,57 @@ const apiLimiter = rateLimit({
 });
 app.use("/api/", apiLimiter);
 
+
+
 app.get("/api/health", (req, res) => {
   res.json({ 
     status: "ok", 
     isNetlify,
     firebaseInitialized
   });
+});
+
+// ── SECURE BLOOD REPORT IFRAME PROXY (Public IFrame Embedder) ─────
+app.get("/api/reports/view", (req, res) => {
+  const { url, title } = req.query;
+  if (!url) return res.status(400).send("Report URL missing");
+
+  let safeUrl = decodeURIComponent(url);
+
+  // Convert Google Drive & Google Docs links to embeddable preview links
+  if (safeUrl.includes("docs.google.com/document") || safeUrl.includes("docs.google.com/spreadsheets") || safeUrl.includes("docs.google.com/presentation")) {
+    safeUrl = safeUrl.replace(/\/edit.*$/, "/preview").replace(/\/view.*$/, "/preview");
+    if (!safeUrl.endsWith("/preview")) {
+      safeUrl = safeUrl + "/preview";
+    }
+  } else {
+    const driveId = getDriveId(safeUrl);
+    if (driveId) {
+      safeUrl = `https://drive.google.com/file/d/${driveId}/preview`;
+    }
+  }
+
+  // Render a secure iframe HTML wrapper for browser preview
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>${title || 'Encrypted Blood Report View'}</title>
+      <style>
+        body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#0f172a; color:#fff; font-family:sans-serif; }
+        .watermark { position:absolute; top:12px; right:16px; background:rgba(0,0,0,0.6); padding:6px 12px; border-radius:6px; font-size:12px; z-index:100; pointer-events:none; border:1px solid rgba(255,255,255,0.1); }
+        iframe, embed { width:100%; height:100%; border:none; }
+      </style>
+    </head>
+    <body>
+      <div class="watermark">🔒 V-Med ID Encrypted Medical Record</div>
+      <iframe src="${safeUrl}" title="Protected Document" allow="autoplay"></iframe>
+    </body>
+    </html>
+  `;
+  res.removeHeader("X-Frame-Options");
+  res.send(html);
 });
 
 
@@ -120,20 +165,24 @@ async function verifyAuthToken(req, res, next) {
   if (!firebaseInitialized) {
     return res.status(503).json({ error: "Server misconfigured: Firebase Admin SDK not initialized. Check FIREBASE_SERVICE_ACCOUNT env var on Netlify." });
   }
+  let token = null;
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Unauthorized. Missing or invalid Authorization header." });
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.split("Bearer ")[1];
+  } else if (req.query && req.query.token) {
+    token = req.query.token;
   }
 
-  const token = authHeader.split("Bearer ")[1];
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized. Missing or invalid Authorization header or token parameter." });
+  }
+
   try {
     const decodedToken = await admin.auth().verifyIdToken(token);
     req.user = decodedToken;
     next();
   } catch (error) {
     console.error("❌ Token verification failed:", error.message);
-    // If the app wasn't initialized, error.message will be "The default Firebase app does not exist."
-    // We send this exact message so the developer knows they forgot to add FIREBASE_SERVICE_ACCOUNT.
     return res.status(401).json({ error: `Unauthorized. ${error.message}` });
   }
 }
@@ -1021,41 +1070,7 @@ app.post("/api/auth/send-welcome-email", (req, res) => {
   });
 });
 
-// ── SECURE BLOOD REPORT IFRAME PROXY ─────────────────────────────
-app.get("/api/reports/view", (req, res) => {
-  const { url, title } = req.query;
-  if (!url) return res.status(400).send("Report URL missing");
 
-  let safeUrl = decodeURIComponent(url);
-
-  // Convert Google Drive view/open links to embeddable preview links
-  const driveId = getDriveId(safeUrl);
-  if (driveId) {
-    safeUrl = `https://drive.google.com/file/d/${driveId}/preview`;
-  }
-
-  // Prevent raw URL exposure by rendering a secure iframe HTML wrapper
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>${title || 'Encrypted Blood Report View'}</title>
-      <style>
-        body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#0f172a; color:#fff; font-family:sans-serif; }
-        .watermark { position:absolute; top:12px; right:16px; background:rgba(0,0,0,0.6); padding:6px 12px; border-radius:6px; font-size:12px; z-index:100; pointer-events:none; border:1px solid rgba(255,255,255,0.1); }
-        iframe, embed { width:100%; height:100%; border:none; }
-      </style>
-    </head>
-    <body>
-      <div class="watermark">🔒 V-Med ID Encrypted Medical Record</div>
-      <iframe src="${safeUrl}" title="Protected Document" allow="autoplay"></iframe>
-    </body>
-    </html>
-  `;
-  res.setHeader("X-Frame-Options", "SAMEORIGIN");
-  res.send(html);
-});
 
 // ── EMERGENCY RFID SCANNER KIT ENDPOINT ───────────────────────────
 app.post("/api/emergency/rfid-scan", async (req, res) => {
@@ -1097,18 +1112,25 @@ app.use((err, req, res, next) => {
 // Configure serverless-http for Netlify
 // Netlify rewrites /api/* to /.netlify/functions/api/*
 // By setting basePath, serverless-http strips it so Express sees the correct /api/* route.
+// Serve static frontend files for Render and local development
+const frontendPath = join(dirnameShim, "..");
+app.use(express.static(frontendPath));
+
+// Fallback to index.html for unknown routes (SPA support)
+app.get("*", (req, res) => {
+  if (req.originalUrl.startsWith("/api")) {
+    return res.status(404).json({ error: "API route not found" });
+  }
+  res.sendFile(join(frontendPath, "index.html"));
+});
+
 export const handler = serverless(app, {
   basePath: '/.netlify/functions'
 });
 export default app;
 
-if (!isNetlify && typeof import.meta !== 'undefined' && import.meta.url) {
-  try {
-    const currentFilePath = fileURLToPath(import.meta.url);
-    if (currentFilePath === filenameShim) {
-      app.listen(PORT, () => {
-        console.log(`🚀 V-Med AI Backend running on http://localhost:${PORT}`);
-      });
-    }
-  } catch (e) {}
+if (!isNetlify) {
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀 V-Med ID Platform running on port ${PORT}`);
+  });
 }

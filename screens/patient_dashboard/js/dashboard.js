@@ -30,6 +30,50 @@ window.closeEmergencyContactModal = function () {
   modal.style.display = "none";
 };
 
+function parseDateFlexible(dateStr) {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) return dateStr;
+  const str = String(dateStr).trim();
+  if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{4}$/.test(str)) {
+    const parts = str.split(/[-\/]/);
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const year = parseInt(parts[2], 10);
+    return new Date(year, month, day, 23, 59, 59);
+  }
+  if (/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}$/.test(str)) {
+    const parts = str.split(/[-\/]/);
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    return new Date(year, month, day, 23, 59, 59);
+  }
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function getEmbeddableReportUrl(url) {
+  if (!url) return 'about:blank';
+  let safeUrl = String(url).trim();
+
+  // If Google Docs / Sheets / Slides link, convert /edit or /view to /preview for direct iframe embedding
+  if (safeUrl.includes("docs.google.com/document") || safeUrl.includes("docs.google.com/spreadsheets") || safeUrl.includes("docs.google.com/presentation")) {
+    let embedUrl = safeUrl.replace(/\/edit.*$/, "/preview").replace(/\/view.*$/, "/preview");
+    if (!embedUrl.endsWith("/preview")) {
+      embedUrl = embedUrl + "/preview";
+    }
+    return embedUrl;
+  }
+
+  // If Google Drive file link, convert to preview URL
+  if (safeUrl.includes("drive.google.com/file/d/")) {
+    const match = safeUrl.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
+    if (match) return `https://drive.google.com/file/d/${match[1]}/preview`;
+  }
+
+  return `${API_BASE}/api/reports/view?url=${encodeURIComponent(safeUrl)}`;
+}
+
 window.openReportIframe = function (url, title = "Medical Report") {
   const modal = document.getElementById("reportViewerModal");
   const iframe = document.getElementById("reportIframe");
@@ -37,8 +81,7 @@ window.openReportIframe = function (url, title = "Medical Report") {
   if (!modal || !iframe) return;
 
   if (titleEl) titleEl.textContent = `📄 ${title}`;
-  const proxyUrl = `${API_BASE}/api/reports/view?url=${encodeURIComponent(url || 'about:blank')}&title=${encodeURIComponent(title)}`;
-  iframe.src = proxyUrl;
+  iframe.src = getEmbeddableReportUrl(url);
   modal.style.display = "flex";
 };
 
@@ -48,12 +91,26 @@ async function checkMedicationCourseCompletion(userData) {
   let updated = false;
 
   const meds = userData.medications.map(m => {
-    if (m.status !== "completed" && m.active !== false && m.startDate) {
-      const start = new Date(m.startDate);
-      const days = parseInt(m.duration, 10) || 7;
-      const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+    if (m.status !== "completed" && m.active !== false) {
+      let isExpired = false;
 
-      if (now > end) {
+      if (m.endDate) {
+        const endParsed = parseDateFlexible(m.endDate);
+        if (endParsed && now > endParsed) {
+          isExpired = true;
+        }
+      }
+
+      if (!isExpired && m.startDate) {
+        const start = parseDateFlexible(m.startDate) || new Date(m.startDate);
+        const days = parseInt(m.duration, 10) || 7;
+        const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+        if (now > end) {
+          isExpired = true;
+        }
+      }
+
+      if (isExpired) {
         updated = true;
         return { ...m, active: false, status: "completed", completedAt: new Date().toISOString() };
       }
@@ -495,26 +552,29 @@ function initHome(data) {
   const blood = data.patientData?.bloodGroup || "";
   const emPhone = data.contact?.phone || data.emergencyContacts?.[0]?.phone || "";
   
+  let getQrUrl = s => `https://api.qrserver.com/v1/create-qr-code/?size=${s}x${s}&data=${encodeURIComponent(vmedId)}&color=0a1628&bgcolor=ffffff&margin=4&format=png`;
+  let getQrFallbackUrl = s => `https://chart.googleapis.com/chart?cht=qr&chs=${s}x${s}&chl=${encodeURIComponent(vmedId)}&chco=0a1628`;
+
   // Encrypt payload so only Doctor Dashboard scanner / ESP32 RFID kit can decrypt and read details
   generatePatientQRPayload(vmedId, fullName, blood, emPhone).then(encryptedPayload => {
     const qrText = encryptedPayload;
-    const qrUrl = s => `https://api.qrserver.com/v1/create-qr-code/?size=${s}x${s}&data=${encodeURIComponent(qrText)}&color=0a1628&bgcolor=ffffff&margin=4&format=png`;
-    const qrFallbackUrl = s => `https://chart.googleapis.com/chart?cht=qr&chs=${s}x${s}&chl=${encodeURIComponent(qrText)}&chco=0a1628`;
+    getQrUrl = s => `https://api.qrserver.com/v1/create-qr-code/?size=${s}x${s}&data=${encodeURIComponent(qrText)}&color=0a1628&bgcolor=ffffff&margin=4&format=png`;
+    getQrFallbackUrl = s => `https://chart.googleapis.com/chart?cht=qr&chs=${s}x${s}&chl=${encodeURIComponent(qrText)}&chco=0a1628`;
 
     const smallImg = $("homeQrImg");
     if (smallImg) {
-      smallImg.src = qrUrl(150);
+      smallImg.src = getQrUrl(150);
       smallImg.onerror = function () {
         this.onerror = function () {
           this.style.display = "none";
           if (this.parentElement) this.parentElement.innerHTML = `<div style="font-size:10px;color:#0a1628;word-break:break-all;text-align:center;padding:4px;line-height:1.4">${vmedId}</div>`;
         };
-        this.src = qrFallbackUrl(150);
+        this.src = getQrFallbackUrl(150);
       };
     }
     const bigImg = $("modalQrImg");
     if (bigImg) {
-      bigImg.src = qrUrl(260);
+      bigImg.src = getQrUrl(260);
     }
   });
 
@@ -533,24 +593,12 @@ function initHome(data) {
   const closeBtn2 = $("closeQrBtn");
   if (closeBtn2) closeBtn2.textContent = t("home.closeBtn");
 
-  const smallImg = $("homeQrImg");
-  if (smallImg) {
-    smallImg.src = qrUrl(150);
-    smallImg.onerror = function () {
-      this.onerror = function () {
-        this.style.display = "none";
-        if (this.parentElement) this.parentElement.innerHTML = `<div style="font-size:10px;color:#0a1628;word-break:break-all;text-align:center;padding:4px;line-height:1.4">${vmedId}</div>`;
-      };
-      this.src = qrFallbackUrl(150);
-    };
-  }
-
   const modal = $("qrFullModal");
   const bigImg = $("modalQrImg");
   $("showFullQrBtn")?.addEventListener("click", () => {
     if (bigImg && !bigImg.dataset.loaded) {
-      bigImg.src = qrUrl(300);
-      bigImg.onerror = function () { this.src = qrFallbackUrl(300); };
+      bigImg.src = getQrUrl(300);
+      bigImg.onerror = function () { this.src = getQrFallbackUrl(300); };
       bigImg.dataset.loaded = "true";
     }
     if (modal) modal.style.display = "flex";
@@ -742,7 +790,23 @@ function initMedications(data) {
   }
   if (empty) empty.style.display = "none";
   list.innerHTML = meds.map(m => {
-    const isActive = m.active !== false;
+    let isExpired = false;
+    if (m.active === false || m.status === "completed") {
+      isExpired = true;
+    } else {
+      const now = new Date();
+      if (m.endDate) {
+        const endParsed = parseDateFlexible(m.endDate);
+        if (endParsed && now > endParsed) isExpired = true;
+      }
+      if (!isExpired && m.startDate) {
+        const start = parseDateFlexible(m.startDate) || new Date(m.startDate);
+        const days = parseInt(m.duration, 10) || 7;
+        const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+        if (now > end) isExpired = true;
+      }
+    }
+    const isActive = !isExpired;
     return `
     <div class="med-card" style="display:flex; align-items:center; gap:16px; padding:20px; background:var(--surface); border:1px solid var(--border); border-radius:14px; margin-bottom:12px; position:relative;">
       <div class="med-icon" style="width:50px; height:50px; border-radius:12px; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:24px;">💊</div>
@@ -784,7 +848,7 @@ function initVisits(data) {
         <h4>${v.reason || "Consultation"}</h4>
         <span class="visit-date">${v.date || ""}</span>
       </div>
-      <div class="visit-doctor">👨‍⚕️ ${t("visits.dr")} ${v.doctorName || "Unknown"} ${v.doctorSpec ? "· " + v.doctorSpec : ""}</div>
+      <div class="visit-doctor">👨‍⚕️ ${t("visits.dr")} ${(v.doctorName && v.doctorName !== "Unknown") ? escHtml(v.doctorName) : (v.prescribedBy ? escHtml(v.prescribedBy) : "Healthcare Provider")} ${v.doctorSpec ? "· " + escHtml(v.doctorSpec) : ""}</div>
       ${v.diagnosis ? `<div class="visit-detail"><strong>${t("visits.diagnosis")}:</strong> ${v.diagnosis}</div>` : ""}
       ${v.notes ? `<div class="visit-detail" style="margin-top:6px">${v.notes}</div>` : ""}
       ${v.prescriptions?.length

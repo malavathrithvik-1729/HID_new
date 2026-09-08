@@ -1,0 +1,17 @@
+# Render Infrastructure Blueprint for V-Med ID Platform
+services:
+  - type: web
+    name: vmed-id-platform
+    env: node
+    region: singapore
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: GROQ_API_KEY
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false

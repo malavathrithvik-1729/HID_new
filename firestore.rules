@@ -12,26 +12,22 @@ service cloud.firestore {
     }
 
     function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function getRole() {
-      return isAuthenticated() ? getUserData().role : null;
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data : {};
     }
 
     function isDoctor() {
-      return getRole() == 'doctor';
+      return isAuthenticated() && getUserData().get('role', '') == 'doctor';
     }
 
     function isGovernment() {
-      return getRole() == 'government';
+      return isAuthenticated() && getUserData().get('role', '') == 'government';
     }
 
     // Users Collection
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update: if isOwner(userId) || isDoctor() || isGovernment();
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isDoctor() || isGovernment());
       allow delete: if false;
     }
 

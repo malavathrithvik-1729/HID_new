@@ -9,6 +9,37 @@ const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hos
   ? "http://127.0.0.1:3000" 
   : "";
 
+function getEmbeddableReportUrl(url) {
+  if (!url) return 'about:blank';
+  let safeUrl = String(url).trim();
+
+  if (safeUrl.includes("docs.google.com/document") || safeUrl.includes("docs.google.com/spreadsheets") || safeUrl.includes("docs.google.com/presentation")) {
+    let embedUrl = safeUrl.replace(/\/edit.*$/, "/preview").replace(/\/view.*$/, "/preview");
+    if (!embedUrl.endsWith("/preview")) {
+      embedUrl = embedUrl + "/preview";
+    }
+    return embedUrl;
+  }
+
+  if (safeUrl.includes("drive.google.com/file/d/")) {
+    const match = safeUrl.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
+    if (match) return `https://drive.google.com/file/d/${match[1]}/preview`;
+  }
+
+  return `${API_BASE}/api/reports/view?url=${encodeURIComponent(safeUrl)}`;
+}
+
+window.openReportIframe = function (url, title = "Medical Report") {
+  const modal = document.getElementById("reportViewerModal");
+  const iframe = document.getElementById("reportIframe");
+  const titleEl = document.getElementById("reportViewerTitle");
+  if (!modal || !iframe) return;
+
+  if (titleEl) titleEl.textContent = `📄 ${title}`;
+  iframe.src = getEmbeddableReportUrl(url);
+  modal.style.display = "flex";
+};
+
 let html5QrScanner = null;
 
 window.openQrScanner = function () {
@@ -491,10 +522,10 @@ async function initPatientDetail(data, pid) {
     div.className = "med-row";
     div.style = "display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; padding:12px; background:var(--surface-2); border-radius:12px;";
     div.innerHTML = `
-      <div style="flex:1.2; min-width:150px;">
+      <div style="flex:1.2; min-width:140px;">
         <input type="text" class="med-name" placeholder="Medicine Name" style="width:100%;" />
       </div>
-      <div style="flex:0.8; min-width:120px;">
+      <div style="flex:0.8; min-width:110px;">
         <select class="med-dosage" style="width:100%; height:38px; font-size:12px; border-radius:8px; border:1px solid var(--border);">
           <option value="1 tablet">1 tablet</option>
           <option value="2 tablets">2 tablets</option>
@@ -510,7 +541,7 @@ async function initPatientDetail(data, pid) {
         <label style="font-size:10px; display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="med-timing-a"> A</label>
         <label style="font-size:10px; display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="med-timing-n" checked> N</label>
       </div>
-      <div style="flex:0.8; min-width:120px;">
+      <div style="flex:0.8; min-width:110px;">
         <select class="med-timing" style="width:100%; height:38px; font-size:12px; border-radius:8px; border:1px solid var(--border);">
           <option value="After Food">After Food</option>
           <option value="Before Food">Before Food</option>
@@ -519,6 +550,11 @@ async function initPatientDetail(data, pid) {
         </select>
       </div>
       <div style="flex:0.6; min-width:100px;">
+        <label style="font-size:9px; color:var(--muted); display:block; margin-bottom:2px;">Start Date</label>
+        <input type="date" class="med-start" style="width:100%; font-size:11px;" />
+      </div>
+      <div style="flex:0.6; min-width:100px;">
+        <label style="font-size:9px; color:var(--muted); display:block; margin-bottom:2px;">End Date</label>
         <input type="date" class="med-end" style="width:100%; font-size:11px;" />
       </div>
       <button onclick="this.parentElement.remove()" style="background:none; border:none; cursor:pointer; font-size:16px;">🗑️</button>
@@ -531,6 +567,7 @@ async function initPatientDetail(data, pid) {
     const dose = row.querySelector(".med-dosage")?.value?.trim() || "";
     const medFreq = row.querySelector(".med-freq")?.value?.trim() || "";
     const timingEl = row.querySelector(".med-timing");
+    const startEl = row.querySelector(".med-start");
     const endEl = row.querySelector(".med-end");
     const mEl = row.querySelector(".med-timing-m");
     const aEl = row.querySelector(".med-timing-a");
@@ -547,6 +584,7 @@ async function initPatientDetail(data, pid) {
       dose,
       frequencyText,
       timing: timingEl?.value || "",
+      start: startEl?.value || "",
       end: endEl?.value || ""
     };
   };
@@ -555,11 +593,15 @@ async function initPatientDetail(data, pid) {
     $("btnSaveConsultDetail").onclick = async () => {
       const btn = $("btnSaveConsultDetail");
       const msg = $("consultDetMsg");
+      const docName = data.identity?.fullName || "Doctor";
+      const docSpec = data.specialization || "";
       const consultData = {
         reason:    $("detVisitReason").value,
         diagnosis: $("detVisitDiagnosis").value,
         notes:     $("detVisitNotes").value,
         date:      new Date().toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" }),
+        doctorName: docName,
+        doctorSpec: docSpec,
         prescriptions: Array.from(document.querySelectorAll("#detMedsContainer .med-row")).map(row => {
           const { name, dose, frequencyText, timing, end } = getMedicationRowDetails(row);
           return name ? `${name} (${dose}${frequencyText ? ` ${frequencyText}` : ""})${timing ? ` - ${timing}` : ""}${end ? " until " + end : ""}` : null;
@@ -574,14 +616,16 @@ async function initPatientDetail(data, pid) {
           await updateDoc(doc(db, "users", pid), {
             visits: arrayUnion(consultData),
             medications: arrayUnion(...Array.from(document.querySelectorAll("#detMedsContainer .med-row")).map(row => {
-              const { name, dose, frequencyText, timing, end } = getMedicationRowDetails(row);
+              const { name, dose, frequencyText, timing, start, end } = getMedicationRowDetails(row);
               if (!name) return null;
               return { 
                 name, 
                 dosage: dose, 
                 frequency: frequencyText || "As needed", 
                 timing: timing || "After Food",
+                startDate: start || new Date().toISOString().split("T")[0],
                 endDate: end,
+                prescribedBy: docName,
                 active: true 
               };
             }).filter(Boolean))
@@ -684,7 +728,7 @@ async function initPatientDetail(data, pid) {
             <br><span style="font-size:11px;color:var(--muted);">${d.type} · ${d.date || "Unknown date"}</span>
           </div>
         </div>
-        <a href="${d.externalUrl}" target="_blank" class="btn-secondary" style="font-size:12px;text-decoration:none">View</a>
+        <button onclick="window.openReportIframe('${d.externalUrl || d.url || ''}', '${escHtml(d.title)}')" class="btn-secondary" style="font-size:12px; cursor:pointer;">👁️ View Report</button>
       </div>`).join("");
   }
 }
@@ -958,8 +1002,12 @@ async function initConsultation(data) {
         </select>
       </div>
       <div class="form-group">
+        <label>Start Date</label>
+        <input type="date" class="med-start"/>
+      </div>
+      <div class="form-group">
         <label>End Date</label>
-        <input type="date" class="med-duration" placeholder="Select end date"/>
+        <input type="date" class="med-end" class="med-duration"/>
       </div>
       <button class="med-remove" onclick="window.removeMedRow(${medCount})">×</button>`;
     container.appendChild(row);
@@ -999,9 +1047,10 @@ async function initConsultation(data) {
       if (!name) return;
       const dosage    = row.querySelector(".med-dosage")?.value.trim()   || "";
       const frequency = row.querySelector(".med-freq")?.value.trim()     || "";
-      const endDate   = row.querySelector(".med-duration")?.value.trim() || "";
+      const startDate = row.querySelector(".med-start")?.value.trim()    || new Date().toISOString().split("T")[0];
+      const endDate   = row.querySelector(".med-end")?.value.trim() || row.querySelector(".med-duration")?.value.trim() || "";
       medications.push({
-        name, dosage, frequency, endDate,
+        name, dosage, frequency, startDate, endDate,
         prescribedBy: doctorData?.identity?.fullName || "Doctor",
         active:  true,
         addedAt: new Date().toISOString()

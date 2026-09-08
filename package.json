@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "cd backend && npm start",
-    "dev": "cd backend && npm run dev",
-    "build": "echo 'No build step required for static frontend'"
+    "start": "node backend/server.js",
+    "dev": "node backend/server.js",
+    "build": "npm install"
   },
   "dependencies": {
     "cors": "^2.8.5",

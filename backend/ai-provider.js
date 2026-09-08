@@ -24,9 +24,9 @@ export const SAFETY_SETTINGS = [
 export class GroqProvider {
   /**
    * @param {string} apiKey
-   * @param {string} model   e.g. "llama-3.3-70b-versatile"
+   * @param {string} model   e.g. "openai/gpt-oss-20b"
    */
-  constructor(apiKey, model = "llama-3.3-70b-versatile") {
+  constructor(apiKey, model = "openai/gpt-oss-20b") {
     this.name   = "Groq";
     this.apiKey = apiKey;
     this.model  = model;
