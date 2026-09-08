@@ -63,6 +63,10 @@ app.use("/api/", apiLimiter);
 
 
 
+app.get("/", (req, res) => {
+  res.redirect("/screens/splash/splash.html");
+});
+
 app.get("/api/health", (req, res) => {
   res.json({ 
     status: "ok", 
